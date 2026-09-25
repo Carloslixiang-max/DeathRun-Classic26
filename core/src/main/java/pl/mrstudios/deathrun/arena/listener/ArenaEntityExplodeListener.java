@@ -5,17 +5,21 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityExplodeEvent;
 import org.jetbrains.annotations.NotNull;
 import pl.mrstudios.commons.inject.annotation.Inject;
+import pl.mrstudios.deathrun.arena.ArenaManager;
 
 public class ArenaEntityExplodeListener implements Listener {
 
-    @Inject
-    public ArenaEntityExplodeListener() {}
+    private final ArenaManager arenaManager;
 
-    @EventHandler
-    public void onEntityExplode(
-            @NotNull EntityExplodeEvent event
-    ) {
-        event.blockList().clear();
+    @Inject
+    public ArenaEntityExplodeListener(@NotNull ArenaManager arenaManager) {
+        this.arenaManager = arenaManager;
     }
 
+    @EventHandler
+    public void onEntityExplode(@NotNull EntityExplodeEvent event) {
+        if (!this.arenaManager.isDeathRunWorld(event.getLocation().getWorld()))
+            return;
+        event.blockList().clear();
+    }
 }
