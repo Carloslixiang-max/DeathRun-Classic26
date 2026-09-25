@@ -19,6 +19,7 @@ import pl.mrstudios.deathrun.api.arena.user.IUser;
 import pl.mrstudios.deathrun.arena.ArenaManager;
 import pl.mrstudios.deathrun.arena.trap.impl.*;
 import pl.mrstudios.deathrun.arena.win.WinMapManager;
+import pl.mrstudios.deathrun.classic.checkpoint.SegmentAabb;
 import pl.mrstudios.deathrun.classic.death.DeathRunDeathCause;
 import pl.mrstudios.deathrun.classic.death.DeathRunDeathService;
 import pl.mrstudios.deathrun.classic.trap.TrapActivationContext;
@@ -62,7 +63,7 @@ public final class ClassicTrapEffectListener implements Listener {
         for (TrapActivationContext context : this.activationService.activeAttributions().values()) {
             if (!context.mapId().equalsIgnoreCase(runtime.mapId()))
                 continue;
-            if (!this.inside(context.trap(), event.getTo()))
+            if (!this.touches(context.trap(), event.getFrom(), event.getTo()))
                 continue;
             if (this.applyContact(player, context))
                 return;
@@ -148,9 +149,26 @@ public final class ClassicTrapEffectListener implements Listener {
     }
 
     private boolean inside(@NotNull ITrap trap, @NotNull Location location) {
-        if (trap.getLocations().isEmpty() || location.getWorld() == null) return false;
-        Location first = trap.getLocations().get(0);
-        if (first == null || first.getWorld() == null || !first.getWorld().getUID().equals(location.getWorld().getUID()))
+        return this.touches(trap, location, location);
+    }
+
+    private boolean touches(
+            @NotNull ITrap trap,
+            @NotNull Location from,
+            @NotNull Location to
+    ) {
+        if (trap.getLocations().isEmpty() || from.getWorld() == null || to.getWorld() == null)
+            return false;
+
+        Location first = trap.getLocations().stream()
+                .filter(java.util.Objects::nonNull)
+                .findFirst()
+                .orElse(null);
+        if (first == null || first.getWorld() == null)
+            return false;
+
+        if (!from.getWorld().getUID().equals(to.getWorld().getUID())
+                || !first.getWorld().getUID().equals(from.getWorld().getUID()))
             return false;
 
         int minX = trap.getLocations().stream().filter(java.util.Objects::nonNull).mapToInt(Location::getBlockX).min().orElse(0);
@@ -160,17 +178,18 @@ public final class ClassicTrapEffectListener implements Listener {
         int minZ = trap.getLocations().stream().filter(java.util.Objects::nonNull).mapToInt(Location::getBlockZ).min().orElse(0);
         int maxZ = trap.getLocations().stream().filter(java.util.Objects::nonNull).mapToInt(Location::getBlockZ).max().orElse(0);
 
-        // Test a normal player-sized hitbox against the configured trap volume.
-        // This is intentionally much tighter than the old +3 block vertical margin.
         final double halfWidth = 0.30;
         final double playerHeight = 1.80;
-        double feetY = location.getY();
 
-        return location.getX() >= minX - halfWidth
-                && location.getX() <= maxX + 1.0 + halfWidth
-                && feetY + playerHeight >= minY
-                && feetY <= maxY + 1.01
-                && location.getZ() >= minZ - halfWidth
-                && location.getZ() <= maxZ + 1.0 + halfWidth;
+        return SegmentAabb.intersects(
+                from.getX(), from.getY(), from.getZ(),
+                to.getX(), to.getY(), to.getZ(),
+                minX - halfWidth,
+                minY - playerHeight,
+                minZ - halfWidth,
+                maxX + 1.0 + halfWidth,
+                maxY + 1.01,
+                maxZ + 1.0 + halfWidth
+        );
     }
 }

@@ -2,6 +2,7 @@ package pl.mrstudios.deathrun.classic.death;
 
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.bukkit.Material;
+import org.bukkit.Location;
 import org.bukkit.NamespacedKey;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
@@ -73,10 +74,45 @@ public final class DeathNavigatorService {
         int index = selectedIndex(player, runtime);
         if (index < 0)
             return false;
-        var button = runtime.map().arenaTraps.get(index).getButton();
+
+        Location button = runtime.map().arenaTraps.get(index).getButton();
         if (button == null || button.getWorld() == null)
             return false;
-        return player.teleport(button.clone().toCenterLocation().add(0, 1.0, 0));
+
+        Location target = this.safeLandingNear(button, player.getLocation().getYaw(), player.getLocation().getPitch());
+        return target != null && player.teleport(target);
+    }
+
+    private Location safeLandingNear(@NotNull Location button, float yaw, float pitch) {
+        int baseX = button.getBlockX();
+        int baseY = button.getBlockY();
+        int baseZ = button.getBlockZ();
+
+        int[][] offsets = {
+                {0, 1, 0},
+                {1, 0, 0}, {-1, 0, 0}, {0, 0, 1}, {0, 0, -1},
+                {1, 1, 0}, {-1, 1, 0}, {0, 1, 1}, {0, 1, -1},
+                {1, 0, 1}, {1, 0, -1}, {-1, 0, 1}, {-1, 0, -1},
+                {0, 2, 0}
+        };
+
+        for (int[] offset : offsets) {
+            int x = baseX + offset[0];
+            int y = baseY + offset[1];
+            int z = baseZ + offset[2];
+
+            var feet = button.getWorld().getBlockAt(x, y, z);
+            var head = button.getWorld().getBlockAt(x, y + 1, z);
+            var floor = button.getWorld().getBlockAt(x, y - 1, z);
+
+            if (!feet.isPassable() || !head.isPassable() || !floor.getType().isSolid())
+                continue;
+
+            Location target = new Location(button.getWorld(), x + 0.5, y, z + 0.5, yaw, pitch);
+            return target;
+        }
+
+        return null;
     }
 
     public @NotNull String selectionLabel(@NotNull Player player, @NotNull ArenaManager.ArenaRuntime runtime) {
