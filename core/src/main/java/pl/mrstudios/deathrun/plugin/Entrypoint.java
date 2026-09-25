@@ -5,7 +5,6 @@ import dev.rollczi.litecommands.LiteCommands;
 import dev.rollczi.litecommands.annotations.command.Command;
 import dev.rollczi.litecommands.argument.ArgumentKey;
 import dev.rollczi.litecommands.suggestion.SuggestionResult;
-import net.kyori.adventure.platform.bukkit.BukkitAudiences;
 import org.bukkit.Bukkit;
 import org.bukkit.Server;
 import org.bukkit.command.CommandSender;
@@ -59,7 +58,6 @@ import static dev.rollczi.litecommands.annotations.LiteCommandsAnnotations.of;
 import static dev.rollczi.litecommands.bukkit.LiteCommandsBukkit.builder;
 import static dev.rollczi.litecommands.schematic.SchematicFormat.angleBrackets;
 import static java.util.Arrays.asList;
-import static net.kyori.adventure.platform.bukkit.BukkitAudiences.create;
 import static pl.mrstudios.deathrun.api.API.apiInstance;
 import static pl.mrstudios.deathrun.api.API.createInstance;
 
@@ -75,8 +73,6 @@ public class Entrypoint extends JavaPlugin {
     private ClassicVoteService classicVoteService;
     private volatile BufferedImage winParchmentImage;
     private volatile BufferedImage loseParchmentImage;
-
-    private BukkitAudiences audiences;
 
     private Configuration configuration;
     private ConfigurationFactory configurationFactory;
@@ -110,9 +106,6 @@ public class Entrypoint extends JavaPlugin {
         if (!songsDirectory.exists() && !songsDirectory.mkdirs())
             this.getLogger().warning("Failed to create songs directory: " + songsDirectory.getAbsolutePath());
 
-        /* Kyori */
-        this.audiences = create(this);
-
         /* Win Map Manager */
         this.winMapManager = new WinMapManager();
         this.winMapManager.initialize(this, 16);
@@ -120,7 +113,7 @@ public class Entrypoint extends JavaPlugin {
         this.loadParchmentImagesAsync();
 
         /* Arena Manager */
-        this.arenaManager = new ArenaManager(this, this.getServer(), this.audiences, this.configuration, this.winMapManager, this.rewardService);
+        this.arenaManager = new ArenaManager(this, this.getServer(), this.configuration, this.winMapManager, this.rewardService);
         this.classicVoteService = new ClassicVoteService(this, this.configuration, this.arenaManager);
         this.signManager = new SignManager(this, this.arenaManager);
         this.arenaManager.setSignManager(this.signManager);
@@ -135,9 +128,6 @@ public class Entrypoint extends JavaPlugin {
                 .register(Plugin.class, this)
                 .register(Server.class, this.getServer())
 
-                /* Kyori */
-                .register(BukkitAudiences.class, this.audiences)
-
                 /* World Edit */
                 .register(WorldEdit.class, this.worldEdit)
 
@@ -148,7 +138,7 @@ public class Entrypoint extends JavaPlugin {
                 .register(RewardService.class, this.rewardService)
                 .register(TrapRegistry.class, this.trapRegistry)
                 .register(PlayerStatisticsService.class, this.playerStatisticsService)
-                .register(MapSelectorService.class, new MapSelectorService(this, this.configuration, this.arenaManager, this.audiences))
+                .register(MapSelectorService.class, new MapSelectorService(this, this.configuration, this.arenaManager))
                 .register(ClassicVoteService.class, this.classicVoteService)
                 .register(Configuration.class, this.configuration);
 
@@ -303,9 +293,6 @@ public class Entrypoint extends JavaPlugin {
 
         if (this.winMapManager != null)
             this.winMapManager.shutdown();
-
-        if (this.audiences != null)
-            this.audiences.close();
 
     }
 
