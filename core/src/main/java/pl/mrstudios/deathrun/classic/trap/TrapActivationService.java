@@ -6,6 +6,7 @@ import org.bukkit.entity.ArmorStand;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.scheduler.BukkitRunnable;
+import org.bukkit.scheduler.BukkitTask;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import pl.mrstudios.deathrun.api.arena.event.arena.ArenaTrapActivateEvent;
@@ -37,6 +38,8 @@ public final class TrapActivationService {
     private static final Map<TrapKey, Long> COOLDOWN_UNTIL = new ConcurrentHashMap<>();
     private static final Map<TrapKey, TrapActivationContext> ACTIVE = new ConcurrentHashMap<>();
     private static final Map<TrapKey, ArmorStand> HOLOGRAMS = new ConcurrentHashMap<>();
+    private static final Map<TrapKey, BukkitTask> END_TASKS = new ConcurrentHashMap<>();
+    private static final Map<TrapKey, BukkitTask> HOLOGRAM_TASKS = new ConcurrentHashMap<>();
     private static final Map<UUID, RecentContact> RECENT_CONTACT = new ConcurrentHashMap<>();
 
     private final Plugin plugin;
@@ -108,7 +111,7 @@ public final class TrapActivationService {
         }
 
         COOLDOWN_UNTIL.put(key, cooldownEnd);
-        this.server.getScheduler().runTaskLater(this.plugin, () -> {
+        BukkitTask endTask = this.server.getScheduler().runTaskLater(this.plugin, () -> {
             try {
                 trap.end();
             } catch (Throwable throwable) {
@@ -120,9 +123,11 @@ public final class TrapActivationService {
                         throwable
                 );
             } finally {
+                END_TASKS.remove(key);
                 ACTIVE.remove(key, context);
             }
         }, Math.max(1L, (durationMillis + 49L) / 50L));
+        END_TASKS.put(key, endTask);
 
         this.startCooldownHologram(trap, key, cooldownEnd);
         return ActivationResult.ACTIVATED;
@@ -136,6 +141,11 @@ public final class TrapActivationService {
                 // Best-effort rollback during plugin disable.
             }
         }
+
+        END_TASKS.values().forEach(BukkitTask::cancel);
+        HOLOGRAM_TASKS.values().forEach(BukkitTask::cancel);
+        END_TASKS.clear();
+        HOLOGRAM_TASKS.clear();
 
         ACTIVE.clear();
         COOLDOWN_UNTIL.clear();
@@ -164,6 +174,24 @@ public final class TrapActivationService {
                 // Best-effort map reset.
             }
             ACTIVE.remove(entry.getKey(), entry.getValue());
+        }
+
+        java.util.List<TrapKey> scheduledEndKeys = END_TASKS.keySet().stream()
+                .filter(key -> key.mapId().equalsIgnoreCase(normalized))
+                .toList();
+        for (TrapKey key : scheduledEndKeys) {
+            BukkitTask task = END_TASKS.remove(key);
+            if (task != null)
+                task.cancel();
+        }
+
+        java.util.List<TrapKey> scheduledHologramKeys = HOLOGRAM_TASKS.keySet().stream()
+                .filter(key -> key.mapId().equalsIgnoreCase(normalized))
+                .toList();
+        for (TrapKey key : scheduledHologramKeys) {
+            BukkitTask task = HOLOGRAM_TASKS.remove(key);
+            if (task != null)
+                task.cancel();
         }
 
         COOLDOWN_UNTIL.keySet().removeIf(key -> key.mapId().equalsIgnoreCase(normalized));
@@ -290,13 +318,23 @@ public final class TrapActivationService {
 
         HOLOGRAMS.put(key, stand);
 
-        new BukkitRunnable() {
+        BukkitTask hologramTask = new BukkitRunnable() {
             @Override
             public void run() {
+                Long currentCooldown = COOLDOWN_UNTIL.get(key);
+                if (currentCooldown == null || currentCooldown.longValue() != cooldownEnd || !stand.isValid()) {
+                    stand.remove();
+                    HOLOGRAMS.remove(key, stand);
+                    HOLOGRAM_TASKS.remove(key);
+                    cancel();
+                    return;
+                }
+
                 long remaining = Math.max(0L, cooldownEnd - System.currentTimeMillis());
                 if (remaining <= 0L) {
                     stand.remove();
                     HOLOGRAMS.remove(key, stand);
+                    HOLOGRAM_TASKS.remove(key);
                     COOLDOWN_UNTIL.remove(key, cooldownEnd);
                     cancel();
                     return;
@@ -309,6 +347,7 @@ public final class TrapActivationService {
                 ));
             }
         }.runTaskTimer(this.plugin, 0L, 20L);
+        HOLOGRAM_TASKS.put(key, hologramTask);
     }
 
     private String miniMessageToLegacy(String message) {
