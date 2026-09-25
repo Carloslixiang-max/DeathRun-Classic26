@@ -264,6 +264,28 @@ public class CommandDeathRun {
         }
     }
 
+    @Execute(name = "recover")
+    @Permission("mrstudios.command.deathrun.leave")
+    public void recover(
+            @Context Player player
+    ) {
+        if (this.arenaManager.runtimeForPlayer(player) != null) {
+            this.message(player, this.configuration.language().commandMessageRecoverInMatch);
+            return;
+        }
+
+        if (!this.arenaManager.hasPendingSnapshot(player)) {
+            this.message(player, this.configuration.language().commandMessageRecoverNone);
+            return;
+        }
+
+        this.signManager.leaveQueue(player);
+        if (this.arenaManager.restorePendingSnapshot(player))
+            this.message(player, this.configuration.language().commandMessageRecoverSuccess);
+        else
+            this.message(player, this.configuration.language().commandMessageRecoverFailed);
+    }
+
     @Execute(name = "leave")
     @Permission("mrstudios.command.deathrun.leave")
     public void leave(

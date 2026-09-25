@@ -22,7 +22,10 @@ public class ArenaPlayerJoinListener implements Listener {
     @EventHandler(priority = MONITOR)
     public void onPlayerJoin(@NotNull PlayerJoinEvent event) {
         if (this.arenaManager.hasPendingSnapshot(event.getPlayer())) {
-            this.arenaManager.restorePendingSnapshot(event.getPlayer());
+            if (this.arenaManager.restorePendingSnapshot(event.getPlayer()))
+                event.getPlayer().sendMessage(org.bukkit.ChatColor.GREEN + "[DeathRun] Your saved pre-game state was recovered.");
+            else
+                event.getPlayer().sendMessage(org.bukkit.ChatColor.RED + "[DeathRun] Recovery is still pending. Use /dr recover after the saved world is available.");
             return;
         }
 

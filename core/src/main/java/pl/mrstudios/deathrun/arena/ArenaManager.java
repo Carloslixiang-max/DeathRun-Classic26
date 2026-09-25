@@ -640,6 +640,7 @@ public class ArenaManager {
 
             world.setAutoSave(true);
             world.save();
+            world.setAutoSave(false);
         }
     }
 

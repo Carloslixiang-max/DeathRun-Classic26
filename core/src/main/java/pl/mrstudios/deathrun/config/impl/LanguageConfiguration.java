@@ -133,6 +133,10 @@ public class LanguageConfiguration extends OkaeriConfig {
                 public String commandMessageStopNoCurrentMap = "<dark_red><b>*</b> <red>You are not queued in any map. Use <white>/dr stop <map><red>.";
                 public String commandMessageReloadSuccess = "<dark_green><b>*</b> <green>DeathRun configuration and runtimes reloaded.";
                 public String commandMessageReloadFailed = "<dark_red><b>*</b> <red>Reload failed: <dark_red><reason>";
+                public String commandMessageRecoverSuccess = "<dark_green><b>*</b> <green>Your saved pre-DeathRun state was restored.";
+                public String commandMessageRecoverFailed = "<dark_red><b>*</b> <red>Recovery could not complete yet. Your recovery file was kept; check the saved world and try again.";
+                public String commandMessageRecoverNone = "<gold><b>*</b> <yellow>No pending DeathRun recovery exists for you.";
+                public String commandMessageRecoverInMatch = "<dark_red><b>*</b> <red>Leave the current DeathRun match before running recovery.";
                 public String commandMessageJoinForcedActor = "<dark_green><b>*</b> <green>Executed join for <dark_green><player><green> on map <dark_green><map><green>.";
                 public String commandMessageJoinForcedLobbyActor = "<dark_green><b>*</b> <green>Sent <dark_green><player> <green>to lobby.";
         public String commandMessageSetupMapSelected = "<reset> <dark_green><b>*</b> <green>Selected setup map <dark_green><map><green>.";
