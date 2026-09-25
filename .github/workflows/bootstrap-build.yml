@@ -57,7 +57,7 @@ jobs:
         run: |
           set -euo pipefail
           chmod +x ./gradlew
-          ./gradlew clean shadowJar --stacktrace --no-daemon
+          ./gradlew clean test shadowJar --stacktrace --no-daemon
 
       - name: Verify packaged plugin
         shell: bash
@@ -66,7 +66,10 @@ jobs:
           JAR="$(find core/build/libs -maxdepth 1 -name 'DeathRun-Classic26-*.jar' -print -quit)"
           test -n "$JAR"
           jar tf "$JAR" | grep -q 'pl/mrstudios/deathrun/classic/playtest/ClassicPlaytestService.class'
+          jar tf "$JAR" | grep -q 'pl/mrstudios/deathrun/classic/vote/ClassicVoteService.class'
           jar tf "$JAR" | grep -q 'pl/mrstudios/deathrun/arena/listener/ClassicTrapEffectListener.class'
+          ! jar tf "$JAR" | grep -q 'net/kyori/adventure/platform/bukkit/BukkitAudiences.class'
+          ! grep -R "BukkitAudiences" core/src/main/java
           unzip -p "$JAR" plugin.yml | grep -q 'api-version: "26.2"'
           unzip -p "$JAR" plugin.yml | grep -q -- '- "WorldEdit"'
 
@@ -156,3 +159,4 @@ jobs:
           test "$READY" -eq 1
           grep -Eq 'Enabling DeathRun|Enabled DeathRun|DeathRun v1\.4\.1-classic26-dev' server.log
           ! grep -Eq 'Error occurred while enabling DeathRun|Could not load.*DeathRun|UnknownDependencyException.*WorldEdit|NoClassDefFoundError.*deathrun' server.log
+          ! grep -Eq 'Failed to register listener via reflection|\[DeathRun\].*SEVERE|\[DR-START\].*Fatal arena tick failure' server.log
