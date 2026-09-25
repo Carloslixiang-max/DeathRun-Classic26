@@ -4,7 +4,6 @@ import dev.rollczi.litecommands.handler.result.ResultHandlerChain;
 import dev.rollczi.litecommands.invocation.Invocation;
 import dev.rollczi.litecommands.permission.MissingPermissions;
 import dev.rollczi.litecommands.permission.MissingPermissionsHandler;
-import net.kyori.adventure.platform.bukkit.BukkitAudiences;
 import org.bukkit.command.CommandSender;
 import org.jetbrains.annotations.NotNull;
 import pl.mrstudios.commons.inject.annotation.Inject;
@@ -16,15 +15,12 @@ public class NoCommandPermissionsHandler implements MissingPermissionsHandler<Co
 
     private static final String PREFIX = "<gold>[DR]</gold> ";
 
-    private final BukkitAudiences audiences;
     private final Configuration configuration;
 
     @Inject
     public NoCommandPermissionsHandler(
-            @NotNull BukkitAudiences audiences,
             @NotNull Configuration configuration
     ) {
-        this.audiences = audiences;
         this.configuration = configuration;
     }
 
@@ -34,7 +30,7 @@ public class NoCommandPermissionsHandler implements MissingPermissionsHandler<Co
             @NotNull MissingPermissions missingPermissions,
             @NotNull ResultHandlerChain<CommandSender> resultHandlerChain
     ) {
-        this.audiences.sender(invocation.sender()).sendMessage(miniMessage().deserialize(
+        invocation.sender().sendMessage(miniMessage().deserialize(
             PREFIX + this.configuration.language().chatMessageNoPermissions
         ));
     }
