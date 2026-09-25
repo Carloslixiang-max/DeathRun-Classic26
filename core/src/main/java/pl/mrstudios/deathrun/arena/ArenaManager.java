@@ -94,7 +94,7 @@ public class ArenaManager {
             this.ensureMapWorldBindings(map);
             String mapId = this.mapId(map);
             Arena arena = new Arena(this.mapName(map));
-            ArenaServiceRunnable service = new ArenaServiceRunnable(arena, map, this, this.winMapManager, this.rewardService, this.plugin, this.server, this.audiences, this.configuration);
+            ArenaServiceRunnable service = new ArenaServiceRunnable(arena, map, this, this.winMapManager, this.rewardService, this.plugin, this.server, this.configuration);
             service.runTaskTimer(this.plugin, 0, 20);
             this.runtimesByMapId.put(mapId, new ArenaRuntime(mapId, map, arena, service));
         }
