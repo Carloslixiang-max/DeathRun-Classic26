@@ -1,5 +1,6 @@
 package pl.mrstudios.deathrun.classic.trap;
 
+import org.bukkit.Location;
 import org.bukkit.Server;
 import org.bukkit.entity.ArmorStand;
 import org.bukkit.entity.Player;
@@ -15,10 +16,12 @@ import pl.mrstudios.deathrun.config.Configuration;
 
 import java.time.Duration;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.logging.Level;
 
 import static org.bukkit.ChatColor.translateAlternateColorCodes;
 import static pl.mrstudios.deathrun.api.arena.enums.GameState.PLAYING;
@@ -45,6 +48,7 @@ public final class TrapActivationService {
     public ActivationResult activate(@NotNull Player death, @NotNull ArenaManager.ArenaRuntime runtime, int trapIndex) {
         if (runtime.arena().getGameState() != PLAYING)
             return ActivationResult.NOT_PLAYING;
+
         IUser user = runtime.arena().getUser(death);
         if (user == null || user.getRole() != DEATH)
             return ActivationResult.NOT_DEATH;
@@ -63,26 +67,58 @@ public final class TrapActivationService {
             return ActivationResult.CANCELLED;
 
         long cooldownMillis = Duration.ofSeconds(Math.max(0, this.configuration.plugin().arenaTrapDelay)).toMillis();
-        long durationMillis = Math.max(0L, trap.getDuration().toMillis());
+        long durationMillis = Math.max(50L, trap.getDuration().toMillis());
         long cooldownEnd = now + cooldownMillis;
         long activeEnd = now + durationMillis;
-        COOLDOWN_UNTIL.put(key, cooldownEnd);
 
         Set<UUID> victims = ConcurrentHashMap.newKeySet();
         TrapActivationContext context = new TrapActivationContext(
-                runtime.mapId(), trapIndex, trap.getClass().getSimpleName(), death.getUniqueId(),
-                now, activeEnd, trap, victims
+                runtime.mapId(),
+                trapIndex,
+                trap.getClass().getSimpleName(),
+                death.getUniqueId(),
+                now,
+                activeEnd,
+                trap,
+                victims
         );
-        ACTIVE.put(key, context);
 
-        trap.start();
+        ACTIVE.put(key, context);
+        try {
+            trap.start();
+        } catch (Throwable throwable) {
+            ACTIVE.remove(key, context);
+            try {
+                trap.end();
+            } catch (Throwable ignored) {
+                // Best-effort rollback.
+            }
+            this.plugin.getLogger().log(
+                    Level.SEVERE,
+                    "[DeathRun] Trap activation failed map=" + runtime.mapId()
+                            + " trap=" + trapIndex
+                            + " type=" + trap.getClass().getSimpleName(),
+                    throwable
+            );
+            return ActivationResult.FAILED;
+        }
+
+        COOLDOWN_UNTIL.put(key, cooldownEnd);
         this.server.getScheduler().runTaskLater(this.plugin, () -> {
             try {
                 trap.end();
+            } catch (Throwable throwable) {
+                this.plugin.getLogger().log(
+                        Level.SEVERE,
+                        "[DeathRun] Trap rollback failed map=" + runtime.mapId()
+                                + " trap=" + trapIndex
+                                + " type=" + trap.getClass().getSimpleName(),
+                        throwable
+                );
             } finally {
                 ACTIVE.remove(key, context);
             }
-        }, Math.max(1L, durationMillis / 50L));
+        }, Math.max(1L, (durationMillis + 49L) / 50L));
 
         this.startCooldownHologram(trap, key, cooldownEnd);
         return ActivationResult.ACTIVATED;
@@ -113,34 +149,76 @@ public final class TrapActivationService {
     }
 
     public void markTrapContact(@NotNull Player victim, @NotNull String mapId, int trapIndex) {
-        TrapKey key = new TrapKey(mapId, trapIndex);
-        TrapActivationContext context = ACTIVE.get(key);
-        if (context == null || System.currentTimeMillis() > context.expiresAt())
+        TrapActivationContext context = ACTIVE.get(new TrapKey(mapId, trapIndex));
+        if (context != null)
+            this.markTrapContact(victim, context);
+    }
+
+    public void markTrapContact(@NotNull Player victim, @NotNull TrapActivationContext context) {
+        if (System.currentTimeMillis() > context.expiresAt())
             return;
+
         context.victims().add(victim.getUniqueId());
-        RECENT_CONTACT.put(victim.getUniqueId(), new RecentContact(context, System.currentTimeMillis() + RECENT_CONTACT_MILLIS));
+        RECENT_CONTACT.put(
+                victim.getUniqueId(),
+                new RecentContact(context, System.currentTimeMillis() + RECENT_CONTACT_MILLIS)
+        );
     }
 
     public @Nullable TrapActivationContext recentAttribution(@NotNull UUID victim) {
         RecentContact contact = RECENT_CONTACT.get(victim);
         if (contact == null)
             return null;
+
         if (System.currentTimeMillis() > contact.expiresAt()) {
             RECENT_CONTACT.remove(victim, contact);
             return null;
         }
+
         return contact.context();
     }
 
+    public @Nullable TrapActivationContext attributionForExplosion(@NotNull Location explosion) {
+        if (explosion.getWorld() == null)
+            return null;
+
+        long now = System.currentTimeMillis();
+        return ACTIVE.values().stream()
+                .filter(context -> now <= context.expiresAt())
+                .filter(context -> context.trap().getLocations().stream().anyMatch(location ->
+                        location != null
+                                && location.getWorld() != null
+                                && location.getWorld().getUID().equals(explosion.getWorld().getUID())
+                ))
+                .min(Comparator.comparingDouble(context -> this.minDistanceSquared(context.trap(), explosion)))
+                .filter(context -> this.minDistanceSquared(context.trap(), explosion) <= 36.0)
+                .orElse(null);
+    }
+
     public Map<String, TrapActivationContext> activeAttributions() {
+        long now = System.currentTimeMillis();
         Map<String, TrapActivationContext> copy = new java.util.LinkedHashMap<>();
-        ACTIVE.forEach((key, value) -> copy.put(key.mapId() + ":" + key.trapIndex(), value));
+        ACTIVE.forEach((key, value) -> {
+            if (now <= value.expiresAt())
+                copy.put(key.mapId() + ":" + key.trapIndex(), value);
+        });
         return Collections.unmodifiableMap(copy);
+    }
+
+    private double minDistanceSquared(@NotNull ITrap trap, @NotNull Location target) {
+        return trap.getLocations().stream()
+                .filter(java.util.Objects::nonNull)
+                .filter(location -> location.getWorld() != null && target.getWorld() != null)
+                .filter(location -> location.getWorld().getUID().equals(target.getWorld().getUID()))
+                .mapToDouble(location -> location.distanceSquared(target))
+                .min()
+                .orElse(Double.MAX_VALUE);
     }
 
     private void startCooldownHologram(ITrap trap, TrapKey key, long cooldownEnd) {
         if (trap.getButton() == null || trap.getButton().getWorld() == null)
             return;
+
         ArmorStand stand = trap.getButton().getWorld().spawn(
                 trap.getButton().clone().toCenterLocation().add(0, -1, 0),
                 ArmorStand.class,
@@ -152,8 +230,10 @@ public final class TrapActivationService {
                     entity.addScoreboardTag(HOLOGRAM_TAG);
                 }
         );
+
         new BukkitRunnable() {
-            @Override public void run() {
+            @Override
+            public void run() {
                 long remaining = Math.max(0L, cooldownEnd - System.currentTimeMillis());
                 if (remaining <= 0L) {
                     stand.remove();
@@ -161,9 +241,11 @@ public final class TrapActivationService {
                     cancel();
                     return;
                 }
+
                 long seconds = (remaining + 999L) / 1000L;
                 stand.setCustomName(miniMessageToLegacy(
-                        configuration.language().arenaHologramTrapDelayed.replace("<delay>", String.valueOf(seconds))
+                        configuration.language().arenaHologramTrapDelayed
+                                .replace("<delay>", String.valueOf(seconds))
                 ));
             }
         }.runTaskTimer(this.plugin, 0L, 20L);
@@ -181,7 +263,16 @@ public final class TrapActivationService {
                 .replace("<magic>", "&k"));
     }
 
-    public enum ActivationResult { ACTIVATED, COOLDOWN, NOT_PLAYING, NOT_DEATH, INVALID_TRAP, CANCELLED }
+    public enum ActivationResult {
+        ACTIVATED,
+        COOLDOWN,
+        NOT_PLAYING,
+        NOT_DEATH,
+        INVALID_TRAP,
+        CANCELLED,
+        FAILED
+    }
+
     private record TrapKey(String mapId, int trapIndex) {}
     private record RecentContact(TrapActivationContext context, long expiresAt) {}
 }
