@@ -23,13 +23,13 @@ import static org.bukkit.plugin.java.JavaPlugin.getPlugin;
 public class TrapParticles extends Trap {
 
     @Serializable
-    private Particle particle;
+    private Particle particle = Particle.FLAME;
 
     @Serializable
-    private int count;
+    private int count = 8;
 
     @Serializable
-    private double offset;
+    private double offset = 0.25d;
 
     private @Nullable BukkitTask bukkitTask;
 
@@ -72,7 +72,9 @@ public class TrapParticles extends Trap {
             @NotNull List<Location> list,
             @Nullable Object... objects
     ) {
-        return list;
+        return list.stream()
+                .filter(location -> location != null && location.getWorld() != null)
+                .toList();
     }
 
     @Override

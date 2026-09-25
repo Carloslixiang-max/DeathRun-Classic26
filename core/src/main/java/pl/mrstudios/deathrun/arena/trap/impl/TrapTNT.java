@@ -21,7 +21,7 @@ public class TrapTNT extends Trap {
             return;
 
         super.locations.forEach(
-                (location) -> location.getWorld().spawn(location, TNTPrimed.class, (entity) -> {
+                (location) -> location.getWorld().spawn(location.toCenterLocation(), TNTPrimed.class, (entity) -> {
                     entity.setFuseTicks(5);
                     entity.setYield(0.0f);
                     entity.addScoreboardTag(pl.mrstudios.deathrun.classic.trap.DeathRunEntityTags.TRAP_EXPLOSIVE);
