@@ -707,53 +707,53 @@ public class CommandDeathRun {
     @Execute(name = "map check")
     @Permission("mrstudios.command.deathrun.setup")
     public void setupMapsCheck(
-            @Context Player player
+            @Context CommandSender sender
     ) {
         this.configuration.map().ensureMapsMutable();
-        this.message(player, this.configuration.language().commandMessageSetupMapCheckHeader);
+        this.message(sender, this.configuration.language().commandMessageSetupMapCheckHeader);
 
         boolean hasIssues = false;
         for (MapConfiguration.MapDefinition map : this.configuration.map().resolvedMaps()) {
             List<String> issues = this.mapIssues(map);
             if (issues.isEmpty()) {
-                this.message(player, this.configuration.language().commandMessageSetupMapCheckEntryOk
+                this.message(sender, this.configuration.language().commandMessageSetupMapCheckEntryOk
                         .replace("<map>", this.safe(map.id)));
                 continue;
             }
 
             hasIssues = true;
-            this.message(player, this.configuration.language().commandMessageSetupMapCheckEntryIssues
+            this.message(sender, this.configuration.language().commandMessageSetupMapCheckEntryIssues
                     .replace("<map>", this.safe(map.id))
                     .replace("<issues>", String.join(", ", issues)));
         }
 
         if (!hasIssues)
-            this.message(player, this.configuration.language().commandMessageSetupMapCheckNoIssues);
+            this.message(sender, this.configuration.language().commandMessageSetupMapCheckNoIssues);
     }
 
     @Execute(name = "map check")
     @Permission("mrstudios.command.deathrun.setup")
     public void setupMapsCheckSingle(
-            @Context Player player,
+            @Context CommandSender sender,
             @Arg("id") String id
     ) {
         this.configuration.map().ensureMapsMutable();
         MapConfiguration.MapDefinition map = this.configuration.map().getMapById(id);
         if (map == null) {
-            this.message(player, this.configuration.language().commandMessageSetupMapMissing.replace("<map>", id));
+            this.message(sender, this.configuration.language().commandMessageSetupMapMissing.replace("<map>", id));
             return;
         }
 
-        this.message(player, this.configuration.language().commandMessageSetupMapCheckHeader);
+        this.message(sender, this.configuration.language().commandMessageSetupMapCheckHeader);
         List<String> issues = this.mapIssues(map);
         if (issues.isEmpty()) {
-            this.message(player, this.configuration.language().commandMessageSetupMapCheckEntryOk
+            this.message(sender, this.configuration.language().commandMessageSetupMapCheckEntryOk
                     .replace("<map>", this.safe(map.id)));
-            this.message(player, this.configuration.language().commandMessageSetupMapCheckNoIssues);
+            this.message(sender, this.configuration.language().commandMessageSetupMapCheckNoIssues);
             return;
         }
 
-        this.message(player, this.configuration.language().commandMessageSetupMapCheckEntryIssues
+        this.message(sender, this.configuration.language().commandMessageSetupMapCheckEntryIssues
                 .replace("<map>", this.safe(map.id))
                 .replace("<issues>", String.join(", ", issues)));
     }
