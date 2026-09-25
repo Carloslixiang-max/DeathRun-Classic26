@@ -32,13 +32,13 @@ public class TrapDisappearingBlocks extends Trap {
 
         super.locations.forEach((location) -> {
             this.backup.put(location, location.getBlock().getBlockData());
-            location.getBlock().setType(AIR);
+            location.getBlock().setType(AIR, false);
         });
     }
 
     @Override
     public void end() {
-        this.backup.forEach((key, value) -> key.getBlock().setBlockData(value));
+        this.backup.forEach((key, value) -> key.getBlock().setBlockData(value, false));
         this.backup.clear();
     }
 
@@ -64,7 +64,9 @@ public class TrapDisappearingBlocks extends Trap {
                         .filter((location) -> location != null && location.getWorld() != null)
                                 .filter((location) -> location.getBlock().getType() == material)
                                 .toList()
-                ).orElse(list);
+                ).orElseGet(() -> list.stream()
+                        .filter(location -> location != null && location.getWorld() != null)
+                        .toList());
     }
 
     @Override
