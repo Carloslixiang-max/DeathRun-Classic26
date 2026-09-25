@@ -52,6 +52,7 @@ public class LanguageConfiguration extends OkaeriConfig {
             "<reset>    <gold>DeathRun <dark_gray>(v<version>) <gray>by <white>MrStudios Industries",
             "<reset>",
             "<reset> <b>*</b> <white>/dr join <map>",
+            "<reset> <b>*</b> <white>/dr vote",
             "<reset> <b>*</b> <white>/dr join lobby",
             "<reset> <b>*</b> <white>/dr start (map)",
             "<reset> <b>*</b> <white>/dr stop (map)",
@@ -199,6 +200,27 @@ public class LanguageConfiguration extends OkaeriConfig {
         public String mapSelectorMapFull = "<dark_red><b>*</b> <red>This map is full right now.";
         public String mapSelectorMapInProgress = "<dark_red><b>*</b> <red>This match is already in progress.";
         public String mapSelectorAlreadyJoined = "<gold><b>*</b> <yellow>You are already queued on this map.";
+
+    public String classicVoteTitle = "DeathRun Map Vote";
+    public String classicVoteRandomName = "<light_purple><b>Random Map";
+    public List<String> classicVoteMapLore = asList(
+            "<gray>Creator: <white><creator>",
+            "<gray>Votes: <white><votes>",
+            "<yellow>Click to vote"
+    );
+    public List<String> classicVoteRandomLore = asList(
+            "<gray>Votes: <white><votes>",
+            "<gray>If Random wins, one candidate is chosen randomly.",
+            "<yellow>Click to vote"
+    );
+    public String classicVoteRecorded = "<green>Your vote: <white><choice>";
+    public String classicVoteCountdown = "<gold>Map vote ends in <white><seconds>s";
+    public String classicVoteWinner = "<gold>Map selected: <white><map> <gray>by <white><creator>";
+    public String classicVoteNoMaps = "<red>No playable DeathRun maps are available for voting.";
+    public String classicVoteInMatch = "<red>You cannot vote while already inside a DeathRun match.";
+    public String classicVoteLeft = "<yellow>You left the current DeathRun map vote.";
+    public String classicPreshowTitle = "<gold><b><map>";
+    public String classicPreshowSubtitle = "<gray>Created by <white><creator>";
 
     public List<String> chatMessageArenaGameStartRunner = asList(
             "<reset>",
