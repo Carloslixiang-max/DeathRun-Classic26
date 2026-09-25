@@ -1,106 +1,56 @@
-import com.palantir.gradle.gitversion.VersionDetails
-import groovy.lang.Closure
-import java.lang.String.format
-import java.lang.String.valueOf
-
 plugins {
     id("java")
     id("net.kyori.blossom") version "1.3.1"
-    id("com.palantir.git-version") version "3.1.0"
-    id("com.github.johnrengelman.shadow") version "8.1.1"
+    id("com.gradleup.shadow") version "9.6.1"
 }
-/*
-val versionDetails: Closure<VersionDetails> by extra
-fun projectVersion(): String = if (versionDetails().branchName == "ver/latest")
-    valueOf(project.version) else format("%s (git/%s)", project.version, versionDetails().gitHash)
-*/
 
-val manualVersion = "1.4.1"
+val manualVersion = "1.4.1-classic26-dev"
 
 project.group = project.parent?.group!!
 project.version = project.parent?.version!!
 
 java {
-    toolchain.languageVersion.set(JavaLanguageVersion.of(21))
+    toolchain.languageVersion.set(JavaLanguageVersion.of(25))
 }
 
 blossom {
     replaceToken("{version}", manualVersion)
-    replaceToken("{gitBranch}", "fork")
+    replaceToken("{gitBranch}", "classic26-dev")
     replaceToken("{gitCommitHash}", "local-build")
 }
 
 repositories {
     mavenCentral()
-    //maven("https://repo.mrstudios.pl/public/")
-    maven { url = uri("https://jitpack.io") }
-    //maven("https://repo.mrstudios.pl/third-party/")
+    maven("https://repo.papermc.io/repository/maven-public/")
     maven("https://maven.enginehub.org/repo/")
     maven("https://repo.panda-lang.org/releases/")
     maven("https://repo.opencollab.dev/maven-releases/")
-    maven("https://repo.papermc.io/repository/maven-public/")
     maven("https://storehouse.okaeri.eu/repository/maven-public/")
     maven("https://repo.extendedclip.com/content/repositories/placeholderapi/")
+    maven("https://jitpack.io")
 }
 
 dependencies {
-
     implementation(project(":api"))
-    implementation(fileTree("../libs") { include("*.jar") })
-    /* Minecraft */
-    //compileOnly("com.destroystokyo.paper:paper-api:${project.parent?.property("minecraft.version")}")
     compileOnly("io.papermc.paper:paper-api:${project.parent?.property("minecraft.version")}")
-    /* Lite Commands */
     implementation("dev.rollczi:litecommands-core:${project.parent?.property("litecommands.version")}")
     implementation("dev.rollczi:litecommands-bukkit:${project.parent?.property("litecommands.version")}")
-
-    /* Okaeri Configs */
     implementation("eu.okaeri:okaeri-configs-yaml-bukkit:${project.parent?.property("okaeri.configs.version")}")
     implementation("eu.okaeri:okaeri-configs-serdes-bukkit:${project.parent?.property("okaeri.configs.version")}")
-
-    /* Commons
-    implementation("pl.mrstudios.commons:commons-bukkit:${project.parent?.property("mrstudios.commons.version")}")
-    implementation("pl.mrstudios.commons:commons-inject:${project.parent?.property("mrstudios.commons.version")}")
-    implementation("pl.mrstudios.commons:commons-reflection:${project.parent?.property("mrstudios.commons.version")}")
-    */
-
-    /* Local Dependencies (Bypassing dead repo) */
-    implementation(fileTree(mapOf("dir" to "libs", "include" to listOf("*.jar"))))
-
-    /* Kyori Adventure */
     implementation("net.kyori:adventure-api:${project.parent?.property("kyori.adventure.version")}")
     implementation("net.kyori:adventure-text-minimessage:${project.parent?.property("kyori.adventure.version")}")
-
-    /* Kyori Adventure Platform */
     implementation("net.kyori:adventure-platform-bukkit:${project.parent?.property("kyori.adventure.platform.version")}")
     implementation("net.kyori:adventure-text-serializer-bungeecord:${project.parent?.property("kyori.adventure.platform.version")}")
-
-    /* Apache Commons IO */
     implementation("commons-io:commons-io:${project.parent?.property("apache.commons.io.version")}")
-
-    /* Zip4J */
     implementation("net.lingala.zip4j:zip4j:${project.parent?.property("zip4j.version")}")
-
-    /* Protocol Sidebar */
-    //implementation("me.catcoder:bukkit-sidebar:${project.parent?.property("protocol.sidebar.version")}")
-
-    /* WorldEdit */
     compileOnly("com.sk89q.worldedit:worldedit-bukkit:${project.parent?.property("worldedit.version")}")
-
-    /* NoteBlockAPI */
-    compileOnly("com.github.koca2000:NoteBlockAPI:1.6.2")
-
-    /* PlaceholderAPI */
     compileOnly("me.clip:placeholderapi:2.12.2")
-
-    /* JetBrains Annotations */
+    compileOnly("com.github.koca2000:NoteBlockAPI:1.6.2")
     compileOnly("org.jetbrains:annotations:${project.parent?.property("jetbrains.annotations.version")}")
     annotationProcessor("org.jetbrains:annotations:${project.parent?.property("jetbrains.annotations.version")}")
-
 }
 
 tasks {
-
     processResources {
         inputs.property("version", manualVersion)
         expand(inputs.properties)
@@ -108,31 +58,16 @@ tasks {
 
     withType<JavaCompile> {
         options.encoding = "UTF-8"
-    }
-
-    jar {
-        dependsOn(shadowJar)
+        options.release.set(25)
     }
 
     shadowJar {
-
-        archiveFileName.set("${project.parent?.name}-${project.name}-${project.version}.jar")
-
-        exclude("META-INF/**")
-        dependencies {
-            isEnableRelocation = false
-        }
-
+        archiveFileName.set("DeathRun-${project.version}.jar")
+        archiveClassifier.set("")
+        exclude("META-INF/*.SF", "META-INF/*.DSA", "META-INF/*.RSA")
     }
 
     build {
-        finalizedBy("finalize")
+        dependsOn(shadowJar)
     }
-
-    register("finalize") {
-        doLast {
-            file("build/libs/${project.name}-${project.version}.jar").delete()
-        }
-    }
-
 }
