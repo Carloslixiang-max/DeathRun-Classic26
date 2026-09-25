@@ -5,6 +5,7 @@ import org.bukkit.Server;
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.World;
+import org.bukkit.WorldCreator;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.potion.PotionEffect;
@@ -872,6 +873,11 @@ public class ArenaManager {
     public void ensureMapWorldBindings(
             @NotNull MapConfiguration.MapDefinition map
         ) {
+        // map.yml is deserialized before secondary worlds are necessarily loaded.
+        // Load an existing configured map world first so every persisted Location
+        // can be rebound before the runtime, barrier reset and traps are created.
+        this.ensureConfiguredMapWorldLoaded(map);
+
         map.arenaWaitingLobbyLocation = this.resolveMapLocation(map.arenaWaitingLobbyLocation, map);
 
         map.arenaRunnerSpawnLocations = map.arenaRunnerSpawnLocations.stream()
@@ -908,6 +914,54 @@ public class ArenaManager {
                 .map((location) -> Objects.requireNonNull(this.resolveMapLocation(location, map), "trap location"))
                 .toList());
         });
+    }
+
+    private @Nullable World ensureConfiguredMapWorldLoaded(
+            @NotNull MapConfiguration.MapDefinition map
+    ) {
+        if (map.world == null || map.world.isBlank())
+            return null;
+
+        World loaded = this.server.getWorld(map.world);
+        if (loaded != null)
+            return loaded;
+
+        // Never generate a brand-new world merely because map.yml contains a
+        // typo or a removed production map. Only load worlds that already exist
+        // on disk.
+        java.io.File worldFolder = new java.io.File(this.server.getWorldContainer(), map.world);
+        if (!worldFolder.isDirectory()) {
+            this.plugin.getLogger().warning(
+                    "[DeathRun] Configured map world '" + map.world + "' for map "
+                            + this.mapId(map) + " is not loaded and no existing world folder was found."
+            );
+            return null;
+        }
+
+        try {
+            World world = this.server.createWorld(new WorldCreator(map.world));
+            if (world == null) {
+                this.plugin.getLogger().severe(
+                        "[DeathRun] Failed to load existing map world '" + map.world
+                                + "' for map " + this.mapId(map) + "."
+                );
+                return null;
+            }
+
+            this.plugin.getLogger().info(
+                    "[DeathRun] Loaded configured map world '" + map.world
+                            + "' for map " + this.mapId(map) + " before rebinding persisted locations."
+            );
+            return world;
+        } catch (Throwable throwable) {
+            this.plugin.getLogger().log(
+                    java.util.logging.Level.SEVERE,
+                    "[DeathRun] Failed to load configured map world '" + map.world
+                            + "' for map " + this.mapId(map) + ".",
+                    throwable
+            );
+            return null;
+        }
     }
 
     private void resetPlayerScoreboard(
