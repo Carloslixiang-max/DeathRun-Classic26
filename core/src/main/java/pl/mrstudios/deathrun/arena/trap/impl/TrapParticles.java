@@ -42,8 +42,6 @@ public class TrapParticles extends Trap {
                 .runTaskTimer(getPlugin(Entrypoint.class), () -> super.locations.stream().map(Location::toCenterLocation).forEach((location) -> {
 
                     location.getWorld().spawnParticle(this.particle, location, this.count, this.offset, this.offset, this.offset, 0);
-                    location.getNearbyPlayers(1, this.offset * 2)
-                            .forEach((player) -> player.damage(1));
 
                 }), 0, 15);
     }

@@ -71,7 +71,7 @@ public final class ClassicPlaytestService {
             map.arenaCheckpoints.add(checkpoint(world, 1, 38, "Checkpoint 1"));
             map.arenaCheckpoints.add(checkpoint(world, 2, 78, "Checkpoint 2"));
             map.arenaCheckpoints.add(checkpoint(world, 3, 118, "Checkpoint 3"));
-            map.arenaCheckpoints.add(checkpoint(world, 4, 158, "Finish"));
+            map.arenaCheckpoints.add(checkpoint(world, 4, 198, "Finish"));
             map.arenaCheckpointPoints = new ArrayList<>(List.of(3, 7, 10, 13));
             map.arenaFinishCheckpointId = 4;
 
@@ -97,6 +97,17 @@ public final class ClassicPlaytestService {
             this.addTrap(map, new TrapQuicksand(), button(world, 138), floorRegion(world, 139, 142));
             this.addTrap(map, new TrapBlockReplace(), button(world, 146), wallRegion(world, 147));
             this.addTrap(map, new TrapMinefield(), button(world, 150), feetRegion(world, 151, 154));
+
+            TrapAppearingBlocks appearing = new TrapAppearingBlocks();
+            appearing.setMaterial(Material.IRON_BLOCK);
+            this.addTrap(map, appearing, button(world, 158), feetRegion(world, 159, 162));
+
+            TrapDisappearingBlocks disappearing = new TrapDisappearingBlocks();
+            this.addTrap(map, disappearing, button(world, 170), floorRegion(world, 171, 174));
+
+            TrapParticles particles = new TrapParticles();
+            particles.setExtra(org.bukkit.Particle.FLAME, 8, 0.25d);
+            this.addTrap(map, particles, button(world, 182), hitboxRegion(world, 183, 186));
 
             map.arenaMaxPlayers = 22;
             map.arenaRequiredPlayersToStart = 11;
@@ -128,24 +139,24 @@ public final class ClassicPlaytestService {
 
     private void buildCourse(@NotNull World world) {
         for (int x = -15; x <= 15; x++)
-            for (int z = -20; z <= 170; z++)
+            for (int z = -20; z <= 210; z++)
                 for (int y = FLOOR_Y - 15; y <= FLOOR_Y + 8; y++)
                     world.getBlockAt(x, y, z).setType(Material.AIR, false);
 
         fill(world, -5, 5, FLOOR_Y, FLOOR_Y, -15, -8, Material.SMOOTH_STONE);
-        fill(world, -3, 3, FLOOR_Y, FLOOR_Y, -1, 162, Material.SMOOTH_STONE);
-        fill(world, 8, 10, FLOOR_Y + 3, FLOOR_Y + 3, 0, 162, Material.POLISHED_BLACKSTONE);
+        fill(world, -3, 3, FLOOR_Y, FLOOR_Y, -1, 202, Material.SMOOTH_STONE);
+        fill(world, 8, 10, FLOOR_Y + 3, FLOOR_Y + 3, 0, 202, Material.POLISHED_BLACKSTONE);
 
-        for (int z : new int[]{14, 26, 34, 46, 58, 70, 86, 98, 110, 122, 126, 138, 146, 150}) {
+        for (int z : new int[]{14, 26, 34, 46, 58, 70, 86, 98, 110, 122, 126, 138, 146, 150, 158, 170, 182}) {
             world.getBlockAt(8, FLOOR_Y + 3, z).setType(Material.POLISHED_BLACKSTONE, false);
             world.getBlockAt(8, FLOOR_Y + 4, z).setType(Material.STONE_BUTTON, false);
         }
 
-        for (int z : new int[]{38, 78, 118, 158})
+        for (int z : new int[]{38, 78, 118, 198})
             for (int x = -3; x <= 3; x++)
                 world.getBlockAt(x, FLOOR_Y, z).setType(Material.GOLD_BLOCK, false);
 
-        world.getBlockAt(0, FLOOR_Y, 158).setType(Material.EMERALD_BLOCK, false);
+        world.getBlockAt(0, FLOOR_Y, 198).setType(Material.EMERALD_BLOCK, false);
     }
 
     private void addTrap(

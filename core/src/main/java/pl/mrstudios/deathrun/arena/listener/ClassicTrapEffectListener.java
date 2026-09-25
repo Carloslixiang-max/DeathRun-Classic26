@@ -140,7 +140,7 @@ public final class ClassicTrapEffectListener implements Listener {
             player.setVelocity(push);
         }
 
-        if (context.trap() instanceof TrapGiant) {
+        if (context.trap() instanceof TrapGiant || context.trap() instanceof TrapParticles) {
             this.deathService.killRunner(player, DeathRunDeathCause.TRAP);
             return true;
         }

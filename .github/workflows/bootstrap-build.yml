@@ -161,7 +161,7 @@ jobs:
           printf 'dr playtest create\n' >&3
           PLAYTEST=0
           for _ in $(seq 1 60); do
-            if grep -q 'Rebuilt full Classic26 engineering playtest map classic26-playtest with 14 trap types' server.log; then
+            if grep -q 'Rebuilt full Classic26 engineering playtest map classic26-playtest with 17 trap types' server.log; then
               PLAYTEST=1
               break
             fi
