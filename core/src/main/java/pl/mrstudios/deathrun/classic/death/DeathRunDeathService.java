@@ -3,6 +3,9 @@ package pl.mrstudios.deathrun.classic.death;
 import net.kyori.adventure.platform.bukkit.BukkitAudiences;
 import org.bukkit.Server;
 import org.bukkit.entity.Player;
+import org.bukkit.Material;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.potion.PotionEffect;
 import org.jetbrains.annotations.NotNull;
@@ -71,10 +74,29 @@ public final class DeathRunDeathService {
         user.setDeaths(user.getDeaths() + 1);
         user.setLives(user.getLives() - 1);
         if (user.getLives() <= 0) {
+            user.setLives(0);
             user.setEliminated(true);
             if (this.configuration.plugin().classicZeroLivesSpectator) {
                 user.setRole(pl.mrstudios.deathrun.api.arena.user.enums.Role.SPECTATOR);
                 player.setAllowFlight(true);
+                player.setFlying(true);
+                player.getInventory().clear();
+
+                ItemStack leave = new ItemStack(Material.RED_BED);
+                ItemMeta leaveMeta = leave.getItemMeta();
+                leaveMeta.displayName(miniMessage().deserialize(this.configuration.language().arenaItemLeaveName));
+                leave.setItemMeta(leaveMeta);
+                player.getInventory().setItem(8, leave);
+
+                runtime.arena().getUsers().stream()
+                        .map(IUser::asBukkit)
+                        .filter(java.util.Objects::nonNull)
+                        .filter(other -> other != player)
+                        .forEach(other -> other.hidePlayer(this.plugin, player));
+
+                this.configuration.language().chatMessageGameEndSpectator.stream()
+                        .map(miniMessage()::deserialize)
+                        .forEach(player::sendMessage);
             }
         }
 
