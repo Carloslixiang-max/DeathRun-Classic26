@@ -126,6 +126,55 @@ jobs:
         run: |
           set -euo pipefail
           cd smoke
+
+          dump_logs_on_failure() {
+            status=$?
+            trap - EXIT
+            if [ "$status" -ne 0 ]; then
+              echo '=== DeathRun smoke failure diagnostics ==='
+              if [ -f server.log ]; then
+                echo '--- server.log ---'
+                cat server.log
+              fi
+              if [ -f server-restart.log ]; then
+                echo '--- server-restart.log ---'
+                cat server-restart.log
+              fi
+            fi
+            exit "$status"
+          }
+
+          stop_server_process() {
+            pid="$1"
+
+            # Paper can finish writing its final log lines before every JVM
+            # worker has actually exited. Give it a graceful window first.
+            for _ in $(seq 1 30); do
+              if ! kill -0 "$pid" 2>/dev/null; then
+                wait "$pid" 2>/dev/null || true
+                return 0
+              fi
+              sleep 1
+            done
+
+            echo "Paper process $pid still alive after graceful stop; sending TERM."
+            kill "$pid" 2>/dev/null || true
+            for _ in $(seq 1 10); do
+              if ! kill -0 "$pid" 2>/dev/null; then
+                wait "$pid" 2>/dev/null || true
+                return 0
+              fi
+              sleep 1
+            done
+
+            echo "Paper process $pid still alive after TERM; sending KILL."
+            kill -9 "$pid" 2>/dev/null || true
+            wait "$pid" 2>/dev/null || true
+            ! kill -0 "$pid" 2>/dev/null
+          }
+
+          trap dump_logs_on_failure EXIT
+
           printf 'eula=true\n' > eula.txt
           cat > server.properties <<'EOF'
           online-mode=false
@@ -187,14 +236,7 @@ jobs:
 
           printf 'stop\n' >&3 || true
           exec 3>&-
-          for _ in $(seq 1 30); do
-            if ! kill -0 "$PID" 2>/dev/null; then
-              break
-            fi
-            sleep 1
-          done
-          kill "$PID" 2>/dev/null || true
-          wait "$PID" 2>/dev/null || true
+          stop_server_process "$PID"
 
           cat server.log
           test "$PLAYTEST" -eq 1
@@ -206,6 +248,14 @@ jobs:
           # Restart the exact same server once more. This verifies that the
           # generated map.yml can deserialize every persisted Classic trap and
           # rebuild its runtime cleanly after a real shutdown.
+          # The first JVM must be completely gone before the same world and
+          # listen socket are opened again. This avoids flaky level/session locks.
+          if kill -0 "$PID" 2>/dev/null; then
+            echo "First Paper JVM is still alive before restart."
+            exit 1
+          fi
+          sleep 2
+
           rm -f server.in
           mkfifo server.in
           exec 4<>server.in
@@ -224,7 +274,10 @@ jobs:
             sleep 1
           done
 
-          test "$READY2" -eq 1
+          if [ "$READY2" -ne 1 ]; then
+            echo 'Second Paper boot did not reach Done().'
+            exit 1
+          fi
 
           # Re-run the structural audit after deserialization. This catches
           # silent loss of spawn, checkpoint, barrier, trap or runtime data.
@@ -243,14 +296,7 @@ jobs:
           test "$VERIFY2" -eq 1
           printf 'stop\n' >&4 || true
           exec 4>&-
-          for _ in $(seq 1 30); do
-            if ! kill -0 "$PID2" 2>/dev/null; then
-              break
-            fi
-            sleep 1
-          done
-          kill "$PID2" 2>/dev/null || true
-          wait "$PID2" 2>/dev/null || true
+          stop_server_process "$PID2"
 
           cat server-restart.log
           grep -Eq 'Enabling DeathRun|Enabled DeathRun|DeathRun v1\.4\.1-classic26\.1' server-restart.log
