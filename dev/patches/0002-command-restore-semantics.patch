@@ -1,0 +1,35 @@
+--- a/core/src/main/java/pl/mrstudios/deathrun/command/CommandDeathRun.java
++++ b/core/src/main/java/pl/mrstudios/deathrun/command/CommandDeathRun.java
+@@
+     public void leave(@Context Player player) {
+         boolean leftMap = this.arenaManager.leaveCurrentMap(player, true);
+         boolean leftQueue = this.signManager.leaveQueue(player);
+         if (!leftMap && !leftQueue)
+             return;
+-
+-        this.arenaManager.returnPlayerToHub(player);
+-        this.message(player, "<yellow>You have left the match and returned to the Hub.");
++
++        if (!leftMap)
++            this.arenaManager.returnPlayerToHub(player);
++        this.message(player, leftMap
++                ? "<yellow>You have left DeathRun and your previous state was restored."
++                : "<yellow>You have left the DeathRun queue.");
+@@
+         if (mapId.equalsIgnoreCase("lobby") || mapId.equalsIgnoreCase("leave")) {
+             this.signManager.leaveQueue(target);
+-            this.arenaManager.leaveCurrentMap(target, true);
+-            this.arenaManager.returnPlayerToHub(target);
+-            this.message(target, "<yellow>You have left the match and returned to the Hub.");
++            boolean leftMap = this.arenaManager.leaveCurrentMap(target, true);
++            if (!leftMap)
++                this.arenaManager.returnPlayerToHub(target);
++            this.message(target, leftMap
++                    ? "<yellow>You have left DeathRun and your previous state was restored."
++                    : "<yellow>You have left the DeathRun queue.");
+@@
+         String content = switch (result) {
+             case JOINED -> this.configuration.language().mapSelectorMapSelected.replace("<map>", mapId);
+             case ALREADY_IN_MAP -> this.configuration.language().mapSelectorAlreadyJoined;
++            case PLAYER_STATE_SAVE_FAILED -> "<red>DeathRun could not safely save your current player state; join cancelled.";
+             case MAP_NOT_READY -> this.configuration.language().mapSelectorMapNotReady;
