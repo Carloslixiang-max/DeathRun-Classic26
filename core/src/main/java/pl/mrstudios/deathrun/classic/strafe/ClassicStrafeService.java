@@ -6,6 +6,7 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.plugin.Plugin;
+import org.bukkit.scheduler.BukkitTask;
 import org.bukkit.util.Vector;
 import org.jetbrains.annotations.NotNull;
 
@@ -23,22 +24,44 @@ public final class ClassicStrafeService {
     public static final double VERTICAL_VELOCITY = 0.30;
     public static final long COOLDOWN_MILLIS = 60_000L;
 
+    private final Plugin plugin;
     private final NamespacedKey strafeKey;
     private static final Map<UUID, EnumMap<Direction, Long>> cooldownUntil = new ConcurrentHashMap<>();
+    private static final Map<UUID, BukkitTask> displayTasks = new ConcurrentHashMap<>();
 
     public ClassicStrafeService(@NotNull Plugin plugin) {
+        this.plugin = plugin;
         this.strafeKey = new NamespacedKey(plugin, "classic_strafe");
     }
 
     public void prepareRunner(@NotNull Player player) {
-        player.getInventory().setItem(3, item(Direction.LEFT));
-        player.getInventory().setItem(4, item(Direction.BACK));
-        player.getInventory().setItem(5, item(Direction.RIGHT));
-        this.cooldownUntil.remove(player.getUniqueId());
+        UUID playerId = player.getUniqueId();
+        clearCooldowns(playerId);
+
+        player.getInventory().setItem(3, item(Direction.LEFT, 0L));
+        player.getInventory().setItem(4, item(Direction.BACK, 0L));
+        player.getInventory().setItem(5, item(Direction.RIGHT, 0L));
+
+        BukkitTask displayTask = this.plugin.getServer().getScheduler().runTaskTimer(
+                this.plugin,
+                () -> {
+                    if (!player.isOnline()) {
+                        clearCooldowns(playerId);
+                        return;
+                    }
+                    this.refreshDisplay(player);
+                },
+                0L,
+                20L
+        );
+        displayTasks.put(playerId, displayTask);
     }
 
     public static void clearCooldowns(@NotNull UUID playerId) {
         cooldownUntil.remove(playerId);
+        BukkitTask task = displayTasks.remove(playerId);
+        if (task != null)
+            task.cancel();
     }
 
     public void clear(@NotNull Player player) {
@@ -87,13 +110,37 @@ public final class ClassicStrafeService {
         this.cooldownUntil
                 .computeIfAbsent(player.getUniqueId(), ignored -> new EnumMap<>(Direction.class))
                 .put(direction, System.currentTimeMillis() + COOLDOWN_MILLIS);
+        this.refreshDisplay(player);
         return true;
     }
 
-    private ItemStack item(Direction direction) {
-        ItemStack item = new ItemStack(FEATHER);
+    private void refreshDisplay(@NotNull Player player) {
+        Direction[] directions = { Direction.LEFT, Direction.BACK, Direction.RIGHT };
+        for (int i = 0; i < directions.length; i++) {
+            Direction direction = directions[i];
+            long remaining = this.remainingMillis(player, direction);
+            ItemStack current = player.getInventory().getItem(3 + i);
+
+            // Only rewrite the slot while it is still one of our own Strafe
+            // items; this avoids fighting an administrator/debug edit.
+            if (current != null && this.directionOf(current) == direction)
+                player.getInventory().setItem(3 + i, item(direction, remaining));
+        }
+    }
+
+    private ItemStack item(Direction direction, long remainingMillis) {
+        long seconds = remainingMillis <= 0L ? 0L : (remainingMillis + 999L) / 1000L;
+        int amount = seconds <= 0L ? 1 : (int) Math.max(1L, Math.min(64L, seconds));
+
+        ItemStack item = new ItemStack(FEATHER, amount);
         ItemMeta meta = item.getItemMeta();
-        meta.displayName(miniMessage().deserialize(direction.displayName));
+        if (seconds <= 0L) {
+            meta.displayName(miniMessage().deserialize(direction.displayName));
+        } else {
+            meta.displayName(miniMessage().deserialize(
+                    "<red>" + direction.label() + "</red> <gray>(" + seconds + "s)</gray>"
+            ));
+        }
         meta.getPersistentDataContainer().set(this.strafeKey, PersistentDataType.STRING, direction.name());
         item.setItemMeta(meta);
         return item;
