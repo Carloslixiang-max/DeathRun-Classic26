@@ -1832,6 +1832,50 @@ public class CommandDeathRun {
         this.setupTrapList(player);
     }
 
+    @Execute(name = "trap setbutton")
+    @Permission("mrstudios.command.deathrun.setup")
+    public void setupTrapSetButton(
+            @Context Player player,
+            @Arg("index") int index
+    ) {
+        MapConfiguration.MapDefinition map = this.selectedMapForSetup(player, true);
+        if (map == null || !this.playerInConfiguredMapWorld(player, map))
+            return;
+
+        this.ensureMutableSetupCollections(map);
+        if (index < 1 || index > map.arenaTraps.size()) {
+            this.message(player, PREFIX + "<red>Trap <white>#" + index + "<red> was not found on map <white>" + this.safe(map.id) + "<red>.");
+            return;
+        }
+
+        Block target = player.getTargetBlock(null, 250);
+        if (!this.isSupportedTrapButton(target)) {
+            this.message(player, this.configuration.language().commandMessageTrapLookAtButton);
+            return;
+        }
+
+        map.arenaTraps.get(index - 1).setButton(target.getLocation());
+        this.configuration.map().save();
+        this.message(player, PREFIX + "<green>Updated activation button for trap <white>#" + index + "<green>.");
+    }
+
+    private boolean isSupportedTrapButton(
+            @NotNull Block target
+    ) {
+        return of(
+                STONE_BUTTON,
+                OAK_BUTTON,
+                ACACIA_BUTTON,
+                BIRCH_BUTTON,
+                CRIMSON_BUTTON,
+                JUNGLE_BUTTON,
+                SPRUCE_BUTTON,
+                WARPED_BUTTON,
+                POLISHED_BLACKSTONE_BUTTON,
+                DARK_OAK_BUTTON
+        ).anyMatch(button -> target.getType().equals(button));
+    }
+
     @Execute(name = "edit create")
     @Permission("mrstudios.command.deathrun.setup")
     public void setupCreate(
@@ -2064,8 +2108,11 @@ public class CommandDeathRun {
             LocalSession session = this.worldEdit.getSessionManager().findByName(player.getName());
 
             assert session != null;
-            Region region = session.getSelection(session.getSelectionWorld());
+            com.sk89q.worldedit.world.World selectionWorld = session.getSelectionWorld();
+            if (selectionWorld == null || !selectionWorld.getName().equals(player.getWorld().getName()))
+                return emptyList();
 
+            Region region = session.getSelection(selectionWorld);
             region.forEach((vector) -> locations.add(adapt(player.getWorld(), vector)));
 
             return locations;
@@ -2083,26 +2130,20 @@ public class CommandDeathRun {
     ) throws Exception {
 
         MapConfiguration.MapDefinition map = this.selectedMapForSetup(player, true);
-        if (map == null)
+        if (map == null || !this.playerInConfiguredMapWorld(player, map))
             return;
 
         Block target = player.getTargetBlock(null, 250);
         List<Location> locations = this.locations(player);
         Class<? extends ITrap> trapClass = this.trapRegistry.get(type.toUpperCase());
 
-        if (of(
-                STONE_BUTTON,
-                OAK_BUTTON,
-                ACACIA_BUTTON,
-                BIRCH_BUTTON,
-                CRIMSON_BUTTON,
-                JUNGLE_BUTTON,
-                SPRUCE_BUTTON,
-                WARPED_BUTTON,
-                POLISHED_BLACKSTONE_BUTTON,
-                DARK_OAK_BUTTON
-        ).noneMatch((button) -> target.getType().equals(button))) {
+        if (!this.isSupportedTrapButton(target)) {
             this.message(player, this.configuration.language().commandMessageTrapLookAtButton);
+            return;
+        }
+
+        if (locations.isEmpty()) {
+            this.message(player, PREFIX + "<red>Select a non-empty WorldEdit region in the current map world first.");
             return;
         }
 
@@ -2114,7 +2155,13 @@ public class CommandDeathRun {
         ITrap trap = trapClass.getDeclaredConstructor().newInstance();
 
         trap.setButton(target.getLocation());
-        trap.setLocations(trap.filter(locations, objects));
+        List<Location> filteredLocations = trap.filter(locations, objects);
+        if (filteredLocations.isEmpty()) {
+            this.message(player, PREFIX + "<red>The selected region contains no valid target blocks for this trap type.");
+            return;
+        }
+
+        trap.setLocations(filteredLocations);
         ofNullable(objects).ifPresent(trap::setExtra);
 
         map.arenaTraps.add(trap);
