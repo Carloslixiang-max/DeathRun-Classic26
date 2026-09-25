@@ -1,0 +1,28 @@
+package pl.mrstudios.deathrun.arena.checkpoint;
+
+import org.bukkit.Location;
+import org.jetbrains.annotations.NotNull;
+import pl.mrstudios.deathrun.api.arena.checkpoint.ICheckpoint;
+
+import java.util.List;
+
+public record Checkpoint(
+        @NotNull Integer id,
+        @NotNull Location spawn,
+        @NotNull List<Location> locations,
+        @NotNull String name
+) implements ICheckpoint {
+
+    public Checkpoint(
+            @NotNull Integer id,
+            @NotNull Location spawn,
+            @NotNull List<Location> locations
+    ) {
+        this(id, spawn, locations, "");
+    }
+
+    public Checkpoint {
+        if (name == null)
+            name = "";
+    }
+}

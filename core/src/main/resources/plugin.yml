@@ -1,0 +1,66 @@
+# Plugin Information
+name: "DeathRun"
+description: "An minigame based on popular game from HiveMC server."
+version: "${version}"
+
+# Dependencies
+softdepend:
+  - "WorldEdit"
+depend:
+  - "NoteBlockAPI"
+
+# Commands
+commands:
+  dr:
+    description: "DeathRun main command"
+    usage: "/<command> [join|start|stop|reload|maps|leave|map|cp|trap|save|cancel]"
+    aliases:
+      - "deathrun"
+    permission: "mrstudios.command.deathrun"
+
+# Permissions
+permissions:
+  mrstudios.command.deathrun:
+    description: "Allows using /deathrun"
+    default: true
+  mrstudios.command.deathrun.leave:
+    description: "Allows using /deathrun leave"
+    default: true
+  mrstudios.command.deathrun.join:
+    description: "Allows using /deathrun join <map>"
+    default: true
+  mrstudios.command.deathrun.join.others:
+    description: "Allows using /deathrun join <map> <player>"
+    default: op
+  mrstudios.command.deathrun.start:
+    description: "Allows using /deathrun start (map)"
+    default: op
+  mrstudios.command.deathrun.stop:
+    description: "Allows using /deathrun stop (map)"
+    default: op
+  mrstudios.command.deathrun.reload:
+    description: "Allows using /deathrun reload"
+    default: op
+  mrstudios.command.deathrun.setup:
+    description: "Allows using /deathrun setup and setup subcommands"
+    default: op
+  deathrun.signs.create:
+    description: "Allows creating DeathRun queue signs"
+    default: op
+  deathrun.signs.use:
+    description: "Allows using DeathRun queue signs"
+    default: true
+  deathrun.signs.break:
+    description: "Allows breaking DeathRun queue signs"
+    default: op
+  deathrun.inventory.bypass:
+    description: "Allows bypassing DeathRun inventory/drop/pickup restrictions"
+    default: op
+  deathrun.build.bypass:
+    description: "Allows bypassing DeathRun block/place interaction restrictions"
+    default: op
+
+# Plugin Data
+load: "POSTWORLD"
+api-version: "1.21"
+main: "pl.mrstudios.deathrun.plugin.Entrypoint"

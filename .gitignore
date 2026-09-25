@@ -1,0 +1,7 @@
+*.iml
+**/*.iml
+.idea/**
+**/build/
+**/.gradle/
+**.jar
+.vscode/settings.json
