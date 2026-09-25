@@ -41,6 +41,17 @@ public final class ClassicStrafeListener implements Listener {
         if (direction == null)
             return;
         event.setCancelled(true);
-        this.strafeService.activate(player, direction);
+        boolean activated = this.strafeService.activate(player, direction);
+        if (activated) {
+            player.sendActionBar(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize(
+                    "<aqua>" + direction.label() + "</aqua> <gray>used · <white>60s</white>"
+            ));
+            return;
+        }
+
+        long seconds = (this.strafeService.remainingMillis(player, direction) + 999L) / 1000L;
+        player.sendActionBar(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize(
+                "<red>" + direction.label() + "</red> <gray>ready in <white>" + seconds + "s</white>"
+        ));
     }
 }
