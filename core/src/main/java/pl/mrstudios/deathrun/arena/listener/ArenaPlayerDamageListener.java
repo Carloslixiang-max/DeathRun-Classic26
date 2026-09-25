@@ -2,10 +2,12 @@ package pl.mrstudios.deathrun.arena.listener;
 
 import org.bukkit.Server;
 import org.bukkit.entity.Player;
+import org.bukkit.entity.Projectile;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityCombustEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
+import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityExplodeEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.plugin.Plugin;
@@ -51,9 +53,10 @@ public class ArenaPlayerDamageListener implements Listener {
     public void onDamage(@NotNull EntityDamageEvent event) {
         if (!(event.getEntity() instanceof Player player))
             return;
-        Arena arena = this.arenaManager.arenaForPlayer(player);
-        if (arena == null)
+        ArenaManager.ArenaRuntime runtime = this.arenaManager.runtimeForPlayer(player);
+        if (runtime == null)
             return;
+        Arena arena = runtime.arena();
 
         if (event.getCause() == FIRE || event.getCause() == FIRE_TICK)
             event.setCancelled(true);
@@ -61,6 +64,22 @@ public class ArenaPlayerDamageListener implements Listener {
             event.setCancelled(true);
         if (event.getCause() == ENTITY_ATTACK || event.getCause() == ENTITY_SWEEP_ATTACK)
             event.setCancelled(true);
+
+        if (event.getCause() == PROJECTILE) {
+            if (!(event instanceof EntityDamageByEntityEvent damageByEntity)
+                    || !(damageByEntity.getDamager() instanceof Projectile projectile)
+                    || !pl.mrstudios.deathrun.classic.trap.DeathRunEntityTags.isTrapProjectile(projectile)) {
+                event.setCancelled(true);
+            } else {
+                TrapActivationContext attribution = this.trapActivationService.attributionForProjectile(projectile.getLocation());
+                if (attribution == null || !runtime.mapId().equalsIgnoreCase(attribution.mapId())) {
+                    event.setCancelled(true);
+                } else {
+                    this.trapActivationService.markTrapContact(player, attribution);
+                }
+            }
+        }
+
         if (arena.getGameState() != PLAYING)
             event.setCancelled(true);
         if (event.isCancelled())
@@ -91,6 +110,8 @@ public class ArenaPlayerDamageListener implements Listener {
     @EventHandler(priority = MONITOR)
     public void onEntityExplode(@NotNull EntityExplodeEvent event) {
         if (!this.arenaManager.isDeathRunWorld(event.getLocation().getWorld()))
+            return;
+        if (!pl.mrstudios.deathrun.classic.trap.DeathRunEntityTags.isTrapExplosive(event.getEntity()))
             return;
 
         TrapActivationContext attribution = this.trapActivationService.attributionForExplosion(event.getLocation());
