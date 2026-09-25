@@ -2,30 +2,20 @@ package pl.mrstudios.deathrun.arena.listener;
 
 import org.bukkit.Material;
 import org.bukkit.Server;
-import org.bukkit.entity.ArmorStand;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.plugin.Plugin;
 import org.jetbrains.annotations.NotNull;
 import pl.mrstudios.commons.inject.annotation.Inject;
-import pl.mrstudios.deathrun.api.arena.event.arena.ArenaTrapActivateEvent;
-import pl.mrstudios.deathrun.api.arena.trap.ITrap;
-import pl.mrstudios.deathrun.arena.Arena;
+import pl.mrstudios.deathrun.api.arena.user.IUser;
 import pl.mrstudios.deathrun.arena.ArenaManager;
+import pl.mrstudios.deathrun.classic.trap.TrapActivationService;
 import pl.mrstudios.deathrun.config.Configuration;
-import pl.mrstudios.deathrun.config.impl.MapConfiguration;
 
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
-import static java.lang.System.currentTimeMillis;
-import static java.time.Duration.ofMillis;
-import static java.time.Duration.ofSeconds;
-import static java.util.Optional.ofNullable;
-import static org.bukkit.ChatColor.translateAlternateColorCodes;
 import static org.bukkit.Material.*;
 import static org.bukkit.event.EventPriority.MONITOR;
 import static org.bukkit.event.block.Action.RIGHT_CLICK_BLOCK;
@@ -33,142 +23,60 @@ import static pl.mrstudios.deathrun.api.arena.user.enums.Role.DEATH;
 
 public class ArenaButtonClickListener implements Listener {
 
-        private final ArenaManager arenaManager;
-    private final Plugin plugin;
-    private final Server server;
+    private final ArenaManager arenaManager;
     private final Configuration configuration;
+    private final TrapActivationService activationService;
 
     @Inject
     public ArenaButtonClickListener(
-                        @NotNull ArenaManager arenaManager,
+            @NotNull ArenaManager arenaManager,
             @NotNull Plugin plugin,
             @NotNull Server server,
             @NotNull Configuration configuration
     ) {
-                this.arenaManager = arenaManager;
-        this.plugin = plugin;
-        this.server = server;
+        this.arenaManager = arenaManager;
         this.configuration = configuration;
+        this.activationService = new TrapActivationService(plugin, server, configuration);
     }
 
     @EventHandler(priority = MONITOR)
-    public void onArenaButtonClick(
-            @NotNull PlayerInteractEvent event
-    ) {
-
-        if (
-                event.getClickedBlock() == null || event.getAction() != RIGHT_CLICK_BLOCK || this.materials.stream().noneMatch((material) -> material == event.getClickedBlock().getType())
-        ) return;
-
-        Arena arena = this.arenaManager.arenaForPlayer(event.getPlayer());
-        MapConfiguration.MapDefinition map = this.arenaManager.mapForPlayer(event.getPlayer());
-        if (arena == null || map == null)
+    public void onArenaButtonClick(@NotNull PlayerInteractEvent event) {
+        if (event.getClickedBlock() == null || event.getAction() != RIGHT_CLICK_BLOCK)
+            return;
+        if (!this.materials.contains(event.getClickedBlock().getType()))
             return;
 
-                this.arenaManager.ensureMapWorldBindings(map);
+        ArenaManager.ArenaRuntime runtime = this.arenaManager.runtimeForPlayer(event.getPlayer());
+        if (runtime == null)
+            return;
+        IUser user = runtime.arena().getUser(event.getPlayer());
+        if (user == null || user.getRole() != DEATH)
+            return;
 
-        ofNullable(arena.getUser(event.getPlayer()))
-                .filter((user) -> user.getRole() == DEATH)
-                .flatMap((user) -> map.arenaTraps.stream()
-                        .filter(
-                                (trap) -> trap.getButton().getBlockX() == event.getClickedBlock().getX()
-                                        && trap.getButton().getBlockY() == event.getClickedBlock().getY()
-                                        && trap.getButton().getBlockZ() == event.getClickedBlock().getZ()
-                        )
-                        .findFirst()
-                )
-                .ifPresent((trap) -> {
+        this.arenaManager.ensureMapWorldBindings(runtime.map());
+        int trapIndex = -1;
+        for (int i = 0; i < runtime.map().arenaTraps.size(); i++) {
+            var button = runtime.map().arenaTraps.get(i).getButton();
+            if (button.getWorld() == null || !button.getWorld().getUID().equals(event.getClickedBlock().getWorld().getUID()))
+                continue;
+            if (button.getBlockX() == event.getClickedBlock().getX()
+                    && button.getBlockY() == event.getClickedBlock().getY()
+                    && button.getBlockZ() == event.getClickedBlock().getZ()) {
+                trapIndex = i;
+                break;
+            }
+        }
+        if (trapIndex < 0)
+            return;
 
-                    if (this.delays.getOrDefault(trap, 0L) > currentTimeMillis()) {
-                        event.getPlayer().playSound(event.getPlayer().getLocation(), this.configuration.plugin().arenaSoundTrapDelay, 1.0f, 1.0f);
-                        return;
-                    }
-
-                    ArenaTrapActivateEvent arenaTrapActivateEvent = new ArenaTrapActivateEvent(trap, arena);
-
-                    this.server.getPluginManager().callEvent(arenaTrapActivateEvent);
-                    if (arenaTrapActivateEvent.isCancelled())
-                        return;
-
-                    trap.start();
-                    ArmorStand armorStand = event.getPlayer().getWorld().spawn(trap.getButton().clone().toCenterLocation().add(0, -1, 0), ArmorStand.class, (entity) -> {
-
-                        entity.setGravity(false);
-                        entity.setInvisible(true);
-                        entity.setInvulnerable(true);
-                        entity.setCustomNameVisible(true);
-                        entity.setCustomName(this.miniMessageToLegacy(
-                                this.configuration.language().arenaHologramTrapDelayed
-                                        .replace("<delay>", String.valueOf(this.configuration.plugin().arenaTrapDelay))
-                        ));
-
-                    });
-
-                    this.server.getScheduler().scheduleSyncDelayedTask(this.plugin, trap::end, trap.getDuration().toMillis() / 50L);
-                    this.server.getScheduler().scheduleSyncRepeatingTask(this.plugin, () -> {
-
-                        if (currentTimeMillis() < this.delays.getOrDefault(trap, 0L))
-                            armorStand.setCustomName(
-                                    this.miniMessageToLegacy(
-                                            this.configuration.language().arenaHologramTrapDelayed
-                                                    .replace("<delay>", String.valueOf(ofMillis(this.delays.getOrDefault(trap, 0L) - currentTimeMillis()).toSeconds()))
-                                    )
-                            );
-
-                        if (currentTimeMillis() <= this.delays.getOrDefault(trap, 0L))
-                            return;
-
-                        armorStand.remove();
-                        this.delays.remove(trap);
-
-                    }, 0, 20L);
-
-                    this.delays.put(trap, currentTimeMillis() + ofSeconds(this.configuration.plugin().arenaTrapDelay).toMillis());
-
-                });
-
+        event.setCancelled(true);
+        TrapActivationService.ActivationResult result = this.activationService.activate(event.getPlayer(), runtime, trapIndex);
+        if (result == TrapActivationService.ActivationResult.COOLDOWN)
+            event.getPlayer().playSound(event.getPlayer().getLocation(), this.configuration.plugin().arenaSoundTrapDelay, 1.0f, 1.0f);
     }
 
-    private final Map<ITrap, Long> delays = new HashMap<>();
-    protected final Collection<Material> materials = List.of(
-            STONE_BUTTON,
-            OAK_BUTTON,
-            ACACIA_BUTTON,
-            BIRCH_BUTTON,
-            CRIMSON_BUTTON,
-            JUNGLE_BUTTON,
-            SPRUCE_BUTTON,
-            WARPED_BUTTON,
-            POLISHED_BLACKSTONE_BUTTON,
-            DARK_OAK_BUTTON
+    private final Collection<Material> materials = List.of(
+            STONE_BUTTON, OAK_BUTTON, ACACIA_BUTTON, BIRCH_BUTTON, CRIMSON_BUTTON,
+            JUNGLE_BUTTON, SPRUCE_BUTTON, WARPED_BUTTON, POLISHED_BLACKSTONE_BUTTON, DARK_OAK_BUTTON
     );
-
-    protected String miniMessageToLegacy(
-            @NotNull String message
-    ) {
-        return translateAlternateColorCodes('&', message.replace("<red>", "&c")
-                .replace("<green>", "&a")
-                .replace("<yellow>", "&e")
-                .replace("<blue>", "&9")
-                .replace("<white>", "&f")
-                .replace("<black>", "&0")
-                .replace("<gray>", "&7")
-                .replace("<dark_gray>", "&8")
-                .replace("<gold>", "&6")
-                .replace("<dark_red>", "&4")
-                .replace("<dark_green>", "&2")
-                .replace("<dark_blue>", "&1")
-                .replace("<dark_aqua>", "&3")
-                .replace("<dark_purple>", "&5")
-                .replace("<aqua>", "&b")
-                .replace("<light_purple>", "&d")
-                .replace("<bold>", "&l")
-                .replace("<italic>", "&o")
-                .replace("<strikethrough>", "&m")
-                .replace("<underline>", "&n")
-                .replace("<reset>", "&r")
-                .replace("<magic>", "&k")
-                .replace("<b>", "&b"));
-    }
-
 }
