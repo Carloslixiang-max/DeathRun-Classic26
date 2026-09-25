@@ -325,18 +325,28 @@ public class ArenaCheckpointReachedListener implements Listener {
                 || !checkpoint.locations().get(0).getWorld().getUID().equals(from.getWorld().getUID()))
             return false;
 
-        int minX = checkpoint.locations().stream().mapToInt(Location::getBlockX).min().orElseThrow() - 1;
-        int maxX = checkpoint.locations().stream().mapToInt(Location::getBlockX).max().orElseThrow() + 1;
-        int minY = checkpoint.locations().stream().mapToInt(Location::getBlockY).min().orElseThrow() - 1;
-        int maxY = checkpoint.locations().stream().mapToInt(Location::getBlockY).max().orElseThrow() + 2;
-        int minZ = checkpoint.locations().stream().mapToInt(Location::getBlockZ).min().orElseThrow() - 1;
-        int maxZ = checkpoint.locations().stream().mapToInt(Location::getBlockZ).max().orElseThrow() + 1;
+        int blockMinX = checkpoint.locations().stream().mapToInt(Location::getBlockX).min().orElseThrow();
+        int blockMaxX = checkpoint.locations().stream().mapToInt(Location::getBlockX).max().orElseThrow();
+        int blockMinY = checkpoint.locations().stream().mapToInt(Location::getBlockY).min().orElseThrow();
+        int blockMaxY = checkpoint.locations().stream().mapToInt(Location::getBlockY).max().orElseThrow();
+        int blockMinZ = checkpoint.locations().stream().mapToInt(Location::getBlockZ).min().orElseThrow();
+        int blockMaxZ = checkpoint.locations().stream().mapToInt(Location::getBlockZ).max().orElseThrow();
+
+        // Sweep the player's feet point against the checkpoint volume expanded by
+        // a normal player hitbox (0.6 wide, 1.8 high). This prevents tunnelling
+        // at Strafe velocity without granting checkpoints from blocks away.
+        final double halfWidth = 0.30;
+        final double height = 1.80;
 
         return SegmentAabb.intersects(
                 from.getX(), from.getY(), from.getZ(),
                 to.getX(), to.getY(), to.getZ(),
-                minX, minY, minZ,
-                maxX + 1.0, maxY + 1.0, maxZ + 1.0
+                blockMinX - halfWidth,
+                blockMinY - height,
+                blockMinZ - halfWidth,
+                blockMaxX + 1.0 + halfWidth,
+                blockMaxY + 1.0,
+                blockMaxZ + 1.0 + halfWidth
         );
     }
 
