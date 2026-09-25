@@ -199,6 +199,14 @@ public class CommandDeathRun {
             @Context CommandSender sender,
             @Arg("map") String mapId
     ) {
+        ArenaManager.ArenaRuntime runtime = this.arenaManager.runtimeByMapId(mapId);
+        this.plugin.getLogger().info(
+                "[DR-START] command sender=" + sender.getName()
+                        + " map=" + mapId
+                        + " runtime=" + (runtime != null)
+                        + " users=" + (runtime == null ? -1 : runtime.arena().getUsers().size())
+                        + " state=" + (runtime == null ? "UNAVAILABLE" : runtime.arena().getGameState())
+        );
         this.handleForceStartResult(sender, mapId, this.arenaManager.forceStartMap(mapId));
     }
 

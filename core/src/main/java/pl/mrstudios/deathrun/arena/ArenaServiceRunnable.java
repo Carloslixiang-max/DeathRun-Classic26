@@ -102,23 +102,24 @@ public class ArenaServiceRunnable extends BukkitRunnable {
 
     @Override
     public void run() {
-
-        switch (this.arena.getGameState()) {
-
-            case WAITING ->
-                    this.waiting();
-
-            case STARTING ->
-                    this.starting();
-
-            case PLAYING ->
-                    this.playing();
-
-            case ENDING ->
-                    this.ending();
-
+        try {
+            switch (this.arena.getGameState()) {
+                case WAITING -> this.waiting();
+                case STARTING -> this.starting();
+                case PLAYING -> this.playing();
+                case ENDING -> this.ending();
+            }
+        } catch (Throwable throwable) {
+            this.plugin.getLogger().log(
+                    java.util.logging.Level.SEVERE,
+                    "[DR-START] Fatal arena tick failure map=" + this.resolvedMapId()
+                            + " state=" + this.arena.getGameState()
+                            + " users=" + this.arena.getUsers().size()
+                            + ". Aborting this DeathRun match without stopping the server.",
+                    throwable
+            );
+            this.arenaManager.emergencyAbortMap(this.resolvedMapId(), throwable);
         }
-
     }
 
     /* Waiting */
@@ -366,15 +367,9 @@ public class ArenaServiceRunnable extends BukkitRunnable {
                     player.setSaturation(20.0f);
 
                     if (user.getRole() == RUNNER) {
-                        this.configuration.plugin().boosters
-                                .forEach((booster) ->
-                                        player.getInventory().setItem(
-                                                booster.slot(), new ItemBuilder(booster.item().material())
-                                                        .name(miniMessage().deserialize(booster.item().name()))
-                                                        .texture((booster.item().texture() != null) ? requireNonNull(booster.item().texture()) : "")
-                                                        .itemFlags(values())
-                                                        .build()
-                                        ));
+                        // Hive Classic movement is provided exclusively by Left/Back/Right Strafe.
+                        // Do not inject the old CIlie23 booster item here; its legacy item builder
+                        // is not part of the Paper 26.2 Classic runtime.
                         new ClassicStrafeService(this.plugin).prepareRunner(player);
                     }
 
@@ -471,6 +466,13 @@ public class ArenaServiceRunnable extends BukkitRunnable {
     protected void setState(
             @NotNull GameState gameState
     ) {
+
+        GameState previousState = this.arena.getGameState();
+        this.plugin.getLogger().info(
+                "[DR-START] map=" + this.resolvedMapId()
+                        + " state=" + previousState + " -> " + gameState
+                        + " users=" + this.arena.getUsers().size()
+        );
 
         this.arena.setGameState(gameState);
 
@@ -720,10 +722,20 @@ public class ArenaServiceRunnable extends BukkitRunnable {
                         return false;
 
                 this.forceStartRequested = true;
-                if (this.arena.getGameState() == WAITING)
+                this.startingTimer = Math.min(this.startingTimer, 4);
+                try {
+                    if (this.arena.getGameState() == WAITING)
                         this.setState(STARTING);
-
-                return true;
+                    return true;
+                } catch (Throwable throwable) {
+                    this.plugin.getLogger().log(
+                            java.util.logging.Level.SEVERE,
+                            "[DR-START] Force-start transition failed for map=" + this.resolvedMapId(),
+                            throwable
+                    );
+                    this.arenaManager.emergencyAbortMap(this.resolvedMapId(), throwable);
+                    return false;
+                }
         }
 
         public boolean requestStop() {

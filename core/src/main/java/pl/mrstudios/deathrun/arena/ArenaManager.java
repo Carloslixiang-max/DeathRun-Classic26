@@ -311,6 +311,43 @@ public class ArenaManager {
                 : ForceStartResult.MATCH_ALREADY_RUNNING;
     }
 
+    public void emergencyAbortMap(
+            @NotNull String mapId,
+            @NotNull Throwable cause
+    ) {
+        ArenaRuntime runtime = this.runtimeByMapId(mapId);
+        if (runtime == null)
+            return;
+
+        this.plugin.getLogger().severe(
+                "[DR-START] Emergency abort map=" + runtime.mapId()
+                        + " cause=" + cause.getClass().getSimpleName()
+                        + ": " + String.valueOf(cause.getMessage())
+        );
+
+        List<Player> players = runtime.arena().getUsers().stream()
+                .map(IUser::asBukkit)
+                .filter(Objects::nonNull)
+                .toList();
+
+        for (Player player : players) {
+            try {
+                this.leaveCurrentMap(player, false);
+                this.audiences.player(player).sendMessage(miniMessage().deserialize(
+                        "<red>[DeathRun]</red> <gray>The test match hit an internal error and your pre-game state was restored. Check latest.log for <white>[DR-START]</white>."
+                ));
+            } catch (Throwable restoreFailure) {
+                this.plugin.getLogger().log(
+                        java.util.logging.Level.SEVERE,
+                        "[DR-START] Failed to restore player " + player.getName() + " during emergency abort.",
+                        restoreFailure
+                );
+            }
+        }
+
+        runtime.arena().setGameState(WAITING);
+    }
+
     public @NotNull ForceStopResult forceStopMap(
             @NotNull String mapId
     ) {
