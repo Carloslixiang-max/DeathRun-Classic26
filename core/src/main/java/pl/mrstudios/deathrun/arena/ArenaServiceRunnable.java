@@ -27,6 +27,8 @@ import pl.mrstudios.deathrun.arena.win.WinMapManager;
 import pl.mrstudios.deathrun.config.Configuration;
 import pl.mrstudios.deathrun.config.impl.MapConfiguration;
 import pl.mrstudios.deathrun.reward.RewardService;
+import pl.mrstudios.deathrun.classic.strafe.ClassicStrafeService;
+import pl.mrstudios.deathrun.classic.death.DeathNavigatorService;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -165,6 +167,9 @@ public class ArenaServiceRunnable extends BukkitRunnable {
 
         this.arena.getUsers().forEach((user) -> {
             user.setDeaths(0);
+            user.setLives(0);
+            user.setRoundPoints(0);
+            user.setEliminated(false);
             user.setRole(UNKNOWN);
             if (!this.map.arenaCheckpoints.isEmpty())
                 user.setCheckpoint(this.map.arenaCheckpoints.get(0));
@@ -310,6 +315,24 @@ public class ArenaServiceRunnable extends BukkitRunnable {
                 .stream()
                 .filter((user) -> user.getRole() != DEATH)
                 .forEach((user) -> user.setRole(RUNNER));
+
+        this.arena.getRunners().forEach(user -> {
+            user.setLives(2);
+            user.setRoundPoints(0);
+            user.setEliminated(false);
+            Player player = user.asBukkit();
+            if (player != null)
+                new ClassicStrafeService(this.plugin).prepareRunner(player);
+        });
+
+        this.arena.getDeaths().forEach(user -> {
+            user.setLives(0);
+            user.setRoundPoints(0);
+            user.setEliminated(false);
+            Player player = user.asBukkit();
+            if (player != null)
+                new DeathNavigatorService(this.plugin).prepareDeath(player);
+        });
 
         this.rewardService.resetMatch(this.resolvedMapId(), this.arena.getRunners().size());
 
