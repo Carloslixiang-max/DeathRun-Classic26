@@ -163,6 +163,7 @@ public class LanguageConfiguration extends OkaeriConfig {
         public String commandMessageSetupMapFixBarrierNoBarrier = "<reset> <dark_red><b>*</b> <red>Map <dark_red><map> <red>has no configured start barrier blocks.";
         public String commandMessageSetupMapBackupSuccess = "<reset> <dark_green><b>*</b> <green>Backup refreshed for map <dark_green><map> <green>(world <dark_green><world><green>).";
         public String commandMessageSetupMapBackupWorldMissing = "<reset> <dark_red><b>*</b> <red>World <dark_red><world> <red>is not loaded.";
+        public String commandMessageSetupMapBackupPlayersPresent = "<reset> <dark_red><b>*</b> <red>Cannot back up or autofix a DeathRun map while players are inside it.";
         public String commandMessageSetupMapBackupFailed = "<reset> <dark_red><b>*</b> <red>Backup failed: <dark_red><reason>";
         public String commandMessageSetupMapAutofixApplied = "<reset> <dark_green><b>*</b> <green>Autofix applied for <dark_green><map><green>: <white><actions>";
         public String commandMessageSetupMapAutofixNoChanges = "<reset> <gold><b>*</b> <yellow>No autofix actions applied for <gold><map><yellow>.";

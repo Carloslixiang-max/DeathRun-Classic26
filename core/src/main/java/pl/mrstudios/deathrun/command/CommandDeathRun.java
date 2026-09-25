@@ -766,6 +766,11 @@ public class CommandDeathRun {
             return;
         }
 
+        if (this.arenaManager.playersInMap(map.id) > 0) {
+            this.message(player, this.configuration.language().commandMessageSetupMapBackupPlayersPresent);
+            return;
+        }
+
         String worldName = map.world;
         if (worldName == null || worldName.isBlank()) {
             this.message(player, this.configuration.language().commandMessageSetupMapRestoreWorldMissing.replace("<world>", "unknown"));
@@ -799,6 +804,11 @@ public class CommandDeathRun {
         MapConfiguration.MapDefinition map = this.configuration.map().getMapById(id);
         if (map == null) {
             this.message(player, this.configuration.language().commandMessageSetupMapMissing.replace("<map>", id));
+            return;
+        }
+
+        if (this.arenaManager.playersInMap(map.id) > 0) {
+            this.message(player, this.configuration.language().commandMessageSetupMapBackupPlayersPresent);
             return;
         }
 
@@ -2026,6 +2036,8 @@ public class CommandDeathRun {
             @NotNull String worldName,
             @NotNull World world
     ) throws Exception {
+        this.flushWorldPreservingAutosave(world);
+
         Path path = get(this.plugin.getDataFolder().toString(), "backup/", worldName + ".zip");
         Path tempPath = get(this.plugin.getDataFolder().toString(), "backup/", worldName + ".zip.tmp");
         createDirectories(path.getParent());
@@ -2049,11 +2061,18 @@ public class CommandDeathRun {
             return;
 
         World world = this.plugin.getServer().getWorld(worldName);
-        if (world == null)
-            return;
+        if (world != null)
+            this.flushWorldPreservingAutosave(world);
+    }
 
-        world.setAutoSave(true);
-        world.save();
+    private void flushWorldPreservingAutosave(@NotNull World world) {
+        boolean previousAutoSave = world.isAutoSave();
+        try {
+            world.setAutoSave(true);
+            world.save();
+        } finally {
+            world.setAutoSave(previousAutoSave);
+        }
     }
 
     private boolean rebuildBarrierSnapshot(
