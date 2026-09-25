@@ -249,6 +249,20 @@ public class SignManager {
         }
     }
 
+    public @NotNull List<Player> drainAllQueuedPlayers() {
+        LinkedHashSet<UUID> uniqueIds = new LinkedHashSet<>(this.playerQueue.keySet());
+        this.queuedPlayers.clear();
+        this.playerQueue.clear();
+
+        List<Player> drainedPlayers = new ArrayList<>();
+        for (UUID uniqueId : uniqueIds) {
+            Player player = this.plugin.getServer().getPlayer(uniqueId);
+            if (player != null && player.isOnline())
+                drainedPlayers.add(player);
+        }
+        return drainedPlayers;
+    }
+
     public @NotNull List<Player> drainQueuedPlayers(
             @NotNull String mapId,
             int maxCount

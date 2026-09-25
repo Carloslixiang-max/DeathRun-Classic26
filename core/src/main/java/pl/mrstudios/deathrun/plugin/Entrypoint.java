@@ -8,6 +8,7 @@ import dev.rollczi.litecommands.suggestion.SuggestionResult;
 import org.bukkit.Bukkit;
 import org.bukkit.Server;
 import org.bukkit.command.CommandSender;
+import org.bukkit.entity.Player;
 import org.bukkit.event.Listener;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -142,7 +143,14 @@ public class Entrypoint extends JavaPlugin {
                 .register(ClassicVoteService.class, this.classicVoteService)
                 .register(Configuration.class, this.configuration);
 
-            this.arenaManager.initialize();
+        this.arenaManager.initialize();
+
+        // Crash/reload recovery must also work for players who were already online
+        // before this plugin instance enabled.
+        for (Player onlinePlayer : this.getServer().getOnlinePlayers())
+            if (this.arenaManager.hasPendingSnapshot(onlinePlayer))
+                this.arenaManager.restorePendingSnapshot(onlinePlayer);
+
         this.arenaManager.saveLoadedMapWorlds();
 
         /* Register Traps */

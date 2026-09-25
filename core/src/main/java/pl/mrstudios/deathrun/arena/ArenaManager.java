@@ -23,6 +23,7 @@ import pl.mrstudios.deathrun.config.Configuration;
 import pl.mrstudios.deathrun.config.impl.MapConfiguration;
 import pl.mrstudios.deathrun.reward.RewardService;
 import pl.mrstudios.deathrun.player.PlayerSnapshotService;
+import pl.mrstudios.deathrun.classic.trap.TrapActivationService;
 
 import java.util.*;
 
@@ -93,10 +94,20 @@ public class ArenaManager {
     }
 
     public void initialize() {
+        List<Player> queuedPlayers = this.signManager == null
+                ? List.of()
+                : this.signManager.drainAllQueuedPlayers();
+
         new ArrayList<>(this.server.getOnlinePlayers()).forEach((player) -> this.leaveCurrentMap(player, false));
+        for (Player queuedPlayer : queuedPlayers)
+            this.restoreQueuedPlayer(queuedPlayer);
+
         this.playerMapIndex.clear();
 
-        this.runtimesByMapId.values().forEach((runtime) -> runtime.service().cancel());
+        this.runtimesByMapId.values().forEach((runtime) -> {
+            TrapActivationService.resetMap(runtime.mapId());
+            runtime.service().cancel();
+        });
         this.runtimesByMapId.clear();
 
         for (MapConfiguration.MapDefinition map : this.configuration.map().resolvedMaps()) {
@@ -224,9 +235,25 @@ public class ArenaManager {
             @NotNull String mapId
     ) {
         String normalizedMapId = mapId.toLowerCase(Locale.ROOT);
-        ArenaRuntime previous = this.runtimesByMapId.remove(normalizedMapId);
-        if (previous != null)
+        ArenaRuntime previous = this.runtimesByMapId.get(normalizedMapId);
+
+        if (previous != null) {
+            List<Player> activePlayers = previous.arena().getUsers().stream()
+                    .map(IUser::asBukkit)
+                    .filter(Objects::nonNull)
+                    .toList();
+
+            for (Player player : activePlayers)
+                this.leaveCurrentMap(player, false);
+
+            if (this.signManager != null)
+                for (Player queuedPlayer : this.signManager.drainQueuedPlayers(normalizedMapId, Integer.MAX_VALUE))
+                    this.restoreQueuedPlayer(queuedPlayer);
+
+            TrapActivationService.resetMap(normalizedMapId);
             previous.service().cancel();
+            this.runtimesByMapId.remove(normalizedMapId, previous);
+        }
 
         MapConfiguration.MapDefinition map = this.configuration.map().getMapById(normalizedMapId);
         if (map == null)
@@ -360,9 +387,14 @@ public class ArenaManager {
         if (runtime == null)
             return ForceStopResult.MAP_UNAVAILABLE;
 
-        boolean stopped = runtime.service().requestStop();
-        if (!stopped)
-            return ForceStopResult.ALREADY_WAITING;
+        boolean wasWaiting = runtime.arena().getGameState() == WAITING;
+        boolean hadActivePlayers = !runtime.arena().getUsers().isEmpty();
+        boolean hadQueuedPlayers = this.signManager != null && this.signManager.queuedPlayersCount(runtime.mapId()) > 0;
+
+        if (!wasWaiting)
+            runtime.service().requestStop();
+        else
+            TrapActivationService.resetMap(runtime.mapId());
 
         List<Player> activePlayers = runtime.arena().getUsers().stream()
                 .map(IUser::asBukkit)
@@ -377,13 +409,13 @@ public class ArenaManager {
 
         if (this.signManager != null) {
             for (Player queuedPlayer : this.signManager.drainQueuedPlayers(runtime.mapId(), Integer.MAX_VALUE)) {
-                if (this.hasPendingSnapshot(queuedPlayer))
-                    this.restorePendingSnapshot(queuedPlayer);
-                else
-                    this.returnPlayerToHub(queuedPlayer);
+                this.restoreQueuedPlayer(queuedPlayer);
                 queuedPlayer.sendMessage(miniMessage().deserialize(this.configuration.language().commandMessageStopMovedToHub));
             }
         }
+
+        if (wasWaiting && !hadActivePlayers && !hadQueuedPlayers)
+            return ForceStopResult.ALREADY_WAITING;
 
         return ForceStopResult.STOPPED;
     }
@@ -499,6 +531,16 @@ public class ArenaManager {
             @NotNull Player player
     ) {
         // Map selector compass intentionally disabled; signs are now primary queue flow.
+    }
+
+    private void restoreQueuedPlayer(@NotNull Player player) {
+        if (this.hasPendingSnapshot(player)) {
+            if (!this.restorePendingSnapshot(player))
+                this.plugin.getLogger().warning("[DeathRun] Queued player recovery is still pending for " + player.getName());
+            return;
+        }
+
+        this.returnPlayerToHub(player);
     }
 
     public @Nullable Location resolveHubLocation() {

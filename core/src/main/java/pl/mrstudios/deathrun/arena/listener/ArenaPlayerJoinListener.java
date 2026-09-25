@@ -21,7 +21,11 @@ public class ArenaPlayerJoinListener implements Listener {
 
     @EventHandler(priority = MONITOR)
     public void onPlayerJoin(@NotNull PlayerJoinEvent event) {
-        this.arenaManager.restorePendingSnapshot(event.getPlayer());
+        if (this.arenaManager.hasPendingSnapshot(event.getPlayer())) {
+            this.arenaManager.restorePendingSnapshot(event.getPlayer());
+            return;
+        }
+
         this.arenaManager.recoverPlayerToHubIfNeeded(event.getPlayer(), true);
     }
 }
