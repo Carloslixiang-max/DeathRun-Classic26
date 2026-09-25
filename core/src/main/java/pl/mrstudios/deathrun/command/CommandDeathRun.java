@@ -382,6 +382,30 @@ public class CommandDeathRun {
         }
     }
 
+    @Execute(name = "map profile classic")
+    @Permission("mrstudios.command.deathrun.setup")
+    public void applyClassicBaseProfile(
+            @Context Player player,
+            @Arg("id") String id
+    ) {
+        this.configuration.map().ensureMapsMutable();
+        MapConfiguration.MapDefinition map = this.configuration.map().getMapById(id);
+        if (map == null) {
+            this.message(player, this.configuration.language().commandMessageSetupMapMissing.replace("<map>", id));
+            return;
+        }
+
+        map.arenaMaxPlayers = 22;
+        map.arenaRequiredPlayersToStart = 11;
+
+        this.configuration.map().save();
+        this.arenaManager.reloadRuntime(map.id);
+
+        this.message(player, this.configuration.language().commandMessageClassicProfileApplied
+                .replace("<profile>", "Classic26 Base")
+                .replace("<map>", this.safe(map.id)));
+    }
+
     @Execute(name = "map profile interstellar")
     @Permission("mrstudios.command.deathrun.setup")
     public void applyInterstellarProfile(
@@ -2126,11 +2150,13 @@ public class CommandDeathRun {
             @NotNull MapConfiguration.MapDefinition map
     ) {
         List<String> issues = new ArrayList<>();
+        World mapWorld = null;
 
         if (map.world == null || map.world.isBlank()) {
             issues.add("world-not-set");
         } else {
-            if (this.plugin.getServer().getWorld(map.world) == null)
+            mapWorld = this.plugin.getServer().getWorld(map.world);
+            if (mapWorld == null)
                 issues.add("world-not-loaded");
 
             Path backupPath = get(this.plugin.getDataFolder().toString(), "backup", map.world + ".zip");
@@ -2138,14 +2164,50 @@ public class CommandDeathRun {
                 issues.add("missing-backup");
         }
 
-        if (map.arenaWaitingLobbyLocation == null)
+        if (map.arenaWaitingLobbyLocation == null) {
             issues.add("missing-waiting-lobby");
+        } else if (map.arenaWaitingLobbyLocation.getWorld() == null) {
+            issues.add("waiting-lobby-location-invalid");
+        } else if (mapWorld != null && !this.sameWorld(map.arenaWaitingLobbyLocation, mapWorld)) {
+            issues.add("waiting-lobby-wrong-world");
+        }
 
-        if (map.arenaRunnerSpawnLocations.isEmpty())
+        if (map.arenaRunnerSpawnLocations.isEmpty()) {
             issues.add("missing-runner-spawn");
+        } else {
+            if (map.arenaRunnerSpawnLocations.stream().anyMatch(location -> location == null || location.getWorld() == null))
+                issues.add("runner-spawn-location-invalid");
+            if (mapWorld != null && map.arenaRunnerSpawnLocations.stream()
+                    .filter(Objects::nonNull)
+                    .anyMatch(location -> location.getWorld() != null && !this.sameWorld(location, mapWorld)))
+                issues.add("runner-spawn-wrong-world");
 
-        if (map.arenaDeathSpawnLocations.isEmpty())
+            int requiredRunnerSpawns = this.arenaManager.requiredRunnerSpawnCapacity(map);
+            if (map.arenaRunnerSpawnLocations.size() < requiredRunnerSpawns)
+                issues.add("insufficient-runner-spawns(" + map.arenaRunnerSpawnLocations.size() + "/" + requiredRunnerSpawns + ")");
+        }
+
+        if (map.arenaDeathSpawnLocations.isEmpty()) {
             issues.add("missing-death-spawn");
+        } else {
+            if (map.arenaDeathSpawnLocations.stream().anyMatch(location -> location == null || location.getWorld() == null))
+                issues.add("death-spawn-location-invalid");
+            if (mapWorld != null && map.arenaDeathSpawnLocations.stream()
+                    .filter(Objects::nonNull)
+                    .anyMatch(location -> location.getWorld() != null && !this.sameWorld(location, mapWorld)))
+                issues.add("death-spawn-wrong-world");
+
+            int requiredDeathSpawns = this.arenaManager.requiredDeathSpawnCapacity(map);
+            if (map.arenaDeathSpawnLocations.size() < requiredDeathSpawns)
+                issues.add("insufficient-death-spawns(" + map.arenaDeathSpawnLocations.size() + "/" + requiredDeathSpawns + ")");
+        }
+
+        int maxPlayers = this.arenaManager.maxPlayers(map);
+        int requiredPlayers = this.arenaManager.configuredRequiredPlayersToStart(map);
+        if (requiredPlayers <= 0)
+            issues.add("required-players-invalid");
+        else if (requiredPlayers > maxPlayers)
+            issues.add("required-players-exceed-max(" + requiredPlayers + "/" + maxPlayers + ")");
 
         if (map.arenaCheckpoints.isEmpty())
             issues.add("missing-checkpoints");
@@ -2164,11 +2226,21 @@ public class CommandDeathRun {
             issues.add("checkpoint-points-size-mismatch");
 
         if (!map.arenaCheckpoints.isEmpty() && map.arenaCheckpoints.stream().anyMatch(checkpoint ->
-                checkpoint.spawn() == null
+                checkpoint == null
+                        || checkpoint.spawn() == null
                         || checkpoint.spawn().getWorld() == null
                         || checkpoint.locations().isEmpty()
                         || checkpoint.locations().stream().anyMatch(location -> location == null || location.getWorld() == null)))
             issues.add("checkpoint-location-invalid");
+
+        if (mapWorld != null && map.arenaCheckpoints.stream()
+                .filter(Objects::nonNull)
+                .anyMatch(checkpoint ->
+                        (checkpoint.spawn() != null && checkpoint.spawn().getWorld() != null && !this.sameWorld(checkpoint.spawn(), mapWorld))
+                                || checkpoint.locations().stream()
+                                .filter(Objects::nonNull)
+                                .anyMatch(location -> location.getWorld() != null && !this.sameWorld(location, mapWorld))))
+            issues.add("checkpoint-location-wrong-world");
 
         if (map.arenaTraps.isEmpty()) {
             issues.add("missing-traps");
@@ -2178,13 +2250,43 @@ public class CommandDeathRun {
             if (map.arenaTraps.stream().anyMatch(trap -> trap.getLocations() == null || trap.getLocations().isEmpty()
                     || trap.getLocations().stream().anyMatch(location -> location == null || location.getWorld() == null)))
                 issues.add("trap-region-invalid");
+
+            if (mapWorld != null && map.arenaTraps.stream().anyMatch(trap ->
+                    (trap.getButton() != null && trap.getButton().getWorld() != null && !this.sameWorld(trap.getButton(), mapWorld))
+                            || (trap.getLocations() != null && trap.getLocations().stream()
+                            .filter(Objects::nonNull)
+                            .anyMatch(location -> location.getWorld() != null && !this.sameWorld(location, mapWorld)))))
+                issues.add("trap-location-wrong-world");
         }
 
-        if (map.arenaStartBarrierBlocks.isEmpty())
+        if (map.arenaStartBarrierBlocks.isEmpty()) {
             issues.add("missing-start-barrier");
+        } else {
+            if (map.arenaStartBarrierBlocks.stream().anyMatch(location -> location == null || location.getWorld() == null))
+                issues.add("barrier-location-invalid");
+            if (mapWorld != null && map.arenaStartBarrierBlocks.stream()
+                    .filter(Objects::nonNull)
+                    .anyMatch(location -> location.getWorld() != null && !this.sameWorld(location, mapWorld)))
+                issues.add("barrier-location-wrong-world");
+        }
 
         if (!map.arenaStartBarrierBlocks.isEmpty() && map.arenaStartBarrierRestoreMaterials.size() != map.arenaStartBarrierBlocks.size())
             issues.add("barrier-restore-size-mismatch");
+
+        if (map.teleportPads != null && map.teleportPads.stream().anyMatch(pad ->
+                pad == null
+                        || pad.padLocation() == null
+                        || pad.padLocation().getWorld() == null
+                        || pad.teleportLocation() == null
+                        || pad.teleportLocation().getWorld() == null))
+            issues.add("teleport-pad-location-invalid");
+
+        if (mapWorld != null && map.teleportPads != null && map.teleportPads.stream()
+                .filter(Objects::nonNull)
+                .anyMatch(pad ->
+                        (pad.padLocation() != null && pad.padLocation().getWorld() != null && !this.sameWorld(pad.padLocation(), mapWorld))
+                                || (pad.teleportLocation() != null && pad.teleportLocation().getWorld() != null && !this.sameWorld(pad.teleportLocation(), mapWorld))))
+            issues.add("teleport-pad-wrong-world");
 
         if (map.arenaSetupEnabled)
             issues.add("setup-enabled");
@@ -2192,30 +2294,58 @@ public class CommandDeathRun {
         return issues.stream().distinct().collect(Collectors.toList());
     }
 
+    private boolean sameWorld(
+            @NotNull Location location,
+            @NotNull World world
+    ) {
+        return location.getWorld() != null
+                && location.getWorld().getUID().equals(world.getUID());
+    }
+
     private @NotNull List<String> mapPromotionIssues(
             @NotNull MapConfiguration.MapDefinition map,
             boolean requireBackup
     ) {
         List<String> issues = this.mapIssues(map).stream()
-                .filter((issue) -> switch (issue) {
-                    case "world-not-set",
-                         "world-not-loaded",
-                         "missing-waiting-lobby",
-                         "missing-runner-spawn",
-                         "missing-death-spawn",
-                         "missing-checkpoints",
-                         "finish-checkpoint-not-set",
-                         "finish-checkpoint-invalid",
-                         "finish-checkpoint-not-last",
-                         "checkpoint-points-size-mismatch",
-                         "checkpoint-location-invalid",
-                         "missing-traps",
-                         "trap-button-invalid",
-                         "trap-region-invalid",
-                         "missing-start-barrier",
-                         "barrier-restore-size-mismatch" -> true;
-                    case "missing-backup" -> requireBackup;
-                    default -> false;
+                .filter((issue) -> {
+                    if (issue.startsWith("insufficient-runner-spawns(")
+                            || issue.startsWith("insufficient-death-spawns(")
+                            || issue.startsWith("required-players-exceed-max("))
+                        return true;
+
+                    return switch (issue) {
+                        case "world-not-set",
+                             "world-not-loaded",
+                             "missing-waiting-lobby",
+                             "waiting-lobby-location-invalid",
+                             "waiting-lobby-wrong-world",
+                             "missing-runner-spawn",
+                             "runner-spawn-location-invalid",
+                             "runner-spawn-wrong-world",
+                             "missing-death-spawn",
+                             "death-spawn-location-invalid",
+                             "death-spawn-wrong-world",
+                             "required-players-invalid",
+                             "missing-checkpoints",
+                             "finish-checkpoint-not-set",
+                             "finish-checkpoint-invalid",
+                             "finish-checkpoint-not-last",
+                             "checkpoint-points-size-mismatch",
+                             "checkpoint-location-invalid",
+                             "checkpoint-location-wrong-world",
+                             "missing-traps",
+                             "trap-button-invalid",
+                             "trap-region-invalid",
+                             "trap-location-wrong-world",
+                             "missing-start-barrier",
+                             "barrier-location-invalid",
+                             "barrier-location-wrong-world",
+                             "barrier-restore-size-mismatch",
+                             "teleport-pad-location-invalid",
+                             "teleport-pad-wrong-world" -> true;
+                        case "missing-backup" -> requireBackup;
+                        default -> false;
+                    };
                 })
                 .collect(Collectors.toCollection(ArrayList::new));
 

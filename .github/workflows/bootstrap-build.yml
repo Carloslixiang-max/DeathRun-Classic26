@@ -282,6 +282,20 @@ jobs:
           done
           test "$VERIFY_RESTORE" -eq 1
 
+          printf 'dr map check classic26-playtest\n' >&3
+          MAP_CHECK_OK=0
+          for _ in $(seq 1 30); do
+            if grep -q 'classic26-playtest.*healthy' server.log; then
+              MAP_CHECK_OK=1
+              break
+            fi
+            if ! kill -0 "$PID" 2>/dev/null; then
+              break
+            fi
+            sleep 1
+          done
+          test "$MAP_CHECK_OK" -eq 1
+
           printf 'stop\n' >&3 || true
           exec 3>&-
           stop_server_process "$PID"

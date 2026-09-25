@@ -29,6 +29,7 @@ import pl.mrstudios.deathrun.classic.trap.TrapActivationService;
 import pl.mrstudios.deathrun.classic.strafe.ClassicStrafeService;
 import pl.mrstudios.deathrun.classic.death.DeathNavigatorService;
 import pl.mrstudios.deathrun.classic.death.DeathRunDeathService;
+import pl.mrstudios.deathrun.classic.role.ClassicRoleAllocation;
 
 import java.util.*;
 
@@ -743,12 +744,36 @@ public class ArenaManager {
         return Math.max(1, configuredMax);
     }
 
+    public int requiredDeathSpawnCapacity(
+            @NotNull MapConfiguration.MapDefinition map
+    ) {
+        return ClassicRoleAllocation.deathCount(
+                this.maxPlayers(map),
+                Math.max(0, this.configuration.plugin().arenaDeathsAmount)
+        );
+    }
+
+    public int requiredRunnerSpawnCapacity(
+            @NotNull MapConfiguration.MapDefinition map
+    ) {
+        return Math.max(1, this.maxPlayers(map) - this.requiredDeathSpawnCapacity(map));
+    }
+
+    public int configuredRequiredPlayersToStart(
+            @NotNull MapConfiguration.MapDefinition map
+    ) {
+        return map.arenaRequiredPlayersToStart != null
+                ? map.arenaRequiredPlayersToStart
+                : this.configuration.plugin().arenaRequiredPlayersToStart;
+    }
+
     public boolean isMapConfigured(
             @NotNull MapConfiguration.MapDefinition map
     ) {
         if (map.arenaSetupEnabled
+                || map.world == null
+                || map.world.isBlank()
                 || map.arenaWaitingLobbyLocation == null
-                || map.arenaWaitingLobbyLocation.getWorld() == null
                 || map.arenaRunnerSpawnLocations == null
                 || map.arenaRunnerSpawnLocations.isEmpty()
                 || map.arenaDeathSpawnLocations == null
@@ -761,17 +786,27 @@ public class ArenaManager {
                 || map.arenaStartBarrierBlocks.isEmpty())
             return false;
 
-        if (map.arenaRunnerSpawnLocations.stream().anyMatch(location -> location == null || location.getWorld() == null)
-                || map.arenaDeathSpawnLocations.stream().anyMatch(location -> location == null || location.getWorld() == null))
+        World mapWorld = this.server.getWorld(map.world);
+        if (mapWorld == null)
+            return false;
+
+        if (!this.locationBelongsToWorld(map.arenaWaitingLobbyLocation, mapWorld))
+            return false;
+
+        if (map.arenaRunnerSpawnLocations.size() < this.requiredRunnerSpawnCapacity(map)
+                || map.arenaDeathSpawnLocations.size() < this.requiredDeathSpawnCapacity(map))
+            return false;
+
+        if (map.arenaRunnerSpawnLocations.stream().anyMatch(location -> !this.locationBelongsToWorld(location, mapWorld))
+                || map.arenaDeathSpawnLocations.stream().anyMatch(location -> !this.locationBelongsToWorld(location, mapWorld)))
             return false;
 
         if (map.arenaCheckpoints.stream().anyMatch(checkpoint ->
                 checkpoint == null
-                        || checkpoint.spawn() == null
-                        || checkpoint.spawn().getWorld() == null
+                        || !this.locationBelongsToWorld(checkpoint.spawn(), mapWorld)
                         || checkpoint.locations() == null
                         || checkpoint.locations().isEmpty()
-                        || checkpoint.locations().stream().anyMatch(location -> location == null || location.getWorld() == null)))
+                        || checkpoint.locations().stream().anyMatch(location -> !this.locationBelongsToWorld(location, mapWorld))))
             return false;
 
         Integer finishId = map.arenaFinishCheckpointId;
@@ -784,17 +819,38 @@ public class ArenaManager {
                 && map.arenaCheckpointPoints.size() != map.arenaCheckpoints.size())
             return false;
 
+        int configuredRequired = this.configuredRequiredPlayersToStart(map);
+        if (configuredRequired <= 0 || configuredRequired > this.maxPlayers(map))
+            return false;
+
         if (map.arenaTraps.stream().anyMatch(trap ->
                 trap == null
-                        || trap.getButton() == null
-                        || trap.getButton().getWorld() == null
+                        || !this.locationBelongsToWorld(trap.getButton(), mapWorld)
                         || trap.getLocations() == null
                         || trap.getLocations().isEmpty()
-                        || trap.getLocations().stream().anyMatch(location -> location == null || location.getWorld() == null)))
+                        || trap.getLocations().stream().anyMatch(location -> !this.locationBelongsToWorld(location, mapWorld))))
+            return false;
+
+        if (map.arenaStartBarrierBlocks.stream().anyMatch(location -> !this.locationBelongsToWorld(location, mapWorld)))
+            return false;
+
+        if (map.teleportPads != null && map.teleportPads.stream().anyMatch(pad ->
+                pad == null
+                        || !this.locationBelongsToWorld(pad.padLocation(), mapWorld)
+                        || !this.locationBelongsToWorld(pad.teleportLocation(), mapWorld)))
             return false;
 
         return map.arenaStartBarrierRestoreMaterials != null
                 && map.arenaStartBarrierRestoreMaterials.size() == map.arenaStartBarrierBlocks.size();
+    }
+
+    private boolean locationBelongsToWorld(
+            @Nullable Location location,
+            @NotNull World world
+    ) {
+        return location != null
+                && location.getWorld() != null
+                && location.getWorld().getUID().equals(world.getUID());
     }
 
     private void preparePlayerForWaiting(

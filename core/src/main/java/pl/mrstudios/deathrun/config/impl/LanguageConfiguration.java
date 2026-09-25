@@ -68,6 +68,9 @@ public class LanguageConfiguration extends OkaeriConfig {
             "<reset>    <gold>DeathRun <dark_gray>(v<version>) <gray>by <white>MrStudios Industries",
             "<reset>",
             "<reset> <b>*</b> <white>/dr map list",
+            "<reset> <b>*</b> <white>/dr map profile classic <id>",
+            "<reset> <b>*</b> <white>/dr map profile interstellar <id>",
+            "<reset> <b>*</b> <white>/dr map creator <id> <creator>",
             "<reset> <b>*</b> <white>/dr map edit <id>",
             "<reset> <b>*</b> <white>/dr map create <id> <world>",
             "<reset> <b>*</b> <white>/dr map delete <id>",
@@ -91,12 +94,15 @@ public class LanguageConfiguration extends OkaeriConfig {
             "<reset> <b>*</b> <white>/dr cp setorder <id> <position>",
             "<reset> <b>*</b> <white>/dr cp setname <id> <name>",
             "<reset> <b>*</b> <white>/dr cp setfinish <id>",
+            "<reset> <b>*</b> <white>/dr cp points <id> <points>",
             "<reset> <b>*</b> <white>/dr cp move <id>",
             "<reset> <b>*</b> <white>/dr cp delete <id>",
             "<reset> <b>*</b> <white>/dr sethub",
             "<reset> <b>*</b> <white>/dr addteleport",
             "<reset> <b>*</b> <white>/dr cancel",
             "<reset> <b>*</b> <white>/dr save",
+            "<reset> <b>*</b> <white>/dr playtest create",
+            "<reset> <b>*</b> <white>/dr playtest verify",
             "<reset>"
     );
     public String commandMessageSetupDisabled = "<dark_red><b>*</b> <red>You can't use that command while setup is disabled.";

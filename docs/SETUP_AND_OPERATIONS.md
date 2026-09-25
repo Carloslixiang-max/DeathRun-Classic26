@@ -1,253 +1,275 @@
-# DeathRun Setup And Operations Guide
+# DeathRun Classic26 Setup And Operations Guide
 
-This document contains full installation, setup, administration, and testing notes.
+This guide matches the current `main` branch of DeathRun Classic26.
 
-## Requirements
+## Supported server
 
-- Java 21
-- Paper 1.21.10 (recommended)
-- WorldEdit 7.2.9+
+- **Paper 26.2**
+- **Java 25**
+- **WorldEdit 7.4.5**
+- DeathRun Classic26 plugin JAR from the latest green GitHub Actions build
 
-Spigot may work, but current development and testing are focused on Paper.
-
-## Build
-
-```bash
-./gradlew :core:shadowJar -x test
-```
-
-Built jar:
-
-```text
-core/build/libs/deathrun-core-1.3.3-PATCHED.jar
-```
+Do not use the old Java 21 / Paper 1.21.x setup instructions with this branch.
 
 ## Install
 
-1. Place the jar in your server plugins folder.
-2. Install WorldEdit.
-3. Start server once to generate config files.
-4. Configure maps with setup commands.
+1. Stop the Paper server.
+2. Put WorldEdit 7.4.5 and the DeathRun JAR in `plugins/`.
+3. Start Paper 26.2 once.
+4. Confirm the console contains:
+   - DeathRun enabled
+   - all listeners registered
+   - no DeathRun ERROR/SEVERE messages
+5. Keep the server stopped while copying/importing a real map world.
 
-## Copy-Paste Setup Commands (Functional Lobby)
+## Paper 26.2 world layout
 
-Replace `<map_id>` and `<world_name>` with your values.
-
-1. Create and select map:
-
-```text
-/deathrun setup maps create <map_id> <world_name>
-/deathrun setup maps use <map_id>
-```
-
-2. Set waiting lobby (stand in lobby location first):
+Paper 26.2 stores dimensions under the primary level, for example:
 
 ```text
-/deathrun setup setwaitinglobby
+world/
+  dimensions/
+    minecraft/
+      overworld/
+      the_nether/
+      the_end/
+      safari-valley/
 ```
 
-3. Add spawns (stand in each spawn position before command):
+DeathRun supports both this Paper 26.2 dimension layout and legacy top-level Bukkit world folders when loading existing configured maps.
+
+**Safety rule:** DeathRun will not silently generate a missing production map merely because `map.yml` contains a world name. The world must already exist on disk or be loaded before it can become playable.
+
+## Engineering fixture
+
+Before configuring a real map, verify the plugin itself:
 
 ```text
-/deathrun setup addspawn RUNNER
-/deathrun setup addspawn DEATH
+/dr playtest create
+/dr playtest verify
+/dr join classic26-playtest
+/dr start classic26-playtest
 ```
 
-4. Set start barrier (select barrier with WorldEdit first):
+The verifier checks:
+
+- max 22 / required 11
+- 20 Runner spawns / 2 Death spawns
+- checkpoints and finish
+- start barrier and restore snapshot
+- all 17 engineering trap implementations
+- all locations bound to the correct world
+- live arena runtime
+
+GitHub CI also performs a real backup → restore → verify cycle and a full Paper restart/deserialization cycle.
+
+## Creating a real Classic26 map
+
+The world must already be loaded.
 
 ```text
-/deathrun setup setstartbarrier
+/dr map create <id> <world>
+/dr map profile classic <id>
+/dr map creator <id> <creator>
+/dr map edit <id>
 ```
 
-5. Add at least one checkpoint (select checkpoint region with WorldEdit first):
+`/dr map profile classic <id>` applies only the locked Classic26 room rules:
+
+- max players: 22
+- required players to start: 11
+
+It deliberately does **not** invent creator, checkpoint points, finish, traps, or coordinates.
+
+### Waiting lobby
+
+Stand at the waiting location:
 
 ```text
-/deathrun setup addcheckpoint
+/dr setlobby
 ```
 
-6. Validate setup:
+### Runner / Death spawns
+
+Classic26 full-room allocation is 20 Runner + 2 Death. Configure enough unique spawns to avoid stacked players:
 
 ```text
-/deathrun setup maps check <map_id>
-/deathrun setup maps status <map_id>
+/dr addspawn runner
+/dr addspawn death
 ```
 
-7. Auto-fix snapshot/backup (recommended):
+For a 22-player map, preflight now requires at least:
+
+- 20 Runner spawn locations
+- 2 Death spawn locations
+
+### Checkpoints
+
+Select the checkpoint trigger region with WorldEdit, then:
 
 ```text
-/deathrun setup maps autofix <map_id>
+/dr cp add
+/dr cp list
+/dr cp setname <id> <name>
+/dr cp move <id>
+/dr cp setorder <id> <position>
+/dr cp points <id> <points>
+/dr cp setfinish <id>
 ```
 
-8. Finalize map (runs preflight, creates backup, disables setup mode):
+The finish checkpoint must be the final checkpoint in order.
+
+### Start barrier
+
+Select the full start barrier with WorldEdit:
 
 ```text
-/deathrun setup save
+/dr setbarrier
 ```
 
-9. Final verification:
+### Traps
+
+Look at the activation button, make the needed WorldEdit selection/arguments for that trap type, then:
 
 ```text
-/deathrun setup maps status <map_id>
+/dr trap add <type> ...
+/dr trap list
+/dr trap tp <id>
+/dr trap delete <id>
 ```
 
-Expected for fully functional map: `setup-disabled` and healthy/no issues.
+Every trap button and every trap target location must belong to the configured map world.
 
-Optional, if you need to re-edit an already finalized map:
+### Optional teleport pads
 
 ```text
-/deathrun setup maps enable <map_id>
-/deathrun setup maps use <map_id>
+/dr addteleport
 ```
 
-## Core Player Commands
+If a teleport pad is configured, both ends must belong to the map world.
 
-- /deathrun
-- /deathrun join <map>
-- /deathrun join lobby
-- /deathrun start
-- /deathrun start <map>
-- /deathrun stop
-- /deathrun stop <map>
-- /deathrun reload
-- /deathrun maps
-- /deathrun leave
+## Preflight and finalization
 
-For hub plugins (DeluxeHub, etc.) you can use placeholder-friendly forced join:
-
-- /deathrun join <map> <player>
-
-Example:
+During setup:
 
 ```text
-/deathrun join map1 %player%
+/dr map check <id>
+/dr map status <id>
 ```
 
-## Admin Setup Commands
+The current preflight catches, among other things:
 
-All setup commands require permission `mrstudios.command.deathrun.setup`.
+- missing/unloaded world
+- waiting lobby missing, unresolved, or in the wrong world
+- Runner/Death spawn locations missing, unresolved, or in the wrong world
+- insufficient spawn capacity for the configured max-player Classic role split
+- invalid required-player count
+- missing/invalid checkpoints
+- finish not set or not last
+- checkpoint point list size mismatch
+- checkpoint coordinates in the wrong world
+- missing/invalid trap buttons or regions
+- trap coordinates in the wrong world
+- missing/invalid start barrier
+- barrier restore snapshot mismatch
+- invalid teleport pads
+- missing backup when finalizing
 
-### Map Management
+Create/refresh the map backup:
 
-- /deathrun setup maps list
-- /deathrun setup maps use <id>
-- /deathrun setup maps create <id> <world>
-- /deathrun setup maps delete <id>
-- /deathrun setup maps enable <id>
-- /deathrun setup maps disable <id>
+```text
+/dr map backup <id>
+```
 
-### Health And Status
+Then finalize:
 
-- /deathrun setup maps check
-- /deathrun setup maps check <id>
-- /deathrun setup maps status
-- /deathrun setup maps status <id>
+```text
+/dr save
+```
 
-### Maintenance And Recovery
+or, outside edit mode:
 
-- /deathrun setup maps fixbarrier <id>
-- /deathrun setup maps backup <id>
-- /deathrun setup maps autofix <id>
-- /deathrun setup maps restore <id>
+```text
+/dr map disable <id>
+```
 
-### Map Content Editing
+Finalization is blocked until critical preflight issues are fixed.
 
-- /deathrun setup setname <name>
-- /deathrun setup setwaitinglobby
-- /deathrun setup setstartbarrier (material)
-- /deathrun setup addspawn <death|runner>
-- /deathrun setup addtrap <type> (...args)
-- /deathrun setup addcheckpoint
-- /deathrun setup addteleport
-- /deathrun setup save
+## Backup and restore
 
-## Multi-Map Runtime Model
+Backup:
 
-- One active match runtime per map world.
-- Players choose a map through /deathrun maps selector.
-- Runtime tracks state independently per map: WAITING, STARTING, PLAYING, ENDING.
-- End of match returns map runtime to WAITING.
+```text
+/dr map backup <id>
+```
 
-## Safety Features
+Restore:
 
-### Preflight Gates
+```text
+/dr map restore <id>
+```
 
-Map finalize operations are blocked when critical requirements are missing.
+Restrictions:
 
-/deathrun setup save and /deathrun setup maps disable <id> validate:
+- no players may be queued or playing on that map
+- restore uses the map's real `World#getWorldFolder()` location
+- this works with Paper 26.2's `world/dimensions/.../<key>` layout and legacy layouts
+- the runtime is rebuilt and locations are rebound after restore
 
-- world configured and loaded
-- waiting lobby configured
-- runner spawn exists
-- death spawn exists
-- checkpoints exist
-- start barrier exists
-- barrier restore snapshot consistency
-- backup existence (for disable path)
+Backups are stored under:
 
-### Recovery Tools
+```text
+plugins/DeathRun/backup/<world>.zip
+```
 
-- fixbarrier rebuilds barrier restore snapshot from live blocks
-- backup refreshes backup zip for target world
-- autofix applies safe fixes in one pass
-- restore reloads world from backup zip, rebinds map references, and reloads runtime
+## Interstellar profile
 
-## Recommended Admin Workflow
+First configure exactly 8 checkpoints, then run:
 
-1. Create/select map.
-2. Configure map content.
-3. Run /deathrun setup maps check <id>.
-4. Run /deathrun setup maps autofix <id> if needed.
-5. Run /deathrun setup save.
-6. Verify with /deathrun setup maps status <id>.
+```text
+/dr map profile interstellar <id>
+```
 
-## Quick Test Plan
+It applies the already-confirmed Interstellar rules:
 
-1. Start server with plugin + WorldEdit.
-2. Confirm no startup errors.
-3. Run /deathrun setup maps status and /deathrun setup maps check.
-4. Open selector with /deathrun maps and join map.
-5. Start a round and verify:
-   - match flow runs
-   - end transitions back to WAITING
-   - barrier restore behaves correctly
-6. Test maintenance:
-   - /deathrun setup maps backup <id>
-   - /deathrun setup maps restore <id> when map has no players
+- Creator: Dlimit
+- 8 checkpoints
+- checkpoint points: 3 / 7 / 10 / 13 / 16 / 20 / 23 / 26
+- finish: checkpoint 8
+- max 22
+- required 11
 
-## Configuration Files
+It does not create the world, coordinates, trap regions, or trap buttons.
 
-Generated under plugin data folder:
+## Real-server acceptance
 
-- config.yml: gameplay timings, sounds, boosters, effects
-- language.yml: all message and UI text
-- map.yml: map definitions, setup data, checkpoints, traps, barriers, backups
+After the map passes preflight, test with at least two real clients.
 
-### Scoreboard Config (language.yml)
+Check:
 
-Scoreboard is configured in `language.yml` using:
+- queue/vote/join flow
+- Runner/Death assignment
+- countdown and preshow
+- HUD
+- Left / Back / Right strafes and independent cooldowns
+- lives and checkpoint scoring
+- finish + remaining-life points
+- first finisher clamps remaining round time to 60 seconds
+- death/respawn/elimination
+- Death navigator and trap jumper
+- button activation and hotbar activation
+- every configured trap
+- round reset
+- leave/disconnect/reconnect/recovery
+- non-DeathRun players/worlds remain unaffected
 
-- `arena-scoreboard-enabled`
-- `arena-scoreboard-update-ticks`
-- `arena-scoreboard-title`
-- `arena-scoreboard-lines-waiting`
-- `arena-scoreboard-lines-starting`
-- `arena-scoreboard-lines-playing`
+## Current formal-map order
 
-Available placeholders include:
+1. Safari Valley
+2. Temple
+3. Interstellar
+4. Toxic Factory
+5. Yagrium
+6. To Bee Or Not To Bee / Gardens
 
-- `<map>`
-- `<currentPlayers>`
-- `<maxPlayers>`
-- `<timer>`
-- `<time>`
-- `<timeFormatted>`
-- `<runners>`
-- `<deaths>` (death counter for current viewer)
-- `<deathPlayers>` (count of players with death role)
-- `<role>`
-
-## Known Notes
-
-- WorldEdit is required and checked on plugin enable.
-- Map restore is blocked while players are active in that map runtime.
-- If map IDs are missing in old config format, they are normalized automatically.
+World files and map-specific coordinates remain private content and should not be committed to the public GitHub repository unless their redistribution license is confirmed.
