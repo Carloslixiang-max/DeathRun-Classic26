@@ -676,6 +676,24 @@ public class ArenaServiceRunnable extends BukkitRunnable {
                 // No-op in the Classic26 runtime build.
         }
 
+        public void shutdown() {
+                if (this.sidebarTask != null) {
+                        this.sidebarTask.cancel();
+                        this.sidebarTask = null;
+                }
+
+                this.stopBackgroundSong();
+
+                if (this.arena.getSidebar() != null)
+                        this.arena.getSidebar().destroy();
+
+                try {
+                        this.cancel();
+                } catch (IllegalStateException ignored) {
+                        // Runtime was never scheduled or has already been cancelled.
+                }
+        }
+
         private String resolveSongFileName() {
                 if (this.map.arenaBackgroundSongFileName != null && !this.map.arenaBackgroundSongFileName.isBlank())
                         return this.map.arenaBackgroundSongFileName;

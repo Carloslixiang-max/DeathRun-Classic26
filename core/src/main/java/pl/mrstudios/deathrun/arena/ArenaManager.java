@@ -106,7 +106,7 @@ public class ArenaManager {
 
         this.runtimesByMapId.values().forEach((runtime) -> {
             TrapActivationService.resetMap(runtime.mapId());
-            runtime.service().cancel();
+            runtime.service().shutdown();
         });
         this.runtimesByMapId.clear();
 
@@ -251,7 +251,7 @@ public class ArenaManager {
                     this.restoreQueuedPlayer(queuedPlayer);
 
             TrapActivationService.resetMap(normalizedMapId);
-            previous.service().cancel();
+            previous.service().shutdown();
             this.runtimesByMapId.remove(normalizedMapId, previous);
         }
 
@@ -334,6 +334,11 @@ public class ArenaManager {
 
         if (runtime.arena().getGameState() == PLAYING || runtime.arena().getGameState() == ENDING)
             return ForceStartResult.MATCH_ALREADY_RUNNING;
+
+        // A sign-queued player may not have been promoted into the arena yet
+        // because the 1-second WAITING tick has not run. Promote queued players
+        // synchronously so an admin force-start immediately after a join works.
+        this.applyQueuedPlayersForMapStart(runtime.mapId());
 
         if (runtime.arena().getUsers().isEmpty())
             return ForceStartResult.NO_PLAYERS;
