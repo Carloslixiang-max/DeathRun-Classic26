@@ -48,6 +48,7 @@ public final class ClassicPlaytestService {
             MapConfiguration.MapDefinition map = new MapConfiguration.MapDefinition();
             map.id = MAP_ID;
             map.name = "Classic26 Playtest";
+            map.creator = "Classic26 Engineering";
             map.world = world.getName();
             map.arenaSetupEnabled = false;
             map.arenaWaitingLobbyLocation = new Location(world, 0.5, FLOOR_Y + 1, -11.5, 0f, 0f);
