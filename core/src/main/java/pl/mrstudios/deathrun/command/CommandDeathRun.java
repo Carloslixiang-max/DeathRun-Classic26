@@ -1413,30 +1413,223 @@ public class CommandDeathRun {
             @Context Player player,
             @Arg("role") Role role
     ) {
+        this.addRoleSpawn(player, role);
+    }
 
-        MapConfiguration.MapDefinition map = this.selectedMapForSetup(player, true);
-        if (map == null)
+    @Execute(name = "spawn add")
+    @Permission("mrstudios.command.deathrun.setup")
+    public void addSpawnAlias(
+            @Context Player player,
+            @Arg("role") Role role
+    ) {
+        this.addRoleSpawn(player, role);
+    }
+
+    @Execute(name = "spawn list")
+    @Permission("mrstudios.command.deathrun.setup")
+    public void listSpawns(
+            @Context Player player,
+            @Arg("role") Role role
+    ) {
+        MapConfiguration.MapDefinition map = this.selectedMapForSetup(player, false);
+        if (map == null || !this.validSpawnRole(player, role))
             return;
 
-        switch (role) {
+        List<Location> spawns = this.spawnLocations(map, role);
+        this.message(player, this.configuration.language().commandMessageRoleSpawnListHeader
+                .replace("<role>", role.name())
+                .replace("<map>", this.safe(map.id))
+                .replace("<count>", String.valueOf(spawns.size())));
 
-            case RUNNER ->
-                map.arenaRunnerSpawnLocations.add(player.getLocation().toCenterLocation());
-
-            case DEATH ->
-                map.arenaDeathSpawnLocations.add(player.getLocation().toCenterLocation());
-
-            default ->
-                    this.message(player, this.configuration.language().commandMessageRoleInvalid);
-
+        if (spawns.isEmpty()) {
+            this.message(player, this.configuration.language().commandMessageRoleSpawnListEmpty
+                    .replace("<role>", role.name()));
+            return;
         }
 
-        if (role != DEATH && role != RUNNER)
+        for (int i = 0; i < spawns.size(); i++) {
+            Location location = spawns.get(i);
+            String world = location == null || location.getWorld() == null ? "unresolved" : location.getWorld().getName();
+            int x = location == null ? 0 : location.getBlockX();
+            int y = location == null ? 0 : location.getBlockY();
+            int z = location == null ? 0 : location.getBlockZ();
+            this.message(player, this.configuration.language().commandMessageRoleSpawnListLine
+                    .replace("<index>", String.valueOf(i + 1))
+                    .replace("<world>", world)
+                    .replace("<x>", String.valueOf(x))
+                    .replace("<y>", String.valueOf(y))
+                    .replace("<z>", String.valueOf(z)));
+        }
+    }
+
+    @Execute(name = "spawn tp")
+    @Permission("mrstudios.command.deathrun.setup")
+    public void teleportToSpawn(
+            @Context Player player,
+            @Arg("role") Role role,
+            @Arg("index") int index
+    ) {
+        MapConfiguration.MapDefinition map = this.selectedMapForSetup(player, false);
+        if (map == null || !this.validSpawnRole(player, role))
             return;
 
+        List<Location> spawns = this.spawnLocations(map, role);
+        Location location = this.spawnAt(player, role, spawns, index);
+        if (location == null)
+            return;
+
+        Location resolved = this.arenaManager.resolveMapLocation(location, map);
+        if (resolved == null || resolved.getWorld() == null) {
+            this.message(player, this.configuration.language().commandMessageSetupMapWorldUnavailable
+                    .replace("<map>", this.safe(map.id))
+                    .replace("<world>", this.safe(map.world)));
+            return;
+        }
+
+        player.teleport(resolved);
+        this.message(player, this.configuration.language().commandMessageRoleSpawnTeleported
+                .replace("<role>", role.name())
+                .replace("<index>", String.valueOf(index)));
+    }
+
+    @Execute(name = "spawn move")
+    @Permission("mrstudios.command.deathrun.setup")
+    public void moveSpawn(
+            @Context Player player,
+            @Arg("role") Role role,
+            @Arg("index") int index
+    ) {
+        MapConfiguration.MapDefinition map = this.selectedMapForSetup(player, true);
+        if (map == null || !this.validSpawnRole(player, role))
+            return;
+        if (!this.playerInConfiguredMapWorld(player, map))
+            return;
+
+        List<Location> spawns = this.spawnLocations(map, role);
+        if (this.spawnAt(player, role, spawns, index) == null)
+            return;
+
+        spawns.set(index - 1, player.getLocation().toCenterLocation());
+        this.configuration.map().save();
+        this.message(player, this.configuration.language().commandMessageRoleSpawnMoved
+                .replace("<role>", role.name())
+                .replace("<index>", String.valueOf(index)));
+    }
+
+    @Execute(name = "spawn delete")
+    @Permission("mrstudios.command.deathrun.setup")
+    public void deleteSpawn(
+            @Context Player player,
+            @Arg("role") Role role,
+            @Arg("index") int index
+    ) {
+        MapConfiguration.MapDefinition map = this.selectedMapForSetup(player, true);
+        if (map == null || !this.validSpawnRole(player, role))
+            return;
+
+        List<Location> spawns = this.spawnLocations(map, role);
+        if (this.spawnAt(player, role, spawns, index) == null)
+            return;
+
+        spawns.remove(index - 1);
+        this.configuration.map().save();
+        this.message(player, this.configuration.language().commandMessageRoleSpawnDeleted
+                .replace("<role>", role.name())
+                .replace("<index>", String.valueOf(index)));
+    }
+
+    @Execute(name = "spawn clear")
+    @Permission("mrstudios.command.deathrun.setup")
+    public void clearSpawns(
+            @Context Player player,
+            @Arg("role") Role role
+    ) {
+        MapConfiguration.MapDefinition map = this.selectedMapForSetup(player, true);
+        if (map == null || !this.validSpawnRole(player, role))
+            return;
+
+        List<Location> spawns = this.spawnLocations(map, role);
+        int removed = spawns.size();
+        spawns.clear();
+        this.configuration.map().save();
+        this.message(player, this.configuration.language().commandMessageRoleSpawnCleared
+                .replace("<role>", role.name())
+                .replace("<count>", String.valueOf(removed)));
+    }
+
+    private void addRoleSpawn(
+            @NotNull Player player,
+            @NotNull Role role
+    ) {
+        MapConfiguration.MapDefinition map = this.selectedMapForSetup(player, true);
+        if (map == null || !this.validSpawnRole(player, role))
+            return;
+        if (!this.playerInConfiguredMapWorld(player, map))
+            return;
+
+        this.spawnLocations(map, role).add(player.getLocation().toCenterLocation());
         this.configuration.map().save();
         this.message(player, this.configuration.language().commandMessageRoleSpawnAdded.replace("<role>", role.name()));
+    }
 
+    private boolean validSpawnRole(
+            @NotNull Player player,
+            @NotNull Role role
+    ) {
+        if (role == RUNNER || role == DEATH)
+            return true;
+
+        this.message(player, this.configuration.language().commandMessageRoleInvalid);
+        return false;
+    }
+
+    private @NotNull List<Location> spawnLocations(
+            @NotNull MapConfiguration.MapDefinition map,
+            @NotNull Role role
+    ) {
+        this.ensureMutableSetupCollections(map);
+        return role == DEATH ? map.arenaDeathSpawnLocations : map.arenaRunnerSpawnLocations;
+    }
+
+    private @Nullable Location spawnAt(
+            @NotNull Player player,
+            @NotNull Role role,
+            @NotNull List<Location> spawns,
+            int index
+    ) {
+        if (index < 1 || index > spawns.size()) {
+            this.message(player, this.configuration.language().commandMessageRoleSpawnNotFound
+                    .replace("<role>", role.name())
+                    .replace("<index>", String.valueOf(index)));
+            return null;
+        }
+
+        return spawns.get(index - 1);
+    }
+
+    private boolean playerInConfiguredMapWorld(
+            @NotNull Player player,
+            @NotNull MapConfiguration.MapDefinition map
+    ) {
+        World mapWorld = map.world == null || map.world.isBlank()
+                ? null
+                : this.plugin.getServer().getWorld(map.world);
+
+        if (mapWorld == null) {
+            this.message(player, this.configuration.language().commandMessageSetupMapWorldUnavailable
+                    .replace("<map>", this.safe(map.id))
+                    .replace("<world>", this.safe(map.world)));
+            return false;
+        }
+
+        if (!player.getWorld().getUID().equals(mapWorld.getUID())) {
+            this.message(player, this.configuration.language().commandMessageRoleSpawnWrongWorld
+                    .replace("<map>", this.safe(map.id))
+                    .replace("<world>", mapWorld.getName()));
+            return false;
+        }
+
+        return true;
     }
 
     @Execute(name = "trap add")

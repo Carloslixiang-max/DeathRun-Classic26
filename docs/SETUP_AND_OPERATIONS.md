@@ -95,14 +95,40 @@ Stand at the waiting location:
 
 ### Runner / Death spawns
 
-Classic26 full-room allocation is 20 Runner + 2 Death. Configure enough unique spawns to avoid stacked players:
+Classic26 full-room allocation is 20 Runner + 2 Death. Configure enough unique spawns to avoid stacked players.
+
+Add at your current position:
+
+```text
+/dr spawn add runner
+/dr spawn add death
+```
+
+The legacy aliases remain valid:
 
 ```text
 /dr addspawn runner
 /dr addspawn death
 ```
 
-For a 22-player map, preflight now requires at least:
+Review and correct the recorded positions without editing YAML:
+
+```text
+/dr spawn list runner
+/dr spawn list death
+/dr spawn tp runner <index>
+/dr spawn tp death <index>
+/dr spawn move runner <index>
+/dr spawn move death <index>
+/dr spawn delete runner <index>
+/dr spawn delete death <index>
+/dr spawn clear runner
+/dr spawn clear death
+```
+
+Spawn indices are 1-based. Add/move is rejected unless you are standing in the map's configured world.
+
+For a 22-player map, preflight requires at least:
 
 - 20 Runner spawn locations
 - 2 Death spawn locations

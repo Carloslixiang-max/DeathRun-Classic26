@@ -97,6 +97,12 @@ public class LanguageConfiguration extends OkaeriConfig {
             "<reset> <b>*</b> <white>/dr cp points <id> <points>",
             "<reset> <b>*</b> <white>/dr cp move <id>",
             "<reset> <b>*</b> <white>/dr cp delete <id>",
+            "<reset> <b>*</b> <white>/dr spawn add <runner/death>",
+            "<reset> <b>*</b> <white>/dr spawn list <runner/death>",
+            "<reset> <b>*</b> <white>/dr spawn tp <runner/death> <index>",
+            "<reset> <b>*</b> <white>/dr spawn move <runner/death> <index>",
+            "<reset> <b>*</b> <white>/dr spawn delete <runner/death> <index>",
+            "<reset> <b>*</b> <white>/dr spawn clear <runner/death>",
             "<reset> <b>*</b> <white>/dr sethub",
             "<reset> <b>*</b> <white>/dr addteleport",
             "<reset> <b>*</b> <white>/dr cancel",
@@ -118,6 +124,15 @@ public class LanguageConfiguration extends OkaeriConfig {
                 public String commandMessageCheckpointPointsSet = "<reset> <dark_green><b>*</b> <green>Checkpoint <dark_green>#<checkpoint> <green>points set to <gold><points><green>.";
     public String commandMessageRoleInvalid = "<reset> <dark_red><b>*</b> <red>You must select <dark_red>RUNNER <red>or <dark_red>DEATH <red>role.";
     public String commandMessageRoleSpawnAdded = "<reset> <dark_green><b>*</b> <green>Added <dark_green><role> <green>role spawn.";
+    public String commandMessageRoleSpawnListHeader = "<gold>[DR]</gold> <gray><role> spawns for <white><map><gray>: <white><count>";
+    public String commandMessageRoleSpawnListLine = "<reset> <gray>- <white>#<index> <dark_gray>| <white><world> <dark_gray>| <white><x>, <y>, <z>";
+    public String commandMessageRoleSpawnListEmpty = "<reset> <gold><b>*</b> <yellow>No <gold><role> <yellow>spawns are configured.";
+    public String commandMessageRoleSpawnNotFound = "<reset> <dark_red><b>*</b> <red><role> spawn <dark_red>#<index> <red>does not exist.";
+    public String commandMessageRoleSpawnTeleported = "<reset> <dark_green><b>*</b> <green>Teleported to <dark_green><role> <green>spawn <dark_green>#<index><green>.";
+    public String commandMessageRoleSpawnMoved = "<reset> <dark_green><b>*</b> <green>Moved <dark_green><role> <green>spawn <dark_green>#<index> <green>to your current location.";
+    public String commandMessageRoleSpawnDeleted = "<reset> <dark_green><b>*</b> <green>Deleted <dark_green><role> <green>spawn <dark_green>#<index><green>.";
+    public String commandMessageRoleSpawnCleared = "<reset> <dark_green><b>*</b> <green>Cleared <dark_green><count> <green><role> spawn(s).";
+    public String commandMessageRoleSpawnWrongWorld = "<reset> <dark_red><b>*</b> <red>Stand in map <dark_red><map><red>'s configured world <dark_red><world> <red>before adding or moving a spawn.";
     public String commandMessageArenaNameSet = "<reset> <dark_green><b>*</b> <green>Arena name has been set to <dark_green><name><green>.";
     public String commandMessageStartBarrierSet = "<reset> <dark_green><b>*</b> <green>Arena start barrier has been set.";
     public String commandMessageWaitingLobbySet = "<reset> <dark_green><b>*</b> <green>Arena waiting lobby has been set.";
@@ -177,7 +192,7 @@ public class LanguageConfiguration extends OkaeriConfig {
         public String commandMessageSetupMapPreflightPassed = "<reset> <dark_green><b>*</b> <green>Preflight checks passed for <dark_green><map><green>.";
         public String commandMessageSetupMapMissing = "<reset> <dark_red><b>*</b> <red>Map <dark_red><map> <red>does not exist.";
         public String commandMessageSetupMapAlreadyExists = "<reset> <dark_red><b>*</b> <red>Map <dark_red><map> <red>already exists.";
-        public String commandMessageSetupMapInvalidWorld = "<reset> <dark_red><b>*</b> <red>World <dark_red><world> <red>is not loaded.";
+        public String commandMessageSetupMapInvalidWorld = "<reset> <dark_red><b>*</b> <red>World <dark_red><world> <red>is not loaded and no existing world data was found on disk.";
         public String commandMessageSetupMapWorldUnavailable = "<reset> <dark_red><b>*</b> <red>The world for this map could not be found. Please ensure the map's world is loaded.";
         public String commandMessageSetupMapNoSelection = "<reset> <dark_red><b>*</b> <red>Select setup map first using <white>/dr map edit <id><red>.";
         public String commandMessageSetupMapLocked = "<reset> <dark_red><b>*</b> <red>Selected map setup is disabled. Re-enable it in map.yml or create a new map.";
