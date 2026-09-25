@@ -1,18 +1,10 @@
-import com.palantir.gradle.gitversion.VersionDetails
-import groovy.lang.Closure
-import java.lang.String.format
-import java.lang.String.valueOf
-
 plugins {
     id("java")
     id("net.kyori.blossom") version "1.3.1"
-    id("com.palantir.git-version") version "3.1.0"
     id("com.gradleup.shadow") version "9.6.1"
 }
 
-val versionDetails: Closure<VersionDetails> by extra
-fun projectVersion(): String = if (versionDetails().branchName == "ver/latest")
-    valueOf(project.version) else format("%s (git/%s)", project.version, versionDetails().gitHash)
+val manualVersion = "1.4.1-classic26-dev"
 
 project.group = project.parent?.group!!
 project.version = project.parent?.version!!
@@ -22,9 +14,9 @@ java {
 }
 
 blossom {
-    replaceToken("{version}", projectVersion())
-    replaceToken("{gitBranch}", versionDetails().branchName)
-    replaceToken("{gitCommitHash}", versionDetails().gitHashFull)
+    replaceToken("{version}", manualVersion)
+    replaceToken("{gitBranch}", "classic26-dev")
+    replaceToken("{gitCommitHash}", "github-actions")
 }
 
 repositories {
