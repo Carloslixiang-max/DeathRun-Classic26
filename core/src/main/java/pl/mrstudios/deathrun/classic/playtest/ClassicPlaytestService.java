@@ -14,6 +14,7 @@ import org.jetbrains.annotations.Nullable;
 import pl.mrstudios.deathrun.api.arena.trap.ITrap;
 import pl.mrstudios.deathrun.arena.ArenaManager;
 import pl.mrstudios.deathrun.arena.checkpoint.Checkpoint;
+import pl.mrstudios.deathrun.arena.pad.TeleportPad;
 import pl.mrstudios.deathrun.arena.trap.impl.*;
 import pl.mrstudios.deathrun.config.Configuration;
 import pl.mrstudios.deathrun.config.impl.MapConfiguration;
@@ -111,6 +112,14 @@ public final class ClassicPlaytestService {
             particles.setExtra(org.bukkit.Particle.FLAME, 8, 0.25d);
             this.addTrap(map, particles, button(world, 182), hitboxRegion(world, 183, 186));
 
+            // Keep one real teleport pad in the engineering fixture so its
+            // serializer, world rebinding and pressure-plate validation are
+            // covered by backup/restore and full Paper restart smoke tests.
+            Location teleportSource = new Location(world, 5, FLOOR_Y + 1, -10);
+            teleportSource.getBlock().setType(Material.STONE_PRESSURE_PLATE, false);
+            Location teleportDestination = new Location(world, -4.5, FLOOR_Y + 1, -10.5, 90f, 0f);
+            map.teleportPads.add(new TeleportPad(teleportSource, teleportDestination));
+
             map.arenaMaxPlayers = 22;
             map.arenaRequiredPlayersToStart = 11;
 
@@ -188,6 +197,20 @@ public final class ClassicPlaytestService {
             if (map.arenaTraps.size() != 17)
                 issues.add("trap-count:" + map.arenaTraps.size());
 
+            if (map.teleportPads.size() != 1) {
+                issues.add("teleport-pads:" + map.teleportPads.size());
+            } else {
+                TeleportPad pad = map.teleportPads.get(0);
+                if (!this.locationOnWorld(pad.padLocation(), world))
+                    issues.add("teleport-pad-source-world");
+                if (!this.locationOnWorld(pad.teleportLocation(), world))
+                    issues.add("teleport-pad-destination-world");
+                if (pad.padLocation() == null
+                        || pad.padLocation().getWorld() == null
+                        || !pad.padLocation().getBlock().getType().name().endsWith("_PRESSURE_PLATE"))
+                    issues.add("teleport-pad-source-type");
+            }
+
             Set<String> expectedTrapTypes = Set.of(
                     "TrapDisappearingParkour",
                     "TrapKnockBack",
@@ -233,6 +256,8 @@ public final class ClassicPlaytestService {
                             || checkpoint.locations().stream().anyMatch(location -> !this.locationOnWorld(location, world))))
                 issues.add("checkpoint-world");
 
+            if (!this.arenaManager.isMapConfigured(map))
+                issues.add("map-readiness-failed");
             if (this.arenaManager.runtimeByMapId(MAP_ID) == null)
                 issues.add("runtime-missing");
 
@@ -244,7 +269,7 @@ public final class ClassicPlaytestService {
 
             this.plugin.getLogger().info(
                     "[DeathRun] Classic26 playtest verification PASS: "
-                            + "20 runner spawns, 2 death spawns, 4 checkpoints, 17 traps, runtime ready."
+                            + "20 runner spawns, 2 death spawns, 4 checkpoints, 17 traps, 1 teleport pad, runtime ready."
             );
             return new Result(true, "verified");
         } catch (Exception exception) {
