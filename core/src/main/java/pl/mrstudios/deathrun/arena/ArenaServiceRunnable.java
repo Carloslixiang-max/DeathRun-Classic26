@@ -246,7 +246,7 @@ public class ArenaServiceRunnable extends BukkitRunnable {
                                 this.configuration.language().classicPreshowSubtitle
                                         .replace("<creator>", finalCreator)
                         ),
-                        times(ofMillis(250), ofSeconds(2), ofMillis(250))
+                        times(ofMillis(250), ofMillis(2000), ofMillis(250))
                 )));
     }
 
