@@ -1407,6 +1407,46 @@ public class CommandDeathRun {
                 .replace("<map>", this.safe(map.id)));
     }
 
+    @Execute(name = "cp setregion")
+    @Permission("mrstudios.command.deathrun.setup")
+    public void setupCheckpointSetRegion(
+            @Context Player player,
+            @Arg("id") int checkpointId
+    ) {
+        MapConfiguration.MapDefinition map = this.selectedMapForSetup(player, true);
+        if (map == null || !this.playerInConfiguredMapWorld(player, map))
+            return;
+
+        List<Location> selected = this.locations(player);
+        if (selected.isEmpty()) {
+            this.message(player, this.configuration.language().commandMessageCheckpointAreaEmpty);
+            return;
+        }
+
+        for (int i = 0; i < map.arenaCheckpoints.size(); i++) {
+            Checkpoint checkpoint = map.arenaCheckpoints.get(i);
+            if (checkpoint.id() != checkpointId)
+                continue;
+
+            map.arenaCheckpoints.set(i, new Checkpoint(
+                    checkpoint.id(),
+                    checkpoint.spawn(),
+                    selected,
+                    checkpoint.name()
+            ));
+            this.configuration.map().save();
+
+            this.message(player, PREFIX + "<green>Updated checkpoint <white>#"
+                    + this.displayCheckpointNumber(map, checkpoint.id())
+                    + "<green> trigger region to <white>" + selected.size() + "<green> block(s).");
+            return;
+        }
+
+        this.message(player, this.configuration.language().commandMessageCheckpointNotFound
+                .replace("<checkpoint>", String.valueOf(checkpointId))
+                .replace("<map>", this.safe(map.id)));
+    }
+
     @Execute(name = "addspawn")
     @Permission("mrstudios.command.deathrun.setup")
     public void addSpawn(
