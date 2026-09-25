@@ -10,23 +10,26 @@ import java.util.UUID;
 
 public interface IUser {
 
-    /* User Data */
     @NotNull String getName();
     @NotNull UUID getUniqueId();
 
-    /* Role */
     @NotNull Role getRole();
     void setRole(@NotNull Role role);
 
-    /* Checkpoint */
     @NotNull ICheckpoint getCheckpoint();
     void setCheckpoint(@NotNull ICheckpoint checkpoint);
 
-    /* Arena */
     int getDeaths();
     void setDeaths(int deaths);
 
-    /* Bukkit Player */
-    @Nullable Player asBukkit();
+    int getLives();
+    void setLives(int lives);
 
+    int getRoundPoints();
+    void setRoundPoints(int roundPoints);
+
+    boolean isEliminated();
+    void setEliminated(boolean eliminated);
+
+    @Nullable Player asBukkit();
 }
