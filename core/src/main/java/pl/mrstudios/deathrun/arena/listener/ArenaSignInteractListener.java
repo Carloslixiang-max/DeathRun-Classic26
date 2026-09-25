@@ -4,8 +4,10 @@ import io.papermc.paper.event.player.PlayerOpenSignEvent;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.block.Sign;
+import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
+import org.bukkit.event.player.PlayerInteractEvent;
 import org.jetbrains.annotations.NotNull;
 import pl.mrstudios.commons.inject.annotation.Inject;
 import pl.mrstudios.deathrun.arena.ArenaManager;
@@ -13,6 +15,7 @@ import pl.mrstudios.deathrun.arena.sign.SignManager;
 import pl.mrstudios.deathrun.arena.sign.SignManager.QueueSign;
 
 import static org.bukkit.event.EventPriority.HIGHEST;
+import static org.bukkit.event.block.Action.RIGHT_CLICK_BLOCK;
 
 public class ArenaSignInteractListener implements Listener {
 
@@ -32,78 +35,88 @@ public class ArenaSignInteractListener implements Listener {
     }
 
     @EventHandler(priority = HIGHEST)
-    public void onPlayerOpenSign(
-            @NotNull PlayerOpenSignEvent event
-    ) {
-        if (!(event.getSign().getLocation().getBlock().getState() instanceof Sign))
+    public void onPlayerInteract(@NotNull PlayerInteractEvent event) {
+        if (event.getAction() != RIGHT_CLICK_BLOCK || event.getClickedBlock() == null)
+            return;
+        if (!(event.getClickedBlock().getState() instanceof Sign))
             return;
 
-        QueueSign queueSign = this.signManager.signAt(event.getSign().getLocation().getBlock());
+        QueueSign queueSign = this.signManager.signAt(event.getClickedBlock());
         if (queueSign == null)
             return;
 
-        if (!event.getPlayer().hasPermission(SIGN_USE_PERMISSION)
-            && !event.getPlayer().hasPermission(LEGACY_SIGN_USE_PERMISSION)) {
+        event.setCancelled(true);
+        this.handle(event.getPlayer(), queueSign);
+    }
+
+    @EventHandler(priority = HIGHEST)
+    public void onPlayerOpenSign(@NotNull PlayerOpenSignEvent event) {
+        QueueSign queueSign = this.signManager.signAt(event.getSign().getLocation().getBlock());
+        if (queueSign != null)
             event.setCancelled(true);
-            event.getPlayer().sendMessage(ChatColor.RED + "You don't have permission to use DeathRun signs.");
+    }
+
+    private void handle(@NotNull Player player, @NotNull QueueSign queueSign) {
+        if (!player.hasPermission(SIGN_USE_PERMISSION)
+                && !player.hasPermission(LEGACY_SIGN_USE_PERMISSION)) {
+            player.sendMessage(ChatColor.RED + "You don't have permission to use DeathRun signs.");
             return;
         }
 
-        event.setCancelled(true);
-
         switch (queueSign.type()) {
-
             case JOIN -> {
                 if (queueSign.mapId() != null && this.arenaManager.isMapLockedForEditing(queueSign.mapId())) {
-                    event.getPlayer().sendMessage(ChatColor.RED + "This map is currently unavailable as it is being edited.");
+                    player.sendMessage(ChatColor.RED + "This map is currently unavailable as it is being edited.");
                     return;
                 }
 
                 if (queueSign.mapId() == null || queueSign.mapId().isBlank()) {
-                    event.getPlayer().sendMessage(ChatColor.RED + "This map is currently not joinable.");
+                    player.sendMessage(ChatColor.RED + "This map is currently not joinable.");
                     return;
                 }
 
-                String consoleCommand = "dr join " + event.getPlayer().getName() + " " + queueSign.mapId();
-                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), consoleCommand);
+                Bukkit.dispatchCommand(
+                        Bukkit.getConsoleSender(),
+                        "dr join " + player.getName() + " " + queueSign.mapId()
+                );
             }
 
             case AUTOJOIN -> {
                 String bestMapId = this.signManager.bestJoinableMap().orElse(null);
                 if (bestMapId == null) {
-                    event.getPlayer().sendMessage(ChatColor.RED + "No map available for auto-join.");
+                    player.sendMessage(ChatColor.RED + "No map available for auto-join.");
                     return;
                 }
 
-                String consoleCommand = "dr join " + event.getPlayer().getName() + " " + bestMapId;
-                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), consoleCommand);
+                Bukkit.dispatchCommand(
+                        Bukkit.getConsoleSender(),
+                        "dr join " + player.getName() + " " + bestMapId
+                );
             }
 
             case LEAVE -> {
-                boolean leftQueue = this.signManager.leaveQueue(event.getPlayer());
-                boolean leftMap = this.arenaManager.leaveCurrentMap(event.getPlayer(), true);
+                boolean leftQueue = this.signManager.leaveQueue(player);
+                boolean leftMap = this.arenaManager.leaveCurrentMap(player, true);
                 if (!leftQueue && !leftMap) {
-                    event.getPlayer().sendMessage(ChatColor.GRAY + "You're not in any DeathRun queue.");
+                    player.sendMessage(ChatColor.GRAY + "You're not in any DeathRun queue.");
                     return;
                 }
 
                 if (leftMap) {
-                    event.getPlayer().sendMessage(ChatColor.YELLOW + "You have left DeathRun and your previous state was restored.");
+                    player.sendMessage(ChatColor.YELLOW + "You have left DeathRun and your previous state was restored.");
                     return;
                 }
 
-                if (this.arenaManager.hasPendingSnapshot(event.getPlayer())) {
-                    if (!this.arenaManager.restorePendingSnapshot(event.getPlayer())) {
-                        event.getPlayer().sendMessage(ChatColor.RED + "DeathRun could not restore your saved state yet; recovery data was kept.");
+                if (this.arenaManager.hasPendingSnapshot(player)) {
+                    if (!this.arenaManager.restorePendingSnapshot(player)) {
+                        player.sendMessage(ChatColor.RED + "DeathRun could not restore your saved state yet; recovery data was kept.");
                         return;
                     }
                 } else {
-                    this.arenaManager.returnPlayerToHub(event.getPlayer());
+                    this.arenaManager.returnPlayerToHub(player);
                 }
-                event.getPlayer().sendMessage(ChatColor.YELLOW + "You have left the DeathRun queue.");
+                player.sendMessage(ChatColor.YELLOW + "You have left the DeathRun queue.");
             }
-
         }
     }
-
 }
