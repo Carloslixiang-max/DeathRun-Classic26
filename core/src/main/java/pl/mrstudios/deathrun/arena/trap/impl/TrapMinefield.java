@@ -29,6 +29,7 @@ public final class TrapMinefield extends Trap {
                 location.getWorld().spawn(location.toCenterLocation(), TNTPrimed.class, entity -> {
                     entity.setFuseTicks(8);
                     entity.setYield(0.0f);
+                    entity.addScoreboardTag(pl.mrstudios.deathrun.classic.trap.DeathRunEntityTags.TRAP_EXPLOSIVE);
                     entity.setVelocity(new Vector(0, 0.08, 0));
                 })
         );
