@@ -46,16 +46,16 @@ public class PluginConfiguration extends OkaeriConfig {
         public Location mainHubLocation;
 
                 @Comment({ "", "Required players threshold to start a round." })
-        public int arenaRequiredPlayersToStart = 5;
+        public int arenaRequiredPlayersToStart = 11;
 
         @Comment({ "", "Max players in one map. 0 or less means auto based on configured spawn points; values above 0 are used directly and spawn points are reused." })
-        public int arenaMaxPlayers = 15;
+        public int arenaMaxPlayers = 22;
 
     @Comment({ "", "Amount of players with 'DEATH' role on arena." })
-    public int arenaDeathsAmount = 1;
+    public int arenaDeathsAmount = 2;
 
     @Comment({ "", "Amount of time that runners have to complete run. (in seconds)" })
-    public int arenaGameTime = 600;
+    public int arenaGameTime = 300;
 
     @Comment({ "", "Amount of time that is needed to game start." })
     public int arenaPreStartingTime = 30;
@@ -72,6 +72,9 @@ public class PluginConfiguration extends OkaeriConfig {
     @Comment({ "", "Max ,,survivable`` distance that player can fall." })
     public int arenaMaxFallDistance = 8;
 
+    @Comment({ "", "If true, a Runner at 0 lives becomes a spectator. If false, they stay eliminated without being moved into the spectator role." })
+    public boolean classicZeroLivesSpectator = true;
+
     @Comment({ "", "Speed Amplifier for Death role." })
     public int arenaDeathSpeedAmplifier = 10;
 
@@ -84,8 +87,8 @@ public class PluginConfiguration extends OkaeriConfig {
     })
 
     public List<BlockEffect> blockEffects = of(
-            new BlockEffect(EMERALD_BLOCK, JUMP_BOOST, 7, 1.5f),
-            new BlockEffect(REDSTONE_BLOCK, SPEED, 5, 1.5f)
+            new BlockEffect(EMERALD_BLOCK, JUMP_BOOST, 6, 2.0f),
+            new BlockEffect(REDSTONE_BLOCK, SPEED, 5, 2.0f)
     );
 
     @Comment({

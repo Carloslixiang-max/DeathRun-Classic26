@@ -425,8 +425,8 @@ public class ArenaServiceRunnable extends BukkitRunnable {
                 .toList()
                 .forEach((player) -> {
                     this.audiences.player(player).sendMessage(miniMessage().deserialize(this.configuration.language().arenaMoveServerChat));
+                    // Exact pre-DeathRun snapshot restoration happens in leaveCurrentMap.
                     this.arenaManager.leaveCurrentMap(player, false);
-                                        this.arenaManager.returnPlayerToHub(player);
                 });
 
                 this.setState(WAITING);
@@ -554,6 +554,9 @@ public class ArenaServiceRunnable extends BukkitRunnable {
                                                             .replace("<timeFormatted>", this.formatTime(this.arena.getRemainingTime()))
                                                             .replace("<runners>", valueOf(this.arena.getRunners().size()))
                                                             .replace("<deaths>", valueOf(user.getDeaths()))
+                                                            .replace("<lives>", valueOf(user.getLives()))
+                                                            .replace("<roundPoints>", valueOf(user.getRoundPoints()))
+                                                            .replace("<checkpoint>", user.getCheckpoint() == null ? "-" : valueOf(user.getCheckpoint().id()))
                                                             .replace("<deathPlayers>", valueOf(this.arena.getDeaths().size()))
                                                     )
                                             )),

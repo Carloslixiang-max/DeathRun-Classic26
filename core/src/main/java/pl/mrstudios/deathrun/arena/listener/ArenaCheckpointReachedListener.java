@@ -146,7 +146,7 @@ public class ArenaCheckpointReachedListener implements Listener {
             return;
                                 }
 
-                                if (user.getRole() != RUNNER) {
+                                if (user.getRole() != RUNNER || user.isEliminated()) {
                         this.progressionByPlayer.remove(player.getUniqueId());
             return;
                                 }

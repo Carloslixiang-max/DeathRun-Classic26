@@ -285,13 +285,14 @@ public class LanguageConfiguration extends OkaeriConfig {
             "<reset>",
             "<white>Time: <green><timeFormatted>",
             "<white>Role: <green><role>",
+            "<white>Lives: <red><lives>",
+            "<white>Points: <gold><roundPoints>",
+            "<white>Checkpoint: <aqua><checkpoint>",
             "<reset>",
             "<white>Runners: <green><runners>",
             "<white>Deaths: <red><deaths>",
             "<reset>",
-            "<white>Map: <green><map>",
-            "<reset>",
-            "<yellow>www.example.com"
+            "<white>Map: <green><map>"
     );
 
     @Comment({

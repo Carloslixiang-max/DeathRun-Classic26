@@ -70,8 +70,13 @@ public final class DeathRunDeathService {
         TrapActivationContext attribution = this.trapActivationService.recentAttribution(player.getUniqueId());
         user.setDeaths(user.getDeaths() + 1);
         user.setLives(user.getLives() - 1);
-        if (user.getLives() <= 0)
+        if (user.getLives() <= 0) {
             user.setEliminated(true);
+            if (this.configuration.plugin().classicZeroLivesSpectator) {
+                user.setRole(pl.mrstudios.deathrun.api.arena.user.enums.Role.SPECTATOR);
+                player.setAllowFlight(true);
+            }
+        }
 
         player.teleport(this.respawnLocation(user));
         player.playSound(player.getLocation(), this.configuration.plugin().arenaSoundPlayerDeath, 1.0f, 1.0f);
