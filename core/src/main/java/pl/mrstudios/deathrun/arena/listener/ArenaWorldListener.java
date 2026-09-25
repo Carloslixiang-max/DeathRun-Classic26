@@ -3,7 +3,6 @@ package pl.mrstudios.deathrun.arena.listener;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.world.WorldLoadEvent;
-import org.bukkit.event.world.WorldSaveEvent;
 import org.bukkit.event.world.WorldUnloadEvent;
 import org.jetbrains.annotations.NotNull;
 import pl.mrstudios.commons.inject.annotation.Inject;
@@ -32,9 +31,8 @@ public class ArenaWorldListener implements Listener {
             event.getWorld().setAutoSave(true);
     }
 
-    @EventHandler(priority = MONITOR)
-    public void onWorldSave(@NotNull WorldSaveEvent event) {
-        if (this.arenaManager.isDeathRunWorld(event.getWorld()))
-            event.getWorld().setAutoSave(false);
-    }
+    // Do not change auto-save from WorldSaveEvent. During plugin shutdown or a
+    // runtime reload ArenaManager deliberately enables auto-save and calls
+    // world.save(); flipping it back off from that save event would leave the
+    // world owned by a disabled plugin.
 }
