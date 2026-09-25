@@ -168,7 +168,6 @@ public class ArenaManager {
 
         for (Player player : players) {
             this.leaveCurrentMap(player, true);
-            this.returnPlayerToHub(player);
             this.audiences.player(player).sendMessage(miniMessage().deserialize(this.configuration.language().mapSelectorMapEditing));
         }
     }
