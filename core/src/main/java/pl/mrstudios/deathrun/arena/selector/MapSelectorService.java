@@ -130,6 +130,7 @@ public class MapSelectorService {
         ItemMeta meta = item.getItemMeta();
 
         String mapName = map.name == null || map.name.isBlank() ? "Unnamed" : map.name;
+        String creator = map.creator == null || map.creator.isBlank() ? "Unknown" : map.creator;
         String worldName = map.world == null || map.world.isBlank() ? "unknown" : map.world;
         String status = this.mapStatus(map);
 
@@ -139,6 +140,7 @@ public class MapSelectorService {
 
         List<Component> lore = this.configuration.language().mapSelectorMapLore.stream()
                 .map((line) -> line
+                        .replace("<creator>", creator.replace("<", "").replace(">", ""))
                         .replace("<world>", worldName)
                         .replace("<players>", valueOf(currentPlayers))
                         .replace("<maxPlayers>", valueOf(maxPlayers))
