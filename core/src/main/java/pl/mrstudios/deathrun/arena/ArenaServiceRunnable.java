@@ -26,6 +26,7 @@ import pl.mrstudios.deathrun.config.impl.MapConfiguration;
 import pl.mrstudios.deathrun.reward.RewardService;
 import pl.mrstudios.deathrun.classic.strafe.ClassicStrafeService;
 import pl.mrstudios.deathrun.classic.death.DeathNavigatorService;
+import pl.mrstudios.deathrun.classic.trap.TrapActivationService;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -138,6 +139,7 @@ public class ArenaServiceRunnable extends BukkitRunnable {
     }
 
     protected void stateSwitchToWaiting() {
+        TrapActivationService.resetMap(this.resolvedMapId());
         this.resetRoundState();
         for (int i = 0; i < this.map.arenaStartBarrierBlocks.size(); i++) {
             Location location = this.map.arenaStartBarrierBlocks.get(i);
