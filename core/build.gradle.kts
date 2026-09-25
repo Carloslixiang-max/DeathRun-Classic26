@@ -1,6 +1,5 @@
 plugins {
     id("java")
-    id("net.kyori.blossom") version "1.3.1"
     id("com.gradleup.shadow") version "9.6.1"
 }
 
@@ -11,12 +10,6 @@ project.version = project.parent?.version!!
 
 java {
     toolchain.languageVersion.set(JavaLanguageVersion.of(25))
-}
-
-blossom {
-    replaceToken("{version}", manualVersion)
-    replaceToken("{gitBranch}", "classic26-dev")
-    replaceToken("{gitCommitHash}", "local-build")
 }
 
 repositories {
