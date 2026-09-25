@@ -236,8 +236,11 @@ public class CommandDeathRun {
         if (!leftMap && !leftQueue)
             return;
 
-        this.arenaManager.returnPlayerToHub(player);
-        this.message(player, "<yellow>You have left the match and returned to the Hub.");
+        if (!leftMap)
+            this.arenaManager.returnPlayerToHub(player);
+        this.message(player, leftMap
+                ? "<yellow>You have left DeathRun and your previous state was restored."
+                : "<yellow>You have left the DeathRun queue.");
     }
 
     /* Setup Command */
@@ -1704,9 +1707,12 @@ public class CommandDeathRun {
     ) {
         if (mapId.equalsIgnoreCase("lobby") || mapId.equalsIgnoreCase("leave")) {
             this.signManager.leaveQueue(target);
-            this.arenaManager.leaveCurrentMap(target, true);
-            this.arenaManager.returnPlayerToHub(target);
-            this.message(target, "<yellow>You have left the match and returned to the Hub.");
+            boolean leftMap = this.arenaManager.leaveCurrentMap(target, true);
+            if (!leftMap)
+                this.arenaManager.returnPlayerToHub(target);
+            this.message(target, leftMap
+                    ? "<yellow>You have left DeathRun and your previous state was restored."
+                    : "<yellow>You have left the DeathRun queue.");
 
             if (actor != null && actor != target)
                 this.message(actor, this.configuration.language().commandMessageJoinForcedLobbyActor
@@ -1718,6 +1724,7 @@ public class CommandDeathRun {
         String content = switch (result) {
             case JOINED -> this.configuration.language().mapSelectorMapSelected.replace("<map>", mapId);
             case ALREADY_IN_MAP -> this.configuration.language().mapSelectorAlreadyJoined;
+            case PLAYER_STATE_SAVE_FAILED -> "<red>DeathRun could not safely save your current player state; join cancelled.";
             case MAP_NOT_READY -> this.configuration.language().mapSelectorMapNotReady;
             case MAP_FULL -> this.configuration.language().mapSelectorMapFull;
             case MATCH_IN_PROGRESS -> this.configuration.language().mapSelectorMapInProgress;
