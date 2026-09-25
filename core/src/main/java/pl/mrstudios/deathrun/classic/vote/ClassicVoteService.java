@@ -248,6 +248,27 @@ public final class ClassicVoteService {
 
     private @NotNull List<MapConfiguration.MapDefinition> currentCandidates() {
         int max = Math.max(1, Math.min(5, this.configuration.plugin().classicVoteMapCandidates));
+        List<String> configured = this.configuration.plugin().classicVoteMapIds == null
+                ? List.of()
+                : this.configuration.plugin().classicVoteMapIds.stream()
+                        .filter(java.util.Objects::nonNull)
+                        .map(String::trim)
+                        .filter(id -> !id.isBlank())
+                        .toList();
+
+        if (!configured.isEmpty()) {
+            LinkedHashMap<String, MapConfiguration.MapDefinition> ordered = new LinkedHashMap<>();
+            for (String id : configured) {
+                MapConfiguration.MapDefinition map = this.configuration.map().getMapById(id);
+                if (map == null || !this.isEligible(map))
+                    continue;
+                ordered.putIfAbsent(this.mapId(map), map);
+                if (ordered.size() >= max)
+                    break;
+            }
+            return List.copyOf(ordered.values());
+        }
+
         return this.configuration.map().resolvedMaps().stream()
                 .filter(this::isEligible)
                 .sorted(Comparator.comparing(this::displayName, String.CASE_INSENSITIVE_ORDER))
