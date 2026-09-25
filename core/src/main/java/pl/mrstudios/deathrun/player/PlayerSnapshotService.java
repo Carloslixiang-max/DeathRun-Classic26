@@ -52,6 +52,15 @@ public final class PlayerSnapshotService {
         return this.fileFor(playerId).isFile();
     }
 
+    /**
+     * A pending file can either belong to the current queue/match session or be
+     * an orphan from a previous crash/restart. Only current-session snapshots
+     * may be reused when a player transitions from queue -> arena.
+     */
+    public boolean isCurrentSessionSnapshot(@NotNull UUID playerId) {
+        return this.liveScoreboards.containsKey(playerId) && this.hasPending(playerId);
+    }
+
     public boolean capture(@NotNull Player player) {
         UUID playerId = player.getUniqueId();
         File target = this.fileFor(playerId);

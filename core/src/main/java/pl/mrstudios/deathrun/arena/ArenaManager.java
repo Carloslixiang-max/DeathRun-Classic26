@@ -88,8 +88,22 @@ public class ArenaManager {
     }
 
     public boolean ensureSnapshot(@NotNull Player player) {
-        return this.playerSnapshotService.hasPending(player.getUniqueId())
-                || this.playerSnapshotService.capture(player);
+        UUID playerId = player.getUniqueId();
+
+        if (!this.playerSnapshotService.hasPending(playerId))
+            return this.playerSnapshotService.capture(player);
+
+        if (this.playerSnapshotService.isCurrentSessionSnapshot(playerId))
+            return true;
+
+        // Never reuse a recovery journal left by an older plugin/server session.
+        // The player must recover that state first; otherwise DeathRun could clear
+        // the player's current inventory while preserving an unrelated stale file.
+        this.plugin.getLogger().warning(
+                "[DeathRun] Refusing arena entry for " + player.getName()
+                        + " because an orphan recovery file is still pending."
+        );
+        return false;
     }
 
     public boolean restorePendingSnapshot(@NotNull Player player) {
