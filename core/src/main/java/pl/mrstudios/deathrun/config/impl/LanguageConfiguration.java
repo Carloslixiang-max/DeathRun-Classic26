@@ -185,6 +185,7 @@ public class LanguageConfiguration extends OkaeriConfig {
     public String mapSelectorTitle = "DeathRun Maps";
     public String mapSelectorMapName = "<gold><name>";
     public List<String> mapSelectorMapLore = asList(
+            "<gray>Creator: <white><creator>",
             "<gray>World: <white><world>",
             "<gray>Players: <white><players>/<maxPlayers>",
             "<gray>Status: <white><status>",
