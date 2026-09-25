@@ -924,7 +924,7 @@ public class CommandDeathRun {
     ) {
 
         MapConfiguration.MapDefinition map = this.selectedMapForSetup(player, true);
-        if (map == null)
+        if (map == null || !this.playerInConfiguredMapWorld(player, map))
             return;
 
         this.ensureMutableSetupCollections(map);
@@ -1381,7 +1381,7 @@ public class CommandDeathRun {
             @Arg("id") int checkpointId
     ) {
         MapConfiguration.MapDefinition map = this.selectedMapForSetup(player, true);
-        if (map == null)
+        if (map == null || !this.playerInConfiguredMapWorld(player, map))
             return;
 
         for (int i = 0; i < map.arenaCheckpoints.size(); i++) {
@@ -1965,13 +1965,18 @@ public class CommandDeathRun {
     ) {
 
         MapConfiguration.MapDefinition map = this.selectedMapForSetup(player, true);
-        if (map == null)
+        if (map == null || !this.playerInConfiguredMapWorld(player, map))
             return;
 
         List<Location> locations = this.locations(player);
 
         if (material != null)
             locations.removeIf((location) -> !location.getBlock().getType().equals(material));
+
+        if (locations.isEmpty()) {
+            this.message(player, PREFIX + "<red>Select a non-empty WorldEdit barrier region in the current map world first.");
+            return;
+        }
 
         map.arenaStartBarrierBlocks = locations;
         map.arenaStartBarrierRestoreMaterials = locations.stream()
@@ -1989,10 +1994,9 @@ public class CommandDeathRun {
     ) {
 
         MapConfiguration.MapDefinition map = this.selectedMapForSetup(player, true);
-        if (map == null)
+        if (map == null || !this.playerInConfiguredMapWorld(player, map))
             return;
 
-        map.world = player.getWorld().getName();
         map.arenaWaitingLobbyLocation = player.getLocation().toCenterLocation();
         this.configuration.map().save();
         this.message(player, this.configuration.language().commandMessageWaitingLobbySet);
@@ -2016,12 +2020,12 @@ public class CommandDeathRun {
     ) {
 
         MapConfiguration.MapDefinition map = this.selectedMapForSetup(player, true);
-        if (map == null)
+        if (map == null || !this.playerInConfiguredMapWorld(player, map))
             return;
 
         List<Location> locations = locations(player);
         if (locations.isEmpty()) {
-            this.message(player, this.configuration.language().commandMessageTrapLookAtButton);
+            this.message(player, PREFIX + "<red>Select a non-empty WorldEdit teleport-pad source region in the current map world first.");
             return;
         }
 
@@ -2041,9 +2045,6 @@ public class CommandDeathRun {
         if (map == null)
             return;
 
-        if (map.world == null || map.world.isBlank())
-            map.world = player.getWorld().getName();
-
         this.rebuildBarrierSnapshot(map);
 
         List<String> issues = this.mapPromotionIssues(map, false);
@@ -2054,7 +2055,7 @@ public class CommandDeathRun {
             return;
         }
 
-        String worldName = map.world == null || map.world.isBlank() ? player.getWorld().getName() : map.world;
+        String worldName = map.world;
         World world = this.plugin.getServer().getWorld(worldName);
         if (world == null) {
             this.message(player, this.configuration.language().commandMessageSetupMapBackupWorldMissing.replace("<world>", worldName));
