@@ -5,6 +5,8 @@ import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.WorldCreator;
+import org.bukkit.block.BlockFace;
+import org.bukkit.block.data.Directional;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
 import org.jetbrains.annotations.NotNull;
@@ -82,12 +84,14 @@ public final class ClassicPlaytestService {
 
             this.addTrap(map, new TrapDisappearingParkour(), button(world, 14), floorRegion(world, 15, 18));
             this.addTrap(map, new TrapKnockBack(), button(world, 26), hitboxRegion(world, 27, 30));
+            this.addTrap(map, new TrapArrows(), button(world, 34), arrowDispensers(world, 35));
             this.addTrap(map, new TrapFireFloor(), button(world, 46), floorRegion(world, 47, 50));
             this.addTrap(map, new TrapFlood(), button(world, 58), feetRegion(world, 59, 62));
             this.addTrap(map, new TrapWallSpawn(), button(world, 70), wallRegion(world, 71));
             this.addTrap(map, new TrapLaunchPlayers(), button(world, 86), hitboxRegion(world, 87, 90));
             this.addTrap(map, new TrapGiant(), button(world, 98), hitboxRegion(world, 99, 102));
             this.addTrap(map, new TrapFireTrail(), button(world, 110), floorRegion(world, 111, 114));
+            this.addTrap(map, new TrapTNT(), button(world, 122), tntPads(world, 123));
             this.addTrap(map, new TrapGlassFloor(), button(world, 126), floorRegion(world, 127, 130));
             this.addTrap(map, new TrapQuicksand(), button(world, 138), floorRegion(world, 139, 142));
             this.addTrap(map, new TrapBlockReplace(), button(world, 146), wallRegion(world, 147));
@@ -129,7 +133,7 @@ public final class ClassicPlaytestService {
         fill(world, -3, 3, FLOOR_Y, FLOOR_Y, -1, 162, Material.SMOOTH_STONE);
         fill(world, 8, 10, FLOOR_Y + 3, FLOOR_Y + 3, 0, 162, Material.POLISHED_BLACKSTONE);
 
-        for (int z : new int[]{14, 26, 46, 58, 70, 86, 98, 110, 126, 138, 146, 150}) {
+        for (int z : new int[]{14, 26, 34, 46, 58, 70, 86, 98, 110, 122, 126, 138, 146, 150}) {
             world.getBlockAt(8, FLOOR_Y + 3, z).setType(Material.POLISHED_BLACKSTONE, false);
             world.getBlockAt(8, FLOOR_Y + 4, z).setType(Material.STONE_BUTTON, false);
         }
@@ -148,7 +152,7 @@ public final class ClassicPlaytestService {
             @NotNull List<Location> locations
     ) {
         trap.setButton(button);
-        trap.setLocations(locations);
+        trap.setLocations(trap.filter(locations));
         map.arenaTraps.add(trap);
     }
 
