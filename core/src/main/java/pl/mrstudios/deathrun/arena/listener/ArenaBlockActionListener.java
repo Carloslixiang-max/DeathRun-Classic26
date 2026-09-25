@@ -1,7 +1,7 @@
 package pl.mrstudios.deathrun.arena.listener;
 
-import org.bukkit.Material;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.InventoryHolder;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBreakEvent;
@@ -13,8 +13,6 @@ import pl.mrstudios.deathrun.arena.ArenaManager;
 
 import static org.bukkit.GameMode.CREATIVE;
 
-import static java.util.Arrays.stream;
-import static org.bukkit.Material.*;
 import static org.bukkit.event.EventPriority.MONITOR;
 import static org.bukkit.event.block.Action.PHYSICAL;
 import static org.bukkit.event.block.Action.RIGHT_CLICK_BLOCK;
@@ -55,10 +53,10 @@ public class ArenaBlockActionListener implements Listener {
         if (!this.shouldRestrict(event.getPlayer()))
             return;
 
-        if (event.getAction() == RIGHT_CLICK_BLOCK)
-            if (event.getClickedBlock() != null)
-                if (stream(containerMaterials).anyMatch((material) -> material == event.getClickedBlock().getType()))
-                    event.setCancelled(true);
+        if (event.getAction() == RIGHT_CLICK_BLOCK
+                && event.getClickedBlock() != null
+                && event.getClickedBlock().getState() instanceof InventoryHolder)
+            event.setCancelled(true);
 
         if (event.getAction() == PHYSICAL)
             event.setCancelled(true);
@@ -73,12 +71,5 @@ public class ArenaBlockActionListener implements Listener {
 
         return this.arenaManager.runtimeForPlayer(player) != null;
     }
-
-    protected static final Material[] containerMaterials = {
-            CHEST, DISPENSER, DROPPER, FURNACE,
-            HOPPER, BREWING_STAND, BEACON, ANVIL,
-            CHIPPED_ANVIL, DAMAGED_ANVIL, ENCHANTING_TABLE,
-            ENDER_CHEST, BARREL, BLAST_FURNACE, SMOKER
-    };
 
 }
