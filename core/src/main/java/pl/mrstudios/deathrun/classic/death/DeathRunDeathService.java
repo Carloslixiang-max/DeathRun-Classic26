@@ -61,6 +61,10 @@ public final class DeathRunDeathService {
         this.trapActivationService = new TrapActivationService(plugin, server, configuration);
     }
 
+    public static void clearPlayer(@NotNull UUID playerId) {
+        LAST_DEATH_AT.remove(playerId);
+    }
+
     public @Nullable DeathResult killRunner(@NotNull Player player, @NotNull DeathRunDeathCause cause) {
         ArenaManager.ArenaRuntime runtime = this.arenaManager.runtimeForPlayer(player);
         if (runtime == null || runtime.arena().getGameState() != PLAYING)

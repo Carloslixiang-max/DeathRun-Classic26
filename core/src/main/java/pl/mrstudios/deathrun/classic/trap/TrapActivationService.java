@@ -160,6 +160,11 @@ public final class TrapActivationService {
         );
     }
 
+    public static void clearPlayer(@NotNull UUID playerId) {
+        RECENT_CONTACT.remove(playerId);
+        ACTIVE.values().forEach(context -> context.victims().remove(playerId));
+    }
+
     public static void resetMap(@NotNull String mapId) {
         String normalized = mapId.toLowerCase(java.util.Locale.ROOT);
 

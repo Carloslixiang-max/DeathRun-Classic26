@@ -24,6 +24,9 @@ import pl.mrstudios.deathrun.config.impl.MapConfiguration;
 import pl.mrstudios.deathrun.reward.RewardService;
 import pl.mrstudios.deathrun.player.PlayerSnapshotService;
 import pl.mrstudios.deathrun.classic.trap.TrapActivationService;
+import pl.mrstudios.deathrun.classic.strafe.ClassicStrafeService;
+import pl.mrstudios.deathrun.classic.death.DeathNavigatorService;
+import pl.mrstudios.deathrun.classic.death.DeathRunDeathService;
 
 import java.util.*;
 
@@ -462,6 +465,12 @@ public class ArenaManager {
 
         this.playerMapIndex.remove(player.getUniqueId());
         if (removed) {
+            UUID playerId = player.getUniqueId();
+            ClassicStrafeService.clearCooldowns(playerId);
+            DeathNavigatorService.clearPlayer(playerId);
+            DeathRunDeathService.clearPlayer(playerId);
+            TrapActivationService.clearPlayer(playerId);
+
             this.server.getOnlinePlayers().forEach((onlinePlayer) -> {
                 onlinePlayer.showPlayer(this.plugin, player);
                 player.showPlayer(this.plugin, onlinePlayer);

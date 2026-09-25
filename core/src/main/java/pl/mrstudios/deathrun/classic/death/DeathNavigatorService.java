@@ -92,7 +92,7 @@ public final class DeathNavigatorService {
         return "Trap " + (index + 1) + "/" + runtime.map().arenaTraps.size() + " · " + type;
     }
 
-    public void clear(@NotNull UUID playerId) {
+    public static void clearPlayer(@NotNull UUID playerId) {
         SELECTED_TRAP.remove(playerId);
     }
 

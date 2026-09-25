@@ -37,8 +37,12 @@ public final class ClassicStrafeService {
         this.cooldownUntil.remove(player.getUniqueId());
     }
 
+    public static void clearCooldowns(@NotNull UUID playerId) {
+        cooldownUntil.remove(playerId);
+    }
+
     public void clear(@NotNull Player player) {
-        this.cooldownUntil.remove(player.getUniqueId());
+        clearCooldowns(player.getUniqueId());
         for (int slot = 3; slot <= 5; slot++) {
             ItemStack item = player.getInventory().getItem(slot);
             if (directionOf(item) != null)
