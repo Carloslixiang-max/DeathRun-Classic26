@@ -1,6 +1,5 @@
 package pl.mrstudios.deathrun.arena;
 
-import net.kyori.adventure.platform.bukkit.BukkitAudiences;
 import org.bukkit.Bukkit;
 import org.bukkit.Server;
 import org.bukkit.ChatColor;
@@ -44,7 +43,6 @@ public class ArenaManager {
 
     private final Plugin plugin;
     private final Server server;
-    private final BukkitAudiences audiences;
     private final Configuration configuration;
     private final WinMapManager winMapManager;
     private final RewardService rewardService;
@@ -58,14 +56,12 @@ public class ArenaManager {
     public ArenaManager(
             @NotNull Plugin plugin,
             @NotNull Server server,
-            @NotNull BukkitAudiences audiences,
             @NotNull Configuration configuration,
             @NotNull WinMapManager winMapManager,
             @NotNull RewardService rewardService
     ) {
         this.plugin = plugin;
         this.server = server;
-        this.audiences = audiences;
         this.configuration = configuration;
         this.winMapManager = winMapManager;
         this.rewardService = rewardService;
@@ -168,7 +164,7 @@ public class ArenaManager {
 
         for (Player player : players) {
             this.leaveCurrentMap(player, true);
-            this.audiences.player(player).sendMessage(miniMessage().deserialize(this.configuration.language().mapSelectorMapEditing));
+            player.sendMessage(miniMessage().deserialize(this.configuration.language().mapSelectorMapEditing));
         }
     }
 
@@ -281,7 +277,7 @@ public class ArenaManager {
         runtime.arena().getUsers().stream()
                 .map(IUser::asBukkit)
                 .filter(Objects::nonNull)
-                .forEach((target) -> this.audiences.player(target).sendMessage(miniMessage().deserialize(
+                .forEach((target) -> target.sendMessage(miniMessage().deserialize(
                         this.configuration.language().chatMessageArenaPlayerJoined
                     .replace("<player>", this.safePlayerName(player))
                                 .replace("<currentPlayers>", valueOf(runtime.arena().getUsers().size()))
@@ -332,7 +328,7 @@ public class ArenaManager {
         for (Player player : players) {
             try {
                 this.leaveCurrentMap(player, false);
-                this.audiences.player(player).sendMessage(miniMessage().deserialize(
+                player.sendMessage(miniMessage().deserialize(
                         "<red>[DeathRun]</red> <gray>The test match hit an internal error and your pre-game state was restored. Check latest.log for <white>[DR-START]</white>."
                 ));
             } catch (Throwable restoreFailure) {
@@ -366,13 +362,13 @@ public class ArenaManager {
         for (Player player : activePlayers) {
             // leaveCurrentMap restores the exact pre-DeathRun state/location.
             this.leaveCurrentMap(player, false);
-            this.audiences.player(player).sendMessage(miniMessage().deserialize(this.configuration.language().commandMessageStopMovedToHub));
+            player.sendMessage(miniMessage().deserialize(this.configuration.language().commandMessageStopMovedToHub));
         }
 
         if (this.signManager != null) {
             for (Player queuedPlayer : this.signManager.drainQueuedPlayers(runtime.mapId(), Integer.MAX_VALUE)) {
                 this.returnPlayerToHub(queuedPlayer);
-                this.audiences.player(queuedPlayer).sendMessage(miniMessage().deserialize(this.configuration.language().commandMessageStopMovedToHub));
+                queuedPlayer.sendMessage(miniMessage().deserialize(this.configuration.language().commandMessageStopMovedToHub));
             }
         }
 
@@ -402,7 +398,7 @@ public class ArenaManager {
                 runtime.arena().getUsers().stream()
                         .map(IUser::asBukkit)
                         .filter(Objects::nonNull)
-                        .forEach((target) -> this.audiences.player(target).sendMessage(miniMessage().deserialize(
+                        .forEach((target) -> target.sendMessage(miniMessage().deserialize(
                                 this.configuration.language().chatMessageArenaPlayerLeft
                                         .replace("<player>", this.safePlayerName(player))
                                         .replace("<currentPlayers>", valueOf(runtime.arena().getUsers().size()))
@@ -533,7 +529,7 @@ public class ArenaManager {
         if (this.playerSnapshotService.hasPending(player.getUniqueId())) {
             boolean restored = this.playerSnapshotService.restore(player);
             if (notify && restored)
-                this.audiences.player(player).sendMessage(miniMessage().deserialize("<gold>[DR]</gold> <gray>Your pre-DeathRun state was recovered."));
+                player.sendMessage(miniMessage().deserialize("<gold>[DR]</gold> <gray>Your pre-DeathRun state was recovered."));
             return;
         }
 
@@ -544,7 +540,7 @@ public class ArenaManager {
         this.leaveCurrentMap(player, false);
         this.returnPlayerToHub(player);
         if (notify)
-            this.audiences.player(player).sendMessage(miniMessage().deserialize("<gold>[DR]</gold> <gray>Your previous arena session has ended; you were returned to the hub."));
+            player.sendMessage(miniMessage().deserialize("<gold>[DR]</gold> <gray>Your previous arena session has ended; you were returned to the hub."));
     }
 
     public void restoreActivePlayersOnDisable() {
