@@ -2058,21 +2058,204 @@ public class CommandDeathRun {
     public void addTeleportPad(
             @Context Player player
     ) {
+        this.addTeleportPadInternal(player);
+    }
 
+    @Execute(name = "teleport add")
+    @Permission("mrstudios.command.deathrun.setup")
+    public void addTeleportPadAlias(
+            @Context Player player
+    ) {
+        this.addTeleportPadInternal(player);
+    }
+
+    @Execute(name = "teleport list")
+    @Permission("mrstudios.command.deathrun.setup")
+    public void listTeleportPads(
+            @Context Player player
+    ) {
+        MapConfiguration.MapDefinition map = this.selectedMapForSetup(player, false);
+        if (map == null)
+            return;
+
+        this.ensureMutableSetupCollections(map);
+        if (map.teleportPads.isEmpty()) {
+            this.message(player, PREFIX + "<gray>No teleport pads set for map <white>" + this.safe(map.id) + "<gray>.");
+            return;
+        }
+
+        this.message(player, PREFIX + "<gray>Teleport pads for <white>" + this.safe(map.id) + "<gray>:");
+        for (int i = 0; i < map.teleportPads.size(); i++) {
+            TeleportPad pad = map.teleportPads.get(i);
+            Location source = this.arenaManager.resolveMapLocation(pad.padLocation(), map);
+            Location destination = this.arenaManager.resolveMapLocation(pad.teleportLocation(), map);
+            this.message(player, PREFIX + "<gray>#<white>" + (i + 1)
+                    + " <dark_gray>| <gray>source <white>" + this.locationSummary(source)
+                    + " <dark_gray>-> <gray>destination <white>" + this.locationSummary(destination));
+        }
+    }
+
+    @Execute(name = "teleport tp")
+    @Permission("mrstudios.command.deathrun.setup")
+    public void teleportToTeleportPad(
+            @Context Player player,
+            @Arg("index") int index
+    ) {
+        MapConfiguration.MapDefinition map = this.selectedMapForSetup(player, false);
+        if (map == null)
+            return;
+
+        TeleportPad pad = this.teleportPadAt(player, map, index);
+        if (pad == null)
+            return;
+
+        Location source = this.arenaManager.resolveMapLocation(pad.padLocation(), map);
+        if (source == null || source.getWorld() == null) {
+            this.message(player, this.configuration.language().commandMessageSetupMapWorldUnavailable
+                    .replace("<map>", this.safe(map.id))
+                    .replace("<world>", this.safe(map.world)));
+            return;
+        }
+
+        player.teleport(source.toCenterLocation().add(0, 1, 0));
+        this.message(player, PREFIX + "<green>Teleported to teleport pad <white>#" + index + "<green>.");
+    }
+
+    @Execute(name = "teleport setsource")
+    @Permission("mrstudios.command.deathrun.setup")
+    public void setTeleportPadSource(
+            @Context Player player,
+            @Arg("index") int index
+    ) {
         MapConfiguration.MapDefinition map = this.selectedMapForSetup(player, true);
         if (map == null || !this.playerInConfiguredMapWorld(player, map))
             return;
 
-        List<Location> locations = locations(player);
-        if (locations.isEmpty()) {
-            this.message(player, PREFIX + "<red>Select a non-empty WorldEdit teleport-pad source region in the current map world first.");
+        TeleportPad pad = this.teleportPadAt(player, map, index);
+        if (pad == null)
             return;
-        }
 
-        map.teleportPads.add(new TeleportPad(locations.get(0), player.getLocation().toCenterLocation().add(0, -0.5, 0)));
+        Location source = this.selectedTeleportPressurePlate(player);
+        if (source == null)
+            return;
+
+        map.teleportPads.set(index - 1, new TeleportPad(source, pad.teleportLocation()));
+        this.configuration.map().save();
+        this.message(player, PREFIX + "<green>Updated teleport pad <white>#" + index + "<green> source pressure plate.");
+    }
+
+    @Execute(name = "teleport setdestination")
+    @Permission("mrstudios.command.deathrun.setup")
+    public void setTeleportPadDestination(
+            @Context Player player,
+            @Arg("index") int index
+    ) {
+        MapConfiguration.MapDefinition map = this.selectedMapForSetup(player, true);
+        if (map == null || !this.playerInConfiguredMapWorld(player, map))
+            return;
+
+        TeleportPad pad = this.teleportPadAt(player, map, index);
+        if (pad == null)
+            return;
+
+        Location destination = player.getLocation().toCenterLocation().add(0, -0.5, 0);
+        map.teleportPads.set(index - 1, new TeleportPad(pad.padLocation(), destination));
+        this.configuration.map().save();
+        this.message(player, PREFIX + "<green>Updated teleport pad <white>#" + index + "<green> destination.");
+    }
+
+    @Execute(name = "teleport delete")
+    @Permission("mrstudios.command.deathrun.setup")
+    public void deleteTeleportPad(
+            @Context Player player,
+            @Arg("index") int index
+    ) {
+        MapConfiguration.MapDefinition map = this.selectedMapForSetup(player, true);
+        if (map == null)
+            return;
+
+        if (this.teleportPadAt(player, map, index) == null)
+            return;
+
+        map.teleportPads.remove(index - 1);
+        this.configuration.map().save();
+        this.message(player, PREFIX + "<green>Deleted teleport pad <white>#" + index + "<green>.");
+    }
+
+    @Execute(name = "teleport clear")
+    @Permission("mrstudios.command.deathrun.setup")
+    public void clearTeleportPads(
+            @Context Player player
+    ) {
+        MapConfiguration.MapDefinition map = this.selectedMapForSetup(player, true);
+        if (map == null)
+            return;
+
+        this.ensureMutableSetupCollections(map);
+        int removed = map.teleportPads.size();
+        map.teleportPads.clear();
+        this.configuration.map().save();
+        this.message(player, PREFIX + "<green>Cleared <white>" + removed + "<green> teleport pad(s).");
+    }
+
+    private void addTeleportPadInternal(
+            @NotNull Player player
+    ) {
+        MapConfiguration.MapDefinition map = this.selectedMapForSetup(player, true);
+        if (map == null || !this.playerInConfiguredMapWorld(player, map))
+            return;
+
+        Location source = this.selectedTeleportPressurePlate(player);
+        if (source == null)
+            return;
+
+        Location destination = player.getLocation().toCenterLocation().add(0, -0.5, 0);
+        map.teleportPads.add(new TeleportPad(source, destination));
         this.configuration.map().save();
         this.message(player, this.configuration.language().commandMessageTeleportPadAdded);
+    }
 
+    private @Nullable TeleportPad teleportPadAt(
+            @NotNull Player player,
+            @NotNull MapConfiguration.MapDefinition map,
+            int index
+    ) {
+        this.ensureMutableSetupCollections(map);
+        if (index < 1 || index > map.teleportPads.size()) {
+            this.message(player, PREFIX + "<red>Teleport pad <white>#" + index + "<red> was not found on map <white>" + this.safe(map.id) + "<red>.");
+            return null;
+        }
+
+        return map.teleportPads.get(index - 1);
+    }
+
+    private @Nullable Location selectedTeleportPressurePlate(
+            @NotNull Player player
+    ) {
+        List<Location> pressurePlates = this.locations(player).stream()
+                .filter(Objects::nonNull)
+                .filter(location -> location.getWorld() != null)
+                .filter(location -> location.getBlock().getType().name().endsWith("_PRESSURE_PLATE"))
+                .toList();
+
+        if (pressurePlates.size() != 1) {
+            this.message(player, PREFIX + "<red>Select exactly one pressure plate in the current map world with WorldEdit.");
+            return null;
+        }
+
+        return pressurePlates.get(0);
+    }
+
+    private @NotNull String locationSummary(
+            @Nullable Location location
+    ) {
+        if (location == null || location.getWorld() == null)
+            return "unresolved";
+
+        return location.getWorld().getName()
+                + " " + location.getBlockX()
+                + ", " + location.getBlockY()
+                + ", " + location.getBlockZ();
     }
 
     @Execute(name = "save")
