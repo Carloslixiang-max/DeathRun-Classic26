@@ -1,15 +1,15 @@
-# Plugin Information
 name: "DeathRun"
-description: "An minigame based on popular game from HiveMC server."
+description: "DeathRun Classic Java layer for Paper 26.2."
 version: "${version}"
+main: "pl.mrstudios.deathrun.plugin.Entrypoint"
+load: "POSTWORLD"
+api-version: "26.2"
 
-# Dependencies
 softdepend:
   - "WorldEdit"
-depend:
   - "NoteBlockAPI"
+  - "PlaceholderAPI"
 
-# Commands
 commands:
   dr:
     description: "DeathRun main command"
@@ -18,7 +18,6 @@ commands:
       - "deathrun"
     permission: "mrstudios.command.deathrun"
 
-# Permissions
 permissions:
   mrstudios.command.deathrun:
     description: "Allows using /deathrun"
@@ -59,8 +58,3 @@ permissions:
   deathrun.build.bypass:
     description: "Allows bypassing DeathRun block/place interaction restrictions"
     default: op
-
-# Plugin Data
-load: "POSTWORLD"
-api-version: "1.21"
-main: "pl.mrstudios.deathrun.plugin.Entrypoint"
