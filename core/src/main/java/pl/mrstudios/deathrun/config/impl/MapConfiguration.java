@@ -77,7 +77,9 @@ public class MapConfiguration extends OkaeriConfig {
         legacyMap.id = this.normalizedMapId(this.arenaName);
         legacyMap.name = this.arenaName;
         legacyMap.creator = this.creator;
-        legacyMap.world = this.arenaWaitingLobbyLocation == null ? "" : this.arenaWaitingLobbyLocation.getWorld().getName();
+        legacyMap.world = this.arenaWaitingLobbyLocation == null || this.arenaWaitingLobbyLocation.getWorld() == null
+                ? ""
+                : this.arenaWaitingLobbyLocation.getWorld().getName();
         legacyMap.arenaWaitingLobbyLocation = this.arenaWaitingLobbyLocation;
         legacyMap.arenaRunnerSpawnLocations = new ArrayList<>(this.arenaRunnerSpawnLocations);
         legacyMap.arenaDeathSpawnLocations = new ArrayList<>(this.arenaDeathSpawnLocations);
@@ -143,14 +145,14 @@ public class MapConfiguration extends OkaeriConfig {
     private void ensureMutableSetupLists(
             MapDefinition map
     ) {
-        map.arenaRunnerSpawnLocations = new ArrayList<>(map.arenaRunnerSpawnLocations);
-        map.arenaDeathSpawnLocations = new ArrayList<>(map.arenaDeathSpawnLocations);
-        map.arenaCheckpoints = new ArrayList<>(map.arenaCheckpoints);
-        map.arenaCheckpointPoints = new ArrayList<>(map.arenaCheckpointPoints);
-        map.arenaTraps = new ArrayList<>(map.arenaTraps);
-        map.teleportPads = new ArrayList<>(map.teleportPads);
-        map.arenaStartBarrierBlocks = new ArrayList<>(map.arenaStartBarrierBlocks);
-        map.arenaStartBarrierRestoreMaterials = new ArrayList<>(map.arenaStartBarrierRestoreMaterials);
+        map.arenaRunnerSpawnLocations = new ArrayList<>(map.arenaRunnerSpawnLocations == null ? List.of() : map.arenaRunnerSpawnLocations);
+        map.arenaDeathSpawnLocations = new ArrayList<>(map.arenaDeathSpawnLocations == null ? List.of() : map.arenaDeathSpawnLocations);
+        map.arenaCheckpoints = new ArrayList<>(map.arenaCheckpoints == null ? List.of() : map.arenaCheckpoints);
+        map.arenaCheckpointPoints = new ArrayList<>(map.arenaCheckpointPoints == null ? List.of() : map.arenaCheckpointPoints);
+        map.arenaTraps = new ArrayList<>(map.arenaTraps == null ? List.of() : map.arenaTraps);
+        map.teleportPads = new ArrayList<>(map.teleportPads == null ? List.of() : map.teleportPads);
+        map.arenaStartBarrierBlocks = new ArrayList<>(map.arenaStartBarrierBlocks == null ? List.of() : map.arenaStartBarrierBlocks);
+        map.arenaStartBarrierRestoreMaterials = new ArrayList<>(map.arenaStartBarrierRestoreMaterials == null ? List.of() : map.arenaStartBarrierRestoreMaterials);
     }
 
     public String normalizedMapId(String source) {
