@@ -1,6 +1,5 @@
 package pl.mrstudios.deathrun.arena.listener;
 
-import net.kyori.adventure.platform.bukkit.BukkitAudiences;
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.Server;
@@ -54,7 +53,6 @@ public class ArenaCheckpointReachedListener implements Listener {
     private final ArenaManager arenaManager;
     private final Plugin plugin;
     private final Server server;
-    private final BukkitAudiences audiences;
     private final Configuration configuration;
         private final WinMapManager winMapManager;
         private final RewardService rewardService;
@@ -65,7 +63,6 @@ public class ArenaCheckpointReachedListener implements Listener {
             @NotNull ArenaManager arenaManager,
             @NotNull Plugin plugin,
             @NotNull Server server,
-            @NotNull BukkitAudiences audiences,
                         @NotNull Configuration configuration,
                         @NotNull WinMapManager winMapManager,
                         @NotNull RewardService rewardService
@@ -73,7 +70,6 @@ public class ArenaCheckpointReachedListener implements Listener {
         this.arenaManager = arenaManager;
         this.plugin = plugin;
         this.server = server;
-        this.audiences = audiences;
         this.configuration = configuration;
                 this.winMapManager = winMapManager;
                 this.rewardService = rewardService;
@@ -205,7 +201,7 @@ public class ArenaCheckpointReachedListener implements Listener {
                 this.configuration.plugin().arenaSoundCheckpointReachedVolume,
                 this.configuration.plugin().arenaSoundCheckpointReachedPitch
         );
-        this.audiences.player(player).sendMessage(miniMessage().deserialize(
+        player.sendMessage(miniMessage().deserialize(
                 this.configuration.language().chatMessageArenaCheckpointReached
                         .replace("<checkpoint>", valueOf(checkpoint.id()))
                         .replace("<checkpointName>", this.displayCheckpointName(checkpoint))
@@ -262,7 +258,7 @@ public class ArenaCheckpointReachedListener implements Listener {
         arena.getUsers().stream()
                 .map(IUser::asBukkit)
                 .filter(Objects::nonNull)
-                .forEach((target) -> this.audiences.player(target).sendMessage(miniMessage().deserialize(
+                .forEach((target) -> target.sendMessage(miniMessage().deserialize(
                         this.configuration.language().chatMessageArenaPlayerFinished
                                 .replace("<player>", this.safePlayerName(player))
                                 .replace("<seconds>", valueOf(time))
@@ -271,7 +267,7 @@ public class ArenaCheckpointReachedListener implements Listener {
 
         this.configuration.language().chatMessageGameEndSpectator.stream()
                 .map(miniMessage()::deserialize)
-                .forEach((component) -> this.audiences.player(player).sendMessage(component));
+                .forEach((component) -> player.sendMessage(component));
 
         player.setAllowFlight(true);
         player.setGameMode(ADVENTURE);
