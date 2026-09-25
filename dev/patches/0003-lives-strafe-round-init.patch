@@ -1,0 +1,44 @@
+--- a/core/src/main/java/pl/mrstudios/deathrun/arena/ArenaServiceRunnable.java
++++ b/core/src/main/java/pl/mrstudios/deathrun/arena/ArenaServiceRunnable.java
+@@
+ import pl.mrstudios.deathrun.reward.RewardService;
++import pl.mrstudios.deathrun.classic.strafe.ClassicStrafeService;
+@@
+         this.arena.getUsers().forEach((user) -> {
+             user.setDeaths(0);
++            user.setLives(0);
++            user.setRoundPoints(0);
++            user.setEliminated(false);
+             user.setRole(UNKNOWN);
+@@
+         this.arena.getUsers()
+                 .stream()
+                 .filter((user) -> user.getRole() != DEATH)
+                 .forEach((user) -> user.setRole(RUNNER));
++
++        this.arena.getRunners().forEach(user -> {
++            user.setLives(2);
++            user.setRoundPoints(0);
++            user.setEliminated(false);
++            Player player = user.asBukkit();
++            if (player != null)
++                new ClassicStrafeService(this.plugin).prepareRunner(player);
++        });
++
++        this.arena.getDeaths().forEach(user -> {
++            user.setLives(0);
++            user.setRoundPoints(0);
++            user.setEliminated(false);
++        });
+@@
+ import pl.mrstudios.deathrun.classic.strafe.ClassicStrafeService;
++import pl.mrstudios.deathrun.classic.death.DeathNavigatorService;
+@@
+         this.arena.getDeaths().forEach(user -> {
+             user.setLives(0);
+             user.setRoundPoints(0);
+             user.setEliminated(false);
++            Player player = user.asBukkit();
++            if (player != null)
++                new DeathNavigatorService(this.plugin).prepareDeath(player);
+         });
