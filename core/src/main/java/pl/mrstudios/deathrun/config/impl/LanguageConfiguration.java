@@ -320,7 +320,7 @@ public class LanguageConfiguration extends OkaeriConfig {
             "<white>Checkpoint: <aqua><checkpoint>",
             "<reset>",
             "<white>Runners: <green><runners>",
-            "<white>Deaths: <red><deaths>",
+            "<white>Deaths: <red><deathPlayers>",
             "<reset>",
             "<white>Map: <green><map>",
             "<white>Creator: <gray><creator>"
