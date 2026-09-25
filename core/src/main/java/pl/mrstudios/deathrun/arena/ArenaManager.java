@@ -837,7 +837,8 @@ public class ArenaManager {
         if (map.teleportPads != null && map.teleportPads.stream().anyMatch(pad ->
                 pad == null
                         || !this.locationBelongsToWorld(pad.padLocation(), mapWorld)
-                        || !this.locationBelongsToWorld(pad.teleportLocation(), mapWorld)))
+                        || !this.locationBelongsToWorld(pad.teleportLocation(), mapWorld)
+                        || !pad.padLocation().getBlock().getType().name().endsWith("_PRESSURE_PLATE")))
             return false;
 
         return map.arenaStartBarrierRestoreMaterials != null

@@ -2823,6 +2823,13 @@ public class CommandDeathRun {
                                 || (pad.teleportLocation() != null && pad.teleportLocation().getWorld() != null && !this.sameWorld(pad.teleportLocation(), mapWorld))))
             issues.add("teleport-pad-wrong-world");
 
+        if (map.teleportPads != null && map.teleportPads.stream()
+                .filter(Objects::nonNull)
+                .anyMatch(pad -> pad.padLocation() != null
+                        && pad.padLocation().getWorld() != null
+                        && !pad.padLocation().getBlock().getType().name().endsWith("_PRESSURE_PLATE")))
+            issues.add("teleport-pad-source-not-pressure-plate");
+
         if (map.arenaSetupEnabled)
             issues.add("setup-enabled");
 
@@ -2877,7 +2884,8 @@ public class CommandDeathRun {
                              "barrier-location-wrong-world",
                              "barrier-restore-size-mismatch",
                              "teleport-pad-location-invalid",
-                             "teleport-pad-wrong-world" -> true;
+                             "teleport-pad-wrong-world",
+                             "teleport-pad-source-not-pressure-plate" -> true;
                         case "missing-backup" -> requireBackup;
                         default -> false;
                     };
