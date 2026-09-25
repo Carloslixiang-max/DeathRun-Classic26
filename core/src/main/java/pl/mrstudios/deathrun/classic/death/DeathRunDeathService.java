@@ -1,6 +1,5 @@
 package pl.mrstudios.deathrun.classic.death;
 
-import net.kyori.adventure.platform.bukkit.BukkitAudiences;
 import org.bukkit.Server;
 import org.bukkit.entity.Player;
 import org.bukkit.Material;
@@ -38,7 +37,6 @@ public final class DeathRunDeathService {
     private final ArenaManager arenaManager;
     private final Plugin plugin;
     private final Server server;
-    private final BukkitAudiences audiences;
     private final Configuration configuration;
     private final WinMapManager winMapManager;
     private final TrapActivationService trapActivationService;
@@ -47,14 +45,12 @@ public final class DeathRunDeathService {
             @NotNull ArenaManager arenaManager,
             @NotNull Plugin plugin,
             @NotNull Server server,
-            @NotNull BukkitAudiences audiences,
             @NotNull Configuration configuration,
             @NotNull WinMapManager winMapManager
     ) {
         this.arenaManager = arenaManager;
         this.plugin = plugin;
         this.server = server;
-        this.audiences = audiences;
         this.configuration = configuration;
         this.winMapManager = winMapManager;
         this.trapActivationService = new TrapActivationService(plugin, server, configuration);
