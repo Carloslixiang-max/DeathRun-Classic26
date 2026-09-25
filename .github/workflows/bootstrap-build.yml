@@ -171,6 +171,20 @@ jobs:
             sleep 1
           done
 
+          printf 'dr playtest verify\n' >&3
+          VERIFY1=0
+          for _ in $(seq 1 30); do
+            if grep -q 'Classic26 playtest verification PASS' server.log; then
+              VERIFY1=1
+              break
+            fi
+            if ! kill -0 "$PID" 2>/dev/null; then
+              break
+            fi
+            sleep 1
+          done
+          test "$VERIFY1" -eq 1
+
           printf 'stop\n' >&3 || true
           exec 3>&-
           for _ in $(seq 1 30); do
@@ -211,6 +225,22 @@ jobs:
           done
 
           test "$READY2" -eq 1
+
+          # Re-run the structural audit after deserialization. This catches
+          # silent loss of spawn, checkpoint, barrier, trap or runtime data.
+          printf 'dr playtest verify\n' >&4
+          VERIFY2=0
+          for _ in $(seq 1 30); do
+            if grep -q 'Classic26 playtest verification PASS' server-restart.log; then
+              VERIFY2=1
+              break
+            fi
+            if ! kill -0 "$PID2" 2>/dev/null; then
+              break
+            fi
+            sleep 1
+          done
+          test "$VERIFY2" -eq 1
           printf 'stop\n' >&4 || true
           exec 4>&-
           for _ in $(seq 1 30); do

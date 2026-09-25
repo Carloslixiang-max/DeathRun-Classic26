@@ -137,6 +137,21 @@ public class CommandDeathRun {
         this.message(sender, PREFIX + "<gray>Use <white>/dr start classic26-playtest</white> to force-start a joined test session.");
     }
 
+    @Execute(name = "playtest verify")
+    @Permission("mrstudios.command.deathrun.setup")
+    public void verifyClassicPlaytest(@Context CommandSender sender) {
+        ClassicPlaytestService.Result result = new ClassicPlaytestService(
+                this.plugin, this.configuration, this.arenaManager
+        ).verify();
+
+        if (!result.success()) {
+            this.message(sender, PREFIX + "<red>Classic26 playtest verification failed: <white>" + result.message());
+            return;
+        }
+
+        this.message(sender, PREFIX + "<green>Classic26 playtest verification passed.");
+    }
+
     @Execute(name = "vote")
     @Permission("mrstudios.command.deathrun.join")
     public void vote(@Context Player player) {

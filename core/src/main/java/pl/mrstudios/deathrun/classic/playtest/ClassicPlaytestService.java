@@ -19,7 +19,9 @@ import pl.mrstudios.deathrun.config.Configuration;
 import pl.mrstudios.deathrun.config.impl.MapConfiguration;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 public final class ClassicPlaytestService {
 
@@ -135,6 +137,130 @@ public final class ClassicPlaytestService {
             );
             return new Result(false, exception.getClass().getSimpleName() + ": " + exception.getMessage());
         }
+    }
+
+
+    public @NotNull Result verify() {
+        try {
+            this.configuration.map().ensureMapsMutable();
+            MapConfiguration.MapDefinition map = this.configuration.map().getMapById(MAP_ID);
+            if (map == null)
+                return new Result(false, "map-not-configured");
+
+            List<String> issues = new ArrayList<>();
+            World world = map.world == null || map.world.isBlank() ? null : Bukkit.getWorld(map.world);
+
+            if (world == null)
+                issues.add("world-not-loaded");
+            else if (!WORLD_NAME.equalsIgnoreCase(world.getName()))
+                issues.add("unexpected-world:" + world.getName());
+
+            if (map.arenaSetupEnabled)
+                issues.add("setup-enabled");
+            if (map.arenaMaxPlayers != 22)
+                issues.add("max-players:" + map.arenaMaxPlayers);
+            if (map.arenaRequiredPlayersToStart != 11)
+                issues.add("required-players:" + map.arenaRequiredPlayersToStart);
+            if (map.arenaRunnerSpawnLocations.size() != 20)
+                issues.add("runner-spawns:" + map.arenaRunnerSpawnLocations.size());
+            if (map.arenaDeathSpawnLocations.size() != 2)
+                issues.add("death-spawns:" + map.arenaDeathSpawnLocations.size());
+
+            if (map.arenaCheckpoints.size() != 4)
+                issues.add("checkpoints:" + map.arenaCheckpoints.size());
+            if (!map.arenaCheckpointPoints.equals(List.of(3, 7, 10, 13)))
+                issues.add("checkpoint-points:" + map.arenaCheckpointPoints);
+
+            if (map.arenaCheckpoints.isEmpty() || map.arenaFinishCheckpointId == null) {
+                issues.add("finish-not-set");
+            } else {
+                Integer expectedFinish = map.arenaCheckpoints.get(map.arenaCheckpoints.size() - 1).id();
+                if (!expectedFinish.equals(map.arenaFinishCheckpointId))
+                    issues.add("finish-not-last:" + map.arenaFinishCheckpointId);
+            }
+
+            if (map.arenaStartBarrierBlocks.isEmpty())
+                issues.add("barrier-empty");
+            if (map.arenaStartBarrierBlocks.size() != map.arenaStartBarrierRestoreMaterials.size())
+                issues.add("barrier-restore-size:"
+                        + map.arenaStartBarrierBlocks.size() + "/" + map.arenaStartBarrierRestoreMaterials.size());
+
+            if (map.arenaTraps.size() != 17)
+                issues.add("trap-count:" + map.arenaTraps.size());
+
+            Set<String> expectedTrapTypes = Set.of(
+                    "TrapDisappearingParkour",
+                    "TrapKnockBack",
+                    "TrapArrows",
+                    "TrapFireFloor",
+                    "TrapFlood",
+                    "TrapWallSpawn",
+                    "TrapLaunchPlayers",
+                    "TrapGiant",
+                    "TrapFireTrail",
+                    "TrapTNT",
+                    "TrapGlassFloor",
+                    "TrapQuicksand",
+                    "TrapBlockReplace",
+                    "TrapMinefield",
+                    "TrapAppearingBlocks",
+                    "TrapDisappearingBlocks",
+                    "TrapParticles"
+            );
+            Set<String> actualTrapTypes = new HashSet<>();
+            for (ITrap trap : map.arenaTraps) {
+                actualTrapTypes.add(trap.getClass().getSimpleName());
+                if (!this.locationOnWorld(trap.getButton(), world))
+                    issues.add("trap-button-world:" + trap.getClass().getSimpleName());
+                if (trap.getLocations() == null || trap.getLocations().isEmpty()) {
+                    issues.add("trap-region-empty:" + trap.getClass().getSimpleName());
+                } else if (trap.getLocations().stream().anyMatch(location -> !this.locationOnWorld(location, world))) {
+                    issues.add("trap-region-world:" + trap.getClass().getSimpleName());
+                }
+            }
+            if (!actualTrapTypes.equals(expectedTrapTypes))
+                issues.add("trap-types:" + actualTrapTypes);
+
+            if (map.arenaRunnerSpawnLocations.stream().anyMatch(location -> !this.locationOnWorld(location, world)))
+                issues.add("runner-spawn-world");
+            if (map.arenaDeathSpawnLocations.stream().anyMatch(location -> !this.locationOnWorld(location, world)))
+                issues.add("death-spawn-world");
+            if (map.arenaStartBarrierBlocks.stream().anyMatch(location -> !this.locationOnWorld(location, world)))
+                issues.add("barrier-world");
+            if (map.arenaCheckpoints.stream().anyMatch(checkpoint ->
+                    !this.locationOnWorld(checkpoint.spawn(), world)
+                            || checkpoint.locations().isEmpty()
+                            || checkpoint.locations().stream().anyMatch(location -> !this.locationOnWorld(location, world))))
+                issues.add("checkpoint-world");
+
+            if (this.arenaManager.runtimeByMapId(MAP_ID) == null)
+                issues.add("runtime-missing");
+
+            if (!issues.isEmpty()) {
+                String message = String.join(",", issues);
+                this.plugin.getLogger().severe("[DeathRun] Classic26 playtest verification FAILED: " + message);
+                return new Result(false, message);
+            }
+
+            this.plugin.getLogger().info(
+                    "[DeathRun] Classic26 playtest verification PASS: "
+                            + "20 runner spawns, 2 death spawns, 4 checkpoints, 17 traps, runtime ready."
+            );
+            return new Result(true, "verified");
+        } catch (Exception exception) {
+            this.plugin.getLogger().severe(
+                    "[DeathRun] Classic26 playtest verification FAILED: "
+                            + exception.getClass().getSimpleName() + ": " + exception.getMessage()
+            );
+            return new Result(false, exception.getClass().getSimpleName() + ": " + exception.getMessage());
+        }
+    }
+
+    private boolean locationOnWorld(@Nullable Location location, @Nullable World world) {
+        return location != null
+                && world != null
+                && location.getWorld() != null
+                && location.getWorld().getUID().equals(world.getUID());
     }
 
     private void buildCourse(@NotNull World world) {
