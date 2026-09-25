@@ -69,6 +69,12 @@ public class PluginConfiguration extends OkaeriConfig {
     @Comment({ "", "Amount of time before trap can be used again." })
     public int arenaTrapDelay = 20;
 
+    @Comment({ "", "Classic map-vote countdown after the first vote." })
+    public int classicVoteSeconds = 30;
+
+    @Comment({ "", "Maximum real map candidates shown before the Random option." })
+    public int classicVoteMapCandidates = 5;
+
     @Comment({ "", "Max ,,survivable`` distance that player can fall." })
     public int arenaMaxFallDistance = 8;
 
