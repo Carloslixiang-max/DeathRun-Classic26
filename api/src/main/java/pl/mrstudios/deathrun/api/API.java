@@ -51,15 +51,15 @@ public record API(
 
     /* Version Related */
     public @NotNull String pluginVersion() {
-        return "{version}";
+        return "1.4.1-classic26-dev";
     }
 
     public @NotNull String pluginGitBranch() {
-        return "{gitBranch}";
+        return "classic26-dev";
     }
 
     public @NotNull String pluginGitCommit() {
-        return "{gitCommitHash}";
+        return "github-actions";
     }
 
     /* Static Methods */
