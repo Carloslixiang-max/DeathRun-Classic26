@@ -4,7 +4,6 @@ import dev.rollczi.litecommands.handler.result.ResultHandlerChain;
 import dev.rollczi.litecommands.invalidusage.InvalidUsage;
 import dev.rollczi.litecommands.invalidusage.InvalidUsageHandler;
 import dev.rollczi.litecommands.invocation.Invocation;
-import net.kyori.adventure.platform.bukkit.BukkitAudiences;
 import org.bukkit.command.CommandSender;
 import org.jetbrains.annotations.NotNull;
 import pl.mrstudios.commons.inject.annotation.Inject;
@@ -15,15 +14,6 @@ public class InvalidCommandUsageHandler implements InvalidUsageHandler<CommandSe
 
     private static final String PREFIX = "<gold>[DR]</gold> ";
 
-    private final BukkitAudiences audiences;
-
-    @Inject
-    public InvalidCommandUsageHandler(
-            @NotNull BukkitAudiences audiences
-    ) {
-        this.audiences = audiences;
-    }
-
     @Override
     public void handle(
             @NotNull Invocation<CommandSender> invocation,
@@ -31,7 +21,7 @@ public class InvalidCommandUsageHandler implements InvalidUsageHandler<CommandSe
             @NotNull ResultHandlerChain<CommandSender> chain
     ) {
         String usage = usageFor(invocation);
-        this.audiences.sender(invocation.sender()).sendMessage(miniMessage().deserialize(PREFIX + usage));
+        invocation.sender().sendMessage(miniMessage().deserialize(PREFIX + usage));
     }
 
     private @NotNull String usageFor(@NotNull Invocation<CommandSender> invocation) {
