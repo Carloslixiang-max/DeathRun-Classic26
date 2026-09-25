@@ -179,6 +179,9 @@ public class LanguageConfiguration extends OkaeriConfig {
         public String commandMessageSetupMapStateEnabled = "<green>setup-enabled";
         public String commandMessageSetupMapStateDisabled = "<red>setup-disabled";
 
+        public String commandMessageClassicProfileApplied = "<reset> <dark_green><b>*</b> <green>Applied Classic profile <dark_green><profile> <green>to map <dark_green><map><green>.";
+        public String commandMessageClassicProfileCheckpointCount = "<reset> <dark_red><b>*</b> <red>Profile <dark_red><profile> <red>requires exactly <dark_red><required> <red>checkpoints; map has <dark_red><actual><red>.";
+
     public String mapSelectorTitle = "DeathRun Maps";
     public String mapSelectorMapName = "<gold><name>";
     public List<String> mapSelectorMapLore = asList(
