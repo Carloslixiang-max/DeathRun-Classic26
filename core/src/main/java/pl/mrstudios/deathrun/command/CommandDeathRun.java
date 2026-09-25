@@ -1804,6 +1804,34 @@ public class CommandDeathRun {
         this.setupTrapDelete(player, index);
     }
 
+    @Execute(name = "trap setorder")
+    @Permission("mrstudios.command.deathrun.setup")
+    public void setupTrapSetOrder(
+            @Context Player player,
+            @Arg("index") int index,
+            @Arg("position") int position
+    ) {
+        MapConfiguration.MapDefinition map = this.selectedMapForSetup(player, true);
+        if (map == null)
+            return;
+
+        this.ensureMutableSetupCollections(map);
+        if (index < 1 || index > map.arenaTraps.size()) {
+            this.message(player, PREFIX + "<red>Trap <white>#" + index + "<red> was not found on map <white>" + this.safe(map.id) + "<red>.");
+            return;
+        }
+        if (position < 1 || position > map.arenaTraps.size()) {
+            this.message(player, PREFIX + "<red>Trap position <white>" + position + "<red> is invalid; choose 1.." + map.arenaTraps.size() + ".");
+            return;
+        }
+
+        ITrap selected = map.arenaTraps.remove(index - 1);
+        map.arenaTraps.add(position - 1, selected);
+        this.configuration.map().save();
+        this.message(player, PREFIX + "<green>Moved trap <white>#" + index + "<green> to position <white>#" + position + "<green>.");
+        this.setupTrapList(player);
+    }
+
     @Execute(name = "edit create")
     @Permission("mrstudios.command.deathrun.setup")
     public void setupCreate(
