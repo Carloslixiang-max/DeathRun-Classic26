@@ -34,6 +34,7 @@ public class MapConfiguration extends OkaeriConfig {
     public List<MapDefinition> maps = new ArrayList<>();
 
     public String arenaName;
+    public String creator = "Unknown";
 
     /* Spawns */
     public Location arenaWaitingLobbyLocation;
@@ -75,6 +76,7 @@ public class MapConfiguration extends OkaeriConfig {
         MapDefinition legacyMap = new MapDefinition();
         legacyMap.id = this.normalizedMapId(this.arenaName);
         legacyMap.name = this.arenaName;
+        legacyMap.creator = this.creator;
         legacyMap.world = this.arenaWaitingLobbyLocation == null ? "" : this.arenaWaitingLobbyLocation.getWorld().getName();
         legacyMap.arenaWaitingLobbyLocation = this.arenaWaitingLobbyLocation;
         legacyMap.arenaRunnerSpawnLocations = new ArrayList<>(this.arenaRunnerSpawnLocations);
@@ -116,6 +118,7 @@ public class MapConfiguration extends OkaeriConfig {
 
         migrated.id = this.normalizedMapId(legacy.id);
         migrated.name = legacy.name;
+        migrated.creator = legacy.creator;
         migrated.world = legacy.world;
         migrated.arenaWaitingLobbyLocation = legacy.arenaWaitingLobbyLocation;
         migrated.arenaRunnerSpawnLocations = new ArrayList<>(legacy.arenaRunnerSpawnLocations);
@@ -163,6 +166,7 @@ public class MapConfiguration extends OkaeriConfig {
 
         public String id;
         public String name;
+        public String creator = "Unknown";
         public String world;
 
         public Location arenaWaitingLobbyLocation;
