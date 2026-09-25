@@ -36,6 +36,7 @@ import pl.mrstudios.deathrun.arena.sign.SignManager;
 import pl.mrstudios.deathrun.arena.trap.TrapRegistry;
 import pl.mrstudios.deathrun.config.Configuration;
 import pl.mrstudios.deathrun.config.impl.MapConfiguration;
+import pl.mrstudios.deathrun.classic.playtest.ClassicPlaytestService;
 
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -117,6 +118,23 @@ public class CommandDeathRun {
         String content = java.lang.String.join("<br>", this.configuration.language().commandHelpMainLines)
             .replace("<version>", this.plugin.getDescription().getVersion());
         this.message(player, content);
+    }
+
+    @Execute(name = "playtest create")
+    @Permission("mrstudios.command.deathrun.setup")
+    public void createClassicPlaytest(@Context Player player) {
+        ClassicPlaytestService.Result result = new ClassicPlaytestService(
+                this.plugin, this.configuration, this.arenaManager
+        ).create(player);
+
+        if (!result.success()) {
+            this.message(player, PREFIX + "<red>Playtest arena creation failed: <white>" + result.message());
+            return;
+        }
+
+        this.message(player, PREFIX + "<green>Classic26 engineering playtest arena is ready.");
+        this.message(player, PREFIX + "<gray>Join with <white>/dr join classic26-playtest</white>.");
+        this.message(player, PREFIX + "<gray>With 2+ players use <white>/dr start classic26-playtest</white> to force-start immediately.");
     }
 
     @Execute(name = "maps")

@@ -159,6 +159,19 @@ public class Entrypoint extends JavaPlugin {
                 TrapParticles.class
         ).forEach(this.trapRegistry::register);
 
+        this.trapRegistry.register("FIRE_FLOOR", TrapFireFloor.class);
+        this.trapRegistry.register("FLOOD", TrapFlood.class);
+        this.trapRegistry.register("WALL_SPAWN", TrapWallSpawn.class);
+        this.trapRegistry.register("LAUNCH_PLAYERS", TrapLaunchPlayers.class);
+        this.trapRegistry.register("GIANT", TrapGiant.class);
+        this.trapRegistry.register("FIRE_TRAIL", TrapFireTrail.class);
+        this.trapRegistry.register("GLASS_FLOOR", TrapGlassFloor.class);
+        this.trapRegistry.register("QUICKSAND", TrapQuicksand.class);
+        this.trapRegistry.register("BLOCK_REPLACE", TrapBlockReplace.class);
+        this.trapRegistry.register("DISAPPEARING_PARKOUR", TrapDisappearingParkour.class);
+        this.trapRegistry.register("MINEFIELD", TrapMinefield.class);
+        this.trapRegistry.register("KNOCK_BACK", TrapKnockBack.class);
+
         /* Register Commands */
         this.liteCommands = builder()
 

@@ -320,25 +320,27 @@ public class ArenaServiceRunnable extends BukkitRunnable {
             user.setLives(2);
             user.setRoundPoints(0);
             user.setEliminated(false);
-            Player player = user.asBukkit();
-            if (player != null)
-                new ClassicStrafeService(this.plugin).prepareRunner(player);
         });
 
         this.arena.getDeaths().forEach(user -> {
             user.setLives(0);
             user.setRoundPoints(0);
             user.setEliminated(false);
-            Player player = user.asBukkit();
-            if (player != null)
-                new DeathNavigatorService(this.plugin).prepareDeath(player);
         });
 
         this.rewardService.resetMatch(this.resolvedMapId(), this.arena.getRunners().size());
 
         range(0, this.arena.getRunners().size())
                 .filter((i) -> this.arena.getRunners().get(i).asBukkit() != null)
-                .forEach((i) -> requireNonNull(this.arena.getRunners().get(i).asBukkit()).teleport(this.map.arenaRunnerSpawnLocations.get(i % this.map.arenaRunnerSpawnLocations.size())));
+                .forEach((i) -> {
+                    IUser runner = this.arena.getRunners().get(i);
+                    Player runnerPlayer = requireNonNull(runner.asBukkit());
+                    Location spawn = this.map.arenaRunnerSpawnLocations.get(i % this.map.arenaRunnerSpawnLocations.size());
+                    runnerPlayer.teleport(spawn);
+                    runner.setCheckpoint(new pl.mrstudios.deathrun.arena.checkpoint.Checkpoint(
+                            0, spawn.clone(), java.util.List.of(), "Start"
+                    ));
+                });
 
         range(0, this.arena.getDeaths().size())
                 .filter((i) -> this.arena.getDeaths().get(i).asBukkit() != null)
@@ -361,17 +363,12 @@ public class ArenaServiceRunnable extends BukkitRunnable {
                                 .map(miniMessage()::deserialize)
                                 .forEach((component) -> this.audiences.player(player).sendMessage(component));
 
-                                        if (!this.map.arenaCheckpoints.isEmpty())
-                                                user.setCheckpoint(this.map.arenaCheckpoints.get(0));
-                    if (user.getRole() == DEATH)
-                        player.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, Integer.MAX_VALUE, this.configuration.plugin().arenaDeathSpeedAmplifier, false, false, false));
-
                     this.server.getPluginManager().callEvent(new UserArenaRoleAssignedEvent(user.getRole(), user));
                     player.getInventory().clear();
-                                        player.setFoodLevel(20);
-                                        player.setSaturation(20.0f);
+                    player.setFoodLevel(20);
+                    player.setSaturation(20.0f);
 
-                    if (user.getRole() == RUNNER)
+                    if (user.getRole() == RUNNER) {
                         this.configuration.plugin().boosters
                                 .forEach((booster) ->
                                         player.getInventory().setItem(
@@ -381,6 +378,13 @@ public class ArenaServiceRunnable extends BukkitRunnable {
                                                         .itemFlags(values())
                                                         .build()
                                         ));
+                        new ClassicStrafeService(this.plugin).prepareRunner(player);
+                    }
+
+                    if (user.getRole() == DEATH) {
+                        player.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, Integer.MAX_VALUE, this.configuration.plugin().arenaDeathSpeedAmplifier, false, false, false));
+                        new DeathNavigatorService(this.plugin).prepareDeath(player);
+                    }
 
                 });
     }
