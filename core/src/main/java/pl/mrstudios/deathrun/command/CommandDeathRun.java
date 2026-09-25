@@ -121,19 +121,20 @@ public class CommandDeathRun {
 
     @Execute(name = "playtest create")
     @Permission("mrstudios.command.deathrun.setup")
-    public void createClassicPlaytest(@Context Player player) {
+    public void createClassicPlaytest(@Context CommandSender sender) {
+        Player actor = sender instanceof Player player ? player : null;
         ClassicPlaytestService.Result result = new ClassicPlaytestService(
                 this.plugin, this.configuration, this.arenaManager
-        ).create(player);
+        ).create(actor);
 
         if (!result.success()) {
-            this.message(player, PREFIX + "<red>Playtest arena creation failed: <white>" + result.message());
+            this.message(sender, PREFIX + "<red>Playtest arena creation failed: <white>" + result.message());
             return;
         }
 
-        this.message(player, PREFIX + "<green>Classic26 engineering playtest arena is ready.");
-        this.message(player, PREFIX + "<gray>Join with <white>/dr join classic26-playtest</white>.");
-        this.message(player, PREFIX + "<gray>With 2+ players use <white>/dr start classic26-playtest</white> to force-start immediately.");
+        this.message(sender, PREFIX + "<green>Classic26 engineering playtest arena is ready.");
+        this.message(sender, PREFIX + "<gray>Join with <white>/dr join classic26-playtest</white>.");
+        this.message(sender, PREFIX + "<gray>Use <white>/dr start classic26-playtest</white> to force-start a joined test session.");
     }
 
     @Execute(name = "vote")
