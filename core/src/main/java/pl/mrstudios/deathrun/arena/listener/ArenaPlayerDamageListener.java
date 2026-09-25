@@ -54,8 +54,15 @@ public class ArenaPlayerDamageListener implements Listener {
         if (!(event.getEntity() instanceof Player player))
             return;
         ArenaManager.ArenaRuntime runtime = this.arenaManager.runtimeForPlayer(player);
-        if (runtime == null)
+        if (runtime == null) {
+            if (event instanceof EntityDamageByEntityEvent damageByEntity) {
+                var damager = damageByEntity.getDamager();
+                if (pl.mrstudios.deathrun.classic.trap.DeathRunEntityTags.isTrapProjectile(damager)
+                        || pl.mrstudios.deathrun.classic.trap.DeathRunEntityTags.isTrapExplosive(damager))
+                    event.setCancelled(true);
+            }
             return;
+        }
         Arena arena = runtime.arena();
 
         if (event.getCause() == FIRE || event.getCause() == FIRE_TICK)
