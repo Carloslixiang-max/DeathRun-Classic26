@@ -20,6 +20,8 @@ public class ArenaEntityExplodeListener implements Listener {
     public void onEntityExplode(@NotNull EntityExplodeEvent event) {
         if (!this.arenaManager.isDeathRunWorld(event.getLocation().getWorld()))
             return;
+        if (!pl.mrstudios.deathrun.classic.trap.DeathRunEntityTags.isTrapExplosive(event.getEntity()))
+            return;
         event.blockList().clear();
     }
 }
