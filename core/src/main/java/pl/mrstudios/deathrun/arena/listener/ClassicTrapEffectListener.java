@@ -4,6 +4,7 @@ import org.bukkit.Location;
 import org.bukkit.Server;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.plugin.Plugin;
@@ -12,6 +13,7 @@ import org.bukkit.potion.PotionEffectType;
 import org.bukkit.util.Vector;
 import org.jetbrains.annotations.NotNull;
 import pl.mrstudios.commons.inject.annotation.Inject;
+import pl.mrstudios.deathrun.api.arena.event.arena.ArenaTrapActivateEvent;
 import pl.mrstudios.deathrun.api.arena.trap.ITrap;
 import pl.mrstudios.deathrun.api.arena.user.IUser;
 import pl.mrstudios.deathrun.arena.ArenaManager;
@@ -29,6 +31,7 @@ import static pl.mrstudios.deathrun.api.arena.user.enums.Role.RUNNER;
 public final class ClassicTrapEffectListener implements Listener {
 
     private final ArenaManager arenaManager;
+    private final Plugin plugin;
     private final TrapActivationService activationService;
     private final DeathRunDeathService deathService;
 
@@ -41,53 +44,107 @@ public final class ClassicTrapEffectListener implements Listener {
             @NotNull WinMapManager winMapManager
     ) {
         this.arenaManager = arenaManager;
+        this.plugin = plugin;
         this.activationService = new TrapActivationService(plugin, server, configuration);
         this.deathService = new DeathRunDeathService(arenaManager, plugin, server, configuration, winMapManager);
     }
 
     @EventHandler
     public void onMove(@NotNull PlayerMoveEvent event) {
-        if (event.getTo() == null) return;
+        if (event.getTo() == null)
+            return;
+
         Player player = event.getPlayer();
         ArenaManager.ArenaRuntime runtime = this.arenaManager.runtimeForPlayer(player);
-        if (runtime == null || runtime.arena().getGameState() != PLAYING) return;
-
-        IUser user = runtime.arena().getUser(player);
-        if (user == null || user.getRole() != RUNNER || user.isEliminated()) return;
+        if (!this.isActiveRunner(player, runtime))
+            return;
 
         for (TrapActivationContext context : this.activationService.activeAttributions().values()) {
-            if (!context.mapId().equalsIgnoreCase(runtime.mapId())) continue;
-            if (!this.inside(context.trap(), event.getTo())) continue;
-
-            boolean firstContact = context.victims().add(player.getUniqueId());
-            this.activationService.markTrapContact(player, context.mapId(), context.trapIndex());
-
-            if (context.trap() instanceof TrapFireFloor || context.trap() instanceof TrapFireTrail) {
-                this.deathService.killRunner(player, DeathRunDeathCause.TRAP);
+            if (!context.mapId().equalsIgnoreCase(runtime.mapId()))
+                continue;
+            if (!this.inside(context.trap(), event.getTo()))
+                continue;
+            if (this.applyContact(player, context))
                 return;
-            }
-            if (context.trap() instanceof TrapQuicksand)
-                player.addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS, 30, 4, false, false, false));
-
-            if (firstContact && context.trap() instanceof TrapLaunchPlayers) {
-                Vector velocity = player.getVelocity().clone();
-                velocity.setY(1.15);
-                player.setVelocity(velocity);
-            }
-
-            if (firstContact && context.trap() instanceof TrapKnockBack) {
-                Vector push = player.getLocation().toVector().subtract(context.trap().getButton().toVector()).setY(0);
-                if (push.lengthSquared() < 0.0001)
-                    push = player.getLocation().getDirection().multiply(-1).setY(0);
-                push.normalize().multiply(1.65).setY(0.45);
-                player.setVelocity(push);
-            }
-
-            if (context.trap() instanceof TrapGiant) {
-                this.deathService.killRunner(player, DeathRunDeathCause.TRAP);
-                return;
-            }
         }
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR)
+    public void onTrapActivated(@NotNull ArenaTrapActivateEvent event) {
+        // The activation event is fired immediately before TrapActivationService
+        // publishes the active context. Run one tick later so players already
+        // standing still inside a trap are affected just like moving players.
+        this.plugin.getServer().getScheduler().runTask(this.plugin, () -> {
+            ArenaManager.ArenaRuntime runtime = this.arenaManager.runtimes().stream()
+                    .filter(candidate -> candidate.arena() == event.getArena())
+                    .findFirst()
+                    .orElse(null);
+            if (runtime == null || runtime.arena().getGameState() != PLAYING)
+                return;
+
+            TrapActivationContext context = this.activationService.activeAttributions().values().stream()
+                    .filter(candidate -> candidate.mapId().equalsIgnoreCase(runtime.mapId()))
+                    .filter(candidate -> candidate.trap() == event.getTrap())
+                    .findFirst()
+                    .orElse(null);
+            if (context == null)
+                return;
+
+            runtime.arena().getRunners().stream()
+                    .map(IUser::asBukkit)
+                    .filter(java.util.Objects::nonNull)
+                    .filter(player -> this.isActiveRunner(player, runtime))
+                    .filter(player -> this.inside(context.trap(), player.getLocation()))
+                    .forEach(player -> this.applyContact(player, context));
+        });
+    }
+
+    private boolean isActiveRunner(
+            @NotNull Player player,
+            ArenaManager.ArenaRuntime runtime
+    ) {
+        if (runtime == null || runtime.arena().getGameState() != PLAYING)
+            return false;
+
+        IUser user = runtime.arena().getUser(player);
+        return user != null && user.getRole() == RUNNER && !user.isEliminated();
+    }
+
+    private boolean applyContact(
+            @NotNull Player player,
+            @NotNull TrapActivationContext context
+    ) {
+        boolean firstContact = context.victims().add(player.getUniqueId());
+        this.activationService.markTrapContact(player, context.mapId(), context.trapIndex());
+
+        if (context.trap() instanceof TrapFireFloor || context.trap() instanceof TrapFireTrail) {
+            this.deathService.killRunner(player, DeathRunDeathCause.TRAP);
+            return true;
+        }
+
+        if (context.trap() instanceof TrapQuicksand)
+            player.addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS, 30, 4, false, false, false));
+
+        if (firstContact && context.trap() instanceof TrapLaunchPlayers) {
+            Vector velocity = player.getVelocity().clone();
+            velocity.setY(1.15);
+            player.setVelocity(velocity);
+        }
+
+        if (firstContact && context.trap() instanceof TrapKnockBack) {
+            Vector push = player.getLocation().toVector().subtract(context.trap().getButton().toVector()).setY(0);
+            if (push.lengthSquared() < 0.0001)
+                push = player.getLocation().getDirection().multiply(-1).setY(0);
+            push.normalize().multiply(1.65).setY(0.45);
+            player.setVelocity(push);
+        }
+
+        if (context.trap() instanceof TrapGiant) {
+            this.deathService.killRunner(player, DeathRunDeathCause.TRAP);
+            return true;
+        }
+
+        return false;
     }
 
     private boolean inside(@NotNull ITrap trap, @NotNull Location location) {
@@ -103,8 +160,17 @@ public final class ClassicTrapEffectListener implements Listener {
         int minZ = trap.getLocations().stream().filter(java.util.Objects::nonNull).mapToInt(Location::getBlockZ).min().orElse(0);
         int maxZ = trap.getLocations().stream().filter(java.util.Objects::nonNull).mapToInt(Location::getBlockZ).max().orElse(0);
 
-        return location.getX() >= minX - 0.5 && location.getX() <= maxX + 1.5
-                && location.getY() >= minY - 1.0 && location.getY() <= maxY + 3.0
-                && location.getZ() >= minZ - 0.5 && location.getZ() <= maxZ + 1.5;
+        // Test a normal player-sized hitbox against the configured trap volume.
+        // This is intentionally much tighter than the old +3 block vertical margin.
+        final double halfWidth = 0.30;
+        final double playerHeight = 1.80;
+        double feetY = location.getY();
+
+        return location.getX() >= minX - halfWidth
+                && location.getX() <= maxX + 1.0 + halfWidth
+                && feetY + playerHeight >= minY
+                && feetY <= maxY + 1.01
+                && location.getZ() >= minZ - halfWidth
+                && location.getZ() <= maxZ + 1.0 + halfWidth;
     }
 }
