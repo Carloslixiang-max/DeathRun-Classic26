@@ -54,7 +54,7 @@ tasks {
     }
 
     shadowJar {
-        archiveFileName.set("DeathRun-${project.version}.jar")
+        archiveFileName.set("DeathRun-Classic26-1.4.1-dev.jar")
         archiveClassifier.set("")
         exclude("META-INF/*.SF", "META-INF/*.DSA", "META-INF/*.RSA")
     }
