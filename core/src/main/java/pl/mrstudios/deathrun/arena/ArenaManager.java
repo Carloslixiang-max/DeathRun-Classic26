@@ -23,6 +23,7 @@ import pl.mrstudios.deathrun.arena.win.WinMapManager;
 import pl.mrstudios.deathrun.config.Configuration;
 import pl.mrstudios.deathrun.config.impl.MapConfiguration;
 import pl.mrstudios.deathrun.reward.RewardService;
+import pl.mrstudios.deathrun.player.PlayerSnapshotService;
 
 import java.util.*;
 
@@ -47,6 +48,7 @@ public class ArenaManager {
     private final Configuration configuration;
     private final WinMapManager winMapManager;
     private final RewardService rewardService;
+    private final PlayerSnapshotService playerSnapshotService;
     private SignManager signManager;
 
     private final Map<String, ArenaRuntime> runtimesByMapId = new LinkedHashMap<>();
@@ -67,6 +69,22 @@ public class ArenaManager {
         this.configuration = configuration;
         this.winMapManager = winMapManager;
         this.rewardService = rewardService;
+        this.playerSnapshotService = new PlayerSnapshotService(plugin);
+    }
+
+    public boolean isDeathRunWorld(@Nullable World world) {
+        if (world == null)
+            return false;
+        String name = world.getName();
+        return this.runtimesByMapId.values().stream()
+                .map(runtime -> runtime.map().world)
+                .filter(Objects::nonNull)
+                .filter(candidate -> !candidate.isBlank())
+                .anyMatch(candidate -> candidate.equalsIgnoreCase(name));
+    }
+
+    public boolean restorePendingSnapshot(@NotNull Player player) {
+        return this.playerSnapshotService.restorePending(player);
     }
 
     public void initialize() {
@@ -248,6 +266,10 @@ public class ArenaManager {
 
         this.leaveCurrentMap(player, true);
 
+        // P0: state must be durably journaled before any DeathRun mutation.
+        if (!this.playerSnapshotService.capture(player))
+            return JoinResult.PLAYER_STATE_SAVE_FAILED;
+
         User user = new User(player);
         runtime.arena().getUsers().add(user);
         this.playerMapIndex.put(player.getUniqueId(), runtime.mapId());
@@ -306,8 +328,8 @@ public class ArenaManager {
                 .toList();
 
         for (Player player : activePlayers) {
+            // leaveCurrentMap restores the exact pre-DeathRun state/location.
             this.leaveCurrentMap(player, false);
-            this.returnPlayerToHub(player);
             this.audiences.player(player).sendMessage(miniMessage().deserialize(this.configuration.language().commandMessageStopMovedToHub));
         }
 
@@ -357,7 +379,8 @@ public class ArenaManager {
         }
 
         this.playerMapIndex.remove(player.getUniqueId());
-        this.resetPlayerScoreboard(player);
+        if (removed)
+            this.playerSnapshotService.restore(player);
         return removed;
     }
 
@@ -394,6 +417,9 @@ public class ArenaManager {
                 this.leaveCurrentMap(player, true);
 
             if (runtime.arena().getUser(player) != null)
+                continue;
+
+            if (!this.playerSnapshotService.capture(player))
                 continue;
 
             runtime.arena().getUsers().add(new User(player));
@@ -463,6 +489,13 @@ public class ArenaManager {
             @NotNull Player player,
             boolean notify
     ) {
+        if (this.playerSnapshotService.hasPending(player.getUniqueId())) {
+            boolean restored = this.playerSnapshotService.restore(player);
+            if (notify && restored)
+                this.audiences.player(player).sendMessage(miniMessage().deserialize("<gold>[DR]</gold> <gray>Your pre-DeathRun state was recovered."));
+            return;
+        }
+
         if (!this.shouldReturnToHubOnJoinOrRespawn(player))
             return;
 
@@ -666,6 +699,7 @@ public class ArenaManager {
     public enum JoinResult {
         JOINED,
         ALREADY_IN_MAP,
+        PLAYER_STATE_SAVE_FAILED,
         MAP_UNAVAILABLE,
         MAP_NOT_READY,
         MAP_FULL,
