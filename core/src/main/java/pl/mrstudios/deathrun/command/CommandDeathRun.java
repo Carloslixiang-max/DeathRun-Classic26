@@ -37,6 +37,7 @@ import pl.mrstudios.deathrun.arena.trap.TrapRegistry;
 import pl.mrstudios.deathrun.config.Configuration;
 import pl.mrstudios.deathrun.config.impl.MapConfiguration;
 import pl.mrstudios.deathrun.classic.playtest.ClassicPlaytestService;
+import pl.mrstudios.deathrun.classic.vote.ClassicVoteService;
 
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -83,6 +84,7 @@ public class CommandDeathRun {
     private final TrapRegistry  trapRegistry;
     private final ArenaManager arenaManager;
     private final MapSelectorService mapSelectorService;
+    private final ClassicVoteService classicVoteService;
     private final SignManager signManager;
     private final Configuration configuration;
     private final Map<UUID, String> setupMapSelection = new HashMap<>();
@@ -98,6 +100,7 @@ public class CommandDeathRun {
             @NotNull TrapRegistry trapRegistry,
             @NotNull ArenaManager arenaManager,
             @NotNull MapSelectorService mapSelectorService,
+            @NotNull ClassicVoteService classicVoteService,
                 @NotNull SignManager signManager,
             @NotNull Configuration configuration
     ) {
@@ -107,6 +110,7 @@ public class CommandDeathRun {
         this.trapRegistry = trapRegistry;
         this.arenaManager = arenaManager;
         this.mapSelectorService = mapSelectorService;
+        this.classicVoteService = classicVoteService;
         this.signManager = signManager;
         this.configuration = configuration;
     }
@@ -135,6 +139,18 @@ public class CommandDeathRun {
         this.message(player, PREFIX + "<green>Classic26 engineering playtest arena is ready.");
         this.message(player, PREFIX + "<gray>Join with <white>/dr join classic26-playtest</white>.");
         this.message(player, PREFIX + "<gray>With 2+ players use <white>/dr start classic26-playtest</white> to force-start immediately.");
+    }
+
+    @Execute(name = "vote")
+    @Permission("mrstudios.command.deathrun.join")
+    public void vote(@Context Player player) {
+        this.classicVoteService.open(player);
+    }
+
+    @Execute(name = "vote leave")
+    @Permission("mrstudios.command.deathrun.join")
+    public void leaveVote(@Context Player player) {
+        this.classicVoteService.leave(player, true);
     }
 
     @Execute(name = "maps")
