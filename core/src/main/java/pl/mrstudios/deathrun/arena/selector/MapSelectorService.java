@@ -1,6 +1,5 @@
 package pl.mrstudios.deathrun.arena.selector;
 
-import net.kyori.adventure.platform.bukkit.BukkitAudiences;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
@@ -30,19 +29,16 @@ public class MapSelectorService {
     private final Plugin plugin;
     private final Configuration configuration;
     private final ArenaManager arenaManager;
-    private final BukkitAudiences audiences;
     private final NamespacedKey mapIdKey;
 
     public MapSelectorService(
             @NotNull Plugin plugin,
             @NotNull Configuration configuration,
-            @NotNull ArenaManager arenaManager,
-            @NotNull BukkitAudiences audiences
+            @NotNull ArenaManager arenaManager
     ) {
         this.plugin = plugin;
         this.configuration = configuration;
         this.arenaManager = arenaManager;
-        this.audiences = audiences;
         this.mapIdKey = new NamespacedKey(plugin, "selector-map-id");
     }
 
@@ -84,22 +80,22 @@ public class MapSelectorService {
 
         MapConfiguration.MapDefinition map = this.configuration.map().getMapById(mapId);
         if (map == null) {
-            this.audiences.player(player).sendMessage(miniMessage().deserialize(this.configuration.language().mapSelectorMapUnavailable));
+            player.sendMessage(miniMessage().deserialize(this.configuration.language().mapSelectorMapUnavailable));
             return;
         }
 
         ArenaManager.JoinResult result = this.arenaManager.joinMap(player, mapId);
         switch (result) {
-            case JOINED -> this.audiences.player(player).sendMessage(miniMessage().deserialize(
+            case JOINED -> player.sendMessage(miniMessage().deserialize(
                     this.configuration.language().mapSelectorMapSelected.replace("<map>", this.mapName(map))
             ));
 
-            case ALREADY_IN_MAP -> this.audiences.player(player).sendMessage(miniMessage().deserialize(this.configuration.language().mapSelectorAlreadyJoined));
-            case MAP_NOT_READY -> this.audiences.player(player).sendMessage(miniMessage().deserialize(this.configuration.language().mapSelectorMapNotReady));
-            case MAP_FULL -> this.audiences.player(player).sendMessage(miniMessage().deserialize(this.configuration.language().mapSelectorMapFull));
-            case MATCH_IN_PROGRESS -> this.audiences.player(player).sendMessage(miniMessage().deserialize(this.configuration.language().mapSelectorMapInProgress));
-            case MAP_EDITING -> this.audiences.player(player).sendMessage(miniMessage().deserialize(this.configuration.language().mapSelectorMapEditing));
-            default -> this.audiences.player(player).sendMessage(miniMessage().deserialize(this.configuration.language().mapSelectorMapUnavailable));
+            case ALREADY_IN_MAP -> player.sendMessage(miniMessage().deserialize(this.configuration.language().mapSelectorAlreadyJoined));
+            case MAP_NOT_READY -> player.sendMessage(miniMessage().deserialize(this.configuration.language().mapSelectorMapNotReady));
+            case MAP_FULL -> player.sendMessage(miniMessage().deserialize(this.configuration.language().mapSelectorMapFull));
+            case MATCH_IN_PROGRESS -> player.sendMessage(miniMessage().deserialize(this.configuration.language().mapSelectorMapInProgress));
+            case MAP_EDITING -> player.sendMessage(miniMessage().deserialize(this.configuration.language().mapSelectorMapEditing));
+            default -> player.sendMessage(miniMessage().deserialize(this.configuration.language().mapSelectorMapUnavailable));
         }
 
         player.closeInventory();
