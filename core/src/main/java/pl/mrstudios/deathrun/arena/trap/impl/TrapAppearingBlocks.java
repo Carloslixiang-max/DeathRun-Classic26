@@ -30,12 +30,13 @@ public class TrapAppearingBlocks extends Trap {
             return;
 
         super.locations.forEach((location) -> this.backup.put(location, location.getBlock().getBlockData()));
-        super.locations.forEach((location) -> location.getBlock().setType(this.material));
+        Material replacement = this.material == null ? Material.STONE : this.material;
+        super.locations.forEach((location) -> location.getBlock().setType(replacement, false));
     }
 
     @Override
     public void end() {
-        this.backup.forEach((key, value) -> key.getBlock().setBlockData(value));
+        this.backup.forEach((key, value) -> key.getBlock().setBlockData(value, false));
         this.backup.clear();
     }
 
@@ -53,7 +54,9 @@ public class TrapAppearingBlocks extends Trap {
             @NotNull List<Location> list,
             @Nullable Object... objects
     ) {
-        return list;
+        return list.stream()
+                .filter(location -> location != null && location.getWorld() != null)
+                .toList();
     }
 
     @Override
