@@ -2150,12 +2150,13 @@ public class CommandDeathRun {
             @NotNull MapConfiguration.MapDefinition map
     ) {
         List<String> issues = new ArrayList<>();
-        World mapWorld = null;
+        final World mapWorld = map.world == null || map.world.isBlank()
+                ? null
+                : this.plugin.getServer().getWorld(map.world);
 
         if (map.world == null || map.world.isBlank()) {
             issues.add("world-not-set");
         } else {
-            mapWorld = this.plugin.getServer().getWorld(map.world);
             if (mapWorld == null)
                 issues.add("world-not-loaded");
 
