@@ -17,6 +17,8 @@ import pl.mrstudios.deathrun.arena.ArenaManager;
 import pl.mrstudios.deathrun.arena.win.WinMapManager;
 import pl.mrstudios.deathrun.classic.death.DeathRunDeathCause;
 import pl.mrstudios.deathrun.classic.death.DeathRunDeathService;
+import pl.mrstudios.deathrun.classic.trap.TrapActivationContext;
+import pl.mrstudios.deathrun.classic.trap.TrapActivationService;
 import pl.mrstudios.deathrun.config.Configuration;
 
 import static org.bukkit.Material.LAVA;
@@ -30,6 +32,7 @@ public class ArenaPlayerDamageListener implements Listener {
     private final ArenaManager arenaManager;
     private final Configuration configuration;
     private final DeathRunDeathService deathService;
+    private final TrapActivationService trapActivationService;
 
     @Inject
     public ArenaPlayerDamageListener(
@@ -43,6 +46,7 @@ public class ArenaPlayerDamageListener implements Listener {
         this.arenaManager = arenaManager;
         this.configuration = configuration;
         this.deathService = new DeathRunDeathService(arenaManager, plugin, server, audiences, configuration, winMapManager);
+        this.trapActivationService = new TrapActivationService(plugin, server, configuration);
     }
 
     @EventHandler(priority = MONITOR)
@@ -90,10 +94,20 @@ public class ArenaPlayerDamageListener implements Listener {
     public void onEntityExplode(@NotNull EntityExplodeEvent event) {
         if (!this.arenaManager.isDeathRunWorld(event.getLocation().getWorld()))
             return;
+
+        TrapActivationContext attribution = this.trapActivationService.attributionForExplosion(event.getLocation());
+        if (attribution == null)
+            return;
+
         event.getLocation().getNearbyEntitiesByType(Player.class, 3f).forEach(player -> {
-            Arena arena = this.arenaManager.arenaForPlayer(player);
-            if (arena != null && arena.getGameState() == PLAYING)
-                this.deathService.killRunner(player, DeathRunDeathCause.TRAP);
+            ArenaManager.ArenaRuntime runtime = this.arenaManager.runtimeForPlayer(player);
+            if (runtime == null
+                    || runtime.arena().getGameState() != PLAYING
+                    || !runtime.mapId().equalsIgnoreCase(attribution.mapId()))
+                return;
+
+            this.trapActivationService.markTrapContact(player, attribution);
+            this.deathService.killRunner(player, DeathRunDeathCause.TRAP);
         });
     }
 
