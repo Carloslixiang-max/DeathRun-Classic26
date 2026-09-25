@@ -12,6 +12,9 @@ import pl.mrstudios.deathrun.api.arena.event.arena.ArenaTrapActivateEvent;
 import pl.mrstudios.deathrun.api.arena.trap.ITrap;
 import pl.mrstudios.deathrun.api.arena.user.IUser;
 import pl.mrstudios.deathrun.arena.ArenaManager;
+import pl.mrstudios.deathrun.arena.trap.impl.TrapArrows;
+import pl.mrstudios.deathrun.arena.trap.impl.TrapMinefield;
+import pl.mrstudios.deathrun.arena.trap.impl.TrapTNT;
 import pl.mrstudios.deathrun.config.Configuration;
 
 import java.time.Duration;
@@ -220,6 +223,7 @@ public final class TrapActivationService {
         long now = System.currentTimeMillis();
         return ACTIVE.values().stream()
                 .filter(context -> now <= context.expiresAt())
+                .filter(context -> context.trap() instanceof TrapTNT || context.trap() instanceof TrapMinefield)
                 .filter(context -> context.trap().getLocations().stream().anyMatch(location ->
                         location != null
                                 && location.getWorld() != null
@@ -227,6 +231,24 @@ public final class TrapActivationService {
                 ))
                 .min(Comparator.comparingDouble(context -> this.minDistanceSquared(context.trap(), explosion)))
                 .filter(context -> this.minDistanceSquared(context.trap(), explosion) <= 36.0)
+                .orElse(null);
+    }
+
+    public @Nullable TrapActivationContext attributionForProjectile(@NotNull Location projectileLocation) {
+        if (projectileLocation.getWorld() == null)
+            return null;
+
+        long now = System.currentTimeMillis();
+        return ACTIVE.values().stream()
+                .filter(context -> now <= context.expiresAt())
+                .filter(context -> context.trap() instanceof TrapArrows)
+                .filter(context -> context.trap().getLocations().stream().anyMatch(location ->
+                        location != null
+                                && location.getWorld() != null
+                                && location.getWorld().getUID().equals(projectileLocation.getWorld().getUID())
+                ))
+                .min(Comparator.comparingDouble(context -> this.minDistanceSquared(context.trap(), projectileLocation)))
+                .filter(context -> this.minDistanceSquared(context.trap(), projectileLocation) <= 900.0)
                 .orElse(null);
     }
 
