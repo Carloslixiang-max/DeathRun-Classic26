@@ -25,6 +25,7 @@ import pl.mrstudios.deathrun.config.impl.MapConfiguration;
 import pl.mrstudios.deathrun.reward.RewardService;
 import pl.mrstudios.deathrun.classic.strafe.ClassicStrafeService;
 import pl.mrstudios.deathrun.classic.death.DeathNavigatorService;
+import pl.mrstudios.deathrun.classic.role.ClassicRoleAllocation;
 import pl.mrstudios.deathrun.classic.trap.TrapActivationService;
 
 import java.io.File;
@@ -329,7 +330,7 @@ public class ArenaServiceRunnable extends BukkitRunnable {
 
                 int users = this.arena.getUsers().size();
                 int configuredDeaths = Math.max(this.configuration.plugin().arenaDeathsAmount, 0);
-                int deathsToAssign = users <= 1 ? 0 : Math.min(configuredDeaths, users - 1);
+                int deathsToAssign = ClassicRoleAllocation.deathCount(users, configuredDeaths);
 
                 if (deathsToAssign > 0) {
                         ArrayList<IUser> shuffled = new ArrayList<>(this.arena.getUsers());
