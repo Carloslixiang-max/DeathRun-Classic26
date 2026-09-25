@@ -39,6 +39,7 @@ dependencies {
     compileOnly("org.jetbrains:annotations:${project.parent?.property("jetbrains.annotations.version")}")
     annotationProcessor("org.jetbrains:annotations:${project.parent?.property("jetbrains.annotations.version")}")
     testImplementation("org.junit.jupiter:junit-jupiter:5.12.2")
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher:1.12.2")
 }
 
 tasks {
