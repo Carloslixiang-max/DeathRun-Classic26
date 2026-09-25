@@ -112,10 +112,12 @@ public final class DeathRunDeathService {
         player.addPotionEffect(FIRE_RESISTANCE_EFFECT);
         player.setFireTicks(0);
 
-        BufferedImage parchmentImage = this.plugin instanceof Entrypoint entrypoint
-                ? entrypoint.getLoseParchmentImage()
-                : null;
-        this.winMapManager.giveLoseMap(player, parchmentImage, user.getDeaths());
+        if (user.isEliminated()) {
+            BufferedImage parchmentImage = this.plugin instanceof Entrypoint entrypoint
+                    ? entrypoint.getLoseParchmentImage()
+                    : null;
+            this.winMapManager.giveLoseMap(player, parchmentImage, user.getDeaths());
+        }
         this.server.getPluginManager().callEvent(new UserArenaDeathEvent(user, runtime.arena()));
         player.showTitle(title(
                 miniMessage().deserialize(this.configuration.language().arenaDeathTitle),
