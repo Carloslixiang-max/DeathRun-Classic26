@@ -149,6 +149,17 @@ public class SignManager {
         if (current >= maxPlayers)
             return false;
 
+        if (this.arenaManager.runtimeForPlayer(player) != null) {
+            player.sendMessage(ChatColor.RED + "Leave your current DeathRun match before joining a queue.");
+            return false;
+        }
+
+        // Queue teleport is already a DeathRun mutation: journal the exact state first.
+        if (!this.arenaManager.ensureSnapshot(player)) {
+            player.sendMessage(ChatColor.RED + "DeathRun could not safely save your current state; queue join cancelled.");
+            return false;
+        }
+
         this.leaveQueue(player);
 
         this.queuedPlayers
@@ -166,7 +177,9 @@ public class SignManager {
                             + " on map " + normalizedMapId
                             + " because waiting lobby location has null world and configured world is unavailable.");
                     player.sendMessage(ChatColor.RED + "This map is currently misconfigured (waiting lobby world missing). Please contact staff.");
-                    return true;
+                    this.leaveQueue(player);
+                    this.arenaManager.restorePendingSnapshot(player);
+                    return false;
                 }
 
                 waitingLobby = waitingLobby.clone();
@@ -174,7 +187,12 @@ public class SignManager {
                 runtime.map().arenaWaitingLobbyLocation = waitingLobby;
             }
 
-            player.teleport(waitingLobby);
+            if (!player.teleport(waitingLobby)) {
+                this.leaveQueue(player);
+                this.arenaManager.restorePendingSnapshot(player);
+                player.sendMessage(ChatColor.RED + "DeathRun queue teleport failed; your previous state was restored.");
+                return false;
+            }
         }
 
         return true;
@@ -223,8 +241,12 @@ public class SignManager {
         if (players == null || players.isEmpty())
             return;
 
-        for (UUID uniqueId : players)
+        for (UUID uniqueId : players) {
             this.playerQueue.remove(uniqueId);
+            Player player = this.plugin.getServer().getPlayer(uniqueId);
+            if (player != null && player.isOnline() && this.arenaManager.hasPendingSnapshot(player))
+                this.arenaManager.restorePendingSnapshot(player);
+        }
     }
 
     public @NotNull List<Player> drainQueuedPlayers(

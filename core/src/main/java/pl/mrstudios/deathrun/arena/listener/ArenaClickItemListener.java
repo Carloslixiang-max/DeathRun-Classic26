@@ -54,19 +54,27 @@ public class ArenaClickItemListener implements Listener {
         if (!usedType.name().endsWith("_BED"))
             return;
 
-        event.setCancelled(true);
-
         boolean leftMap = this.arenaManager.leaveCurrentMap(event.getPlayer(), true);
         boolean leftQueue = this.signManager.leaveQueue(event.getPlayer());
         if (!leftMap && !leftQueue)
             return;
+
+        event.setCancelled(true);
 
         if (leftMap) {
             event.getPlayer().sendMessage(org.bukkit.ChatColor.YELLOW + "You have left DeathRun and your previous state was restored.");
             return;
         }
 
-        this.arenaManager.returnPlayerToHub(event.getPlayer());
+        if (this.arenaManager.hasPendingSnapshot(event.getPlayer())) {
+            if (!this.arenaManager.restorePendingSnapshot(event.getPlayer())) {
+                event.getPlayer().sendMessage(org.bukkit.ChatColor.RED + "DeathRun could not restore your saved state yet; recovery data was kept.");
+                return;
+            }
+        } else {
+            this.arenaManager.returnPlayerToHub(event.getPlayer());
+        }
+
         event.getPlayer().sendMessage(org.bukkit.ChatColor.YELLOW + "You have left the DeathRun queue.");
 
     }

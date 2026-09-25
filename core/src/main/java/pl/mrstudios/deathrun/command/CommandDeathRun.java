@@ -273,8 +273,16 @@ public class CommandDeathRun {
         if (!leftMap && !leftQueue)
             return;
 
-        if (!leftMap)
-            this.arenaManager.returnPlayerToHub(player);
+        if (!leftMap) {
+            if (this.arenaManager.hasPendingSnapshot(player)) {
+                if (!this.arenaManager.restorePendingSnapshot(player)) {
+                    this.message(player, "<red>DeathRun could not restore your saved state yet; recovery data was kept.");
+                    return;
+                }
+            } else {
+                this.arenaManager.returnPlayerToHub(player);
+            }
+        }
         this.message(player, leftMap
                 ? "<yellow>You have left DeathRun and your previous state was restored."
                 : "<yellow>You have left the DeathRun queue.");

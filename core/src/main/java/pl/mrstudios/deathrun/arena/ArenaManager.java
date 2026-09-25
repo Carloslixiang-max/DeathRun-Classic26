@@ -79,6 +79,15 @@ public class ArenaManager {
                 .anyMatch(candidate -> candidate.equalsIgnoreCase(name));
     }
 
+    public boolean hasPendingSnapshot(@NotNull Player player) {
+        return this.playerSnapshotService.hasPending(player.getUniqueId());
+    }
+
+    public boolean ensureSnapshot(@NotNull Player player) {
+        return this.playerSnapshotService.hasPending(player.getUniqueId())
+                || this.playerSnapshotService.capture(player);
+    }
+
     public boolean restorePendingSnapshot(@NotNull Player player) {
         return this.playerSnapshotService.restorePending(player);
     }
@@ -235,9 +244,6 @@ public class ArenaManager {
             @NotNull Player player,
             @NotNull String mapId
     ) {
-        if (this.signManager != null)
-            this.signManager.leaveQueue(player);
-
         ArenaRuntime runtime = this.runtimeByMapId(mapId);
         if (runtime == null)
             return JoinResult.MAP_UNAVAILABLE;
@@ -259,10 +265,14 @@ public class ArenaManager {
         if (previousRuntime != null && previousRuntime.mapId().equalsIgnoreCase(runtime.mapId()))
             return JoinResult.ALREADY_IN_MAP;
 
+        if (this.signManager != null)
+            this.signManager.leaveQueue(player);
+
         this.leaveCurrentMap(player, true);
 
         // P0: state must be durably journaled before any DeathRun mutation.
-        if (!this.playerSnapshotService.capture(player))
+        // A queue entry may already own the pre-DeathRun snapshot, so reuse it.
+        if (!this.ensureSnapshot(player))
             return JoinResult.PLAYER_STATE_SAVE_FAILED;
 
         User user = new User(player);
@@ -367,7 +377,10 @@ public class ArenaManager {
 
         if (this.signManager != null) {
             for (Player queuedPlayer : this.signManager.drainQueuedPlayers(runtime.mapId(), Integer.MAX_VALUE)) {
-                this.returnPlayerToHub(queuedPlayer);
+                if (this.hasPendingSnapshot(queuedPlayer))
+                    this.restorePendingSnapshot(queuedPlayer);
+                else
+                    this.returnPlayerToHub(queuedPlayer);
                 queuedPlayer.sendMessage(miniMessage().deserialize(this.configuration.language().commandMessageStopMovedToHub));
             }
         }
@@ -456,7 +469,7 @@ public class ArenaManager {
             if (runtime.arena().getUser(player) != null)
                 continue;
 
-            if (!this.playerSnapshotService.capture(player))
+            if (!this.ensureSnapshot(player))
                 continue;
 
             runtime.arena().getUsers().add(new User(player));

@@ -75,6 +75,14 @@ public class ArenaBoosterListener implements Listener {
                 return;
         }
 
+        Arena arena = this.arenaManager.arenaForPlayer(event.getPlayer());
+        if (arena == null || arena.getGameState() != PLAYING)
+            return;
+
+        IUser user = arena.getUser(event.getPlayer());
+        if (user == null || user.getRole() != RUNNER || user.isEliminated())
+            return;
+
         Material usedType = usedItem.getType();
 
         this.configuration.plugin().boosters
@@ -82,18 +90,6 @@ public class ArenaBoosterListener implements Listener {
                 .filter((booster) -> booster.item().material() == usedType)
                 .filter((booster) -> booster.slot() == event.getPlayer().getInventory().getHeldItemSlot())
                 .findFirst().ifPresent((booster) -> {
-
-                    Arena arena = this.arenaManager.arenaForPlayer(event.getPlayer());
-                    if (arena == null)
-                        return;
-
-                    if (arena.getGameState() != PLAYING)
-                        return;
-
-                    IUser user = arena.getUser(event.getPlayer());
-
-                    if (user == null)
-                        return;
 
                     event.setCancelled(true);
 

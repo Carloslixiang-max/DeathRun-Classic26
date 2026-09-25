@@ -92,7 +92,14 @@ public class ArenaSignInteractListener implements Listener {
                     return;
                 }
 
-                this.arenaManager.returnPlayerToHub(event.getPlayer());
+                if (this.arenaManager.hasPendingSnapshot(event.getPlayer())) {
+                    if (!this.arenaManager.restorePendingSnapshot(event.getPlayer())) {
+                        event.getPlayer().sendMessage(ChatColor.RED + "DeathRun could not restore your saved state yet; recovery data was kept.");
+                        return;
+                    }
+                } else {
+                    this.arenaManager.returnPlayerToHub(event.getPlayer());
+                }
                 event.getPlayer().sendMessage(ChatColor.YELLOW + "You have left the DeathRun queue.");
             }
 

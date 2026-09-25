@@ -8,6 +8,7 @@ import org.bukkit.event.entity.EntityDamageEvent;
 import org.jetbrains.annotations.NotNull;
 import pl.mrstudios.commons.inject.annotation.Inject;
 import pl.mrstudios.deathrun.arena.ArenaManager;
+import pl.mrstudios.deathrun.config.Configuration;
 
 import static org.bukkit.event.entity.EntityDamageEvent.DamageCause.FALL;
 import static pl.mrstudios.deathrun.api.arena.enums.GameState.PLAYING;
@@ -15,12 +16,15 @@ import static pl.mrstudios.deathrun.api.arena.enums.GameState.PLAYING;
 public class ArenaFallDamageListener implements Listener {
 
     private final ArenaManager arenaManager;
+    private final Configuration configuration;
 
     @Inject
     public ArenaFallDamageListener(
-            @NotNull ArenaManager arenaManager
+            @NotNull ArenaManager arenaManager,
+            @NotNull Configuration configuration
     ) {
         this.arenaManager = arenaManager;
+        this.configuration = configuration;
     }
 
     @EventHandler(priority = EventPriority.HIGHEST)
@@ -40,6 +44,7 @@ public class ArenaFallDamageListener implements Listener {
         if (runtime.arena().getGameState() != PLAYING)
             return;
 
-        event.setCancelled(true);
+        if (player.getFallDistance() <= this.configuration.plugin().arenaMaxFallDistance)
+            event.setCancelled(true);
     }
 }
