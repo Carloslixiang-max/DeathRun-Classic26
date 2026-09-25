@@ -22,6 +22,8 @@ public class ArenaProjectileListener implements Listener {
     public void onProjectileLand(@NotNull ProjectileHitEvent event) {
         if (!this.arenaManager.isDeathRunWorld(event.getEntity().getWorld()))
             return;
+        if (!pl.mrstudios.deathrun.classic.trap.DeathRunEntityTags.isTrapProjectile(event.getEntity()))
+            return;
         event.getEntity().remove();
     }
 }
