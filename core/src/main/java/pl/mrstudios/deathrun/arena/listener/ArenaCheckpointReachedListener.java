@@ -27,10 +27,7 @@ import pl.mrstudios.deathrun.reward.RewardService;
 import pl.mrstudios.deathrun.classic.checkpoint.SegmentAabb;
 
 import java.awt.image.BufferedImage;
-import java.util.Map;
 import java.util.Objects;
-import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 
 import static java.lang.String.valueOf;
 import static java.time.Duration.ofMillis;
@@ -56,7 +53,6 @@ public class ArenaCheckpointReachedListener implements Listener {
     private final Configuration configuration;
         private final WinMapManager winMapManager;
         private final RewardService rewardService;
-        private final Map<UUID, Integer> progressionByPlayer = new ConcurrentHashMap<>();
 
     @Inject
     public ArenaCheckpointReachedListener(
@@ -123,29 +119,21 @@ public class ArenaCheckpointReachedListener implements Listener {
         Arena arena = this.arenaManager.arenaForPlayer(player);
         ArenaManager.ArenaRuntime runtime = this.arenaManager.runtimeForPlayer(player);
         MapConfiguration.MapDefinition map = this.arenaManager.mapForPlayer(player);
-                if (arena == null || map == null || runtime == null) {
-                        this.progressionByPlayer.remove(player.getUniqueId());
+                if (arena == null || map == null || runtime == null)
             return;
-                }
 
-                                if (arena.getGameState() != PLAYING) {
-                                                this.progressionByPlayer.remove(player.getUniqueId());
-                        return;
-                                }
+                                if (arena.getGameState() != PLAYING)
+            return;
 
         if (map.arenaCheckpoints.isEmpty())
             return;
 
         IUser user = arena.getUser(player);
-                                if (user == null) {
-                        this.progressionByPlayer.remove(player.getUniqueId());
+                                if (user == null)
             return;
-                                }
 
-                                if (user.getRole() != RUNNER || user.isEliminated()) {
-                        this.progressionByPlayer.remove(player.getUniqueId());
+                                if (user.getRole() != RUNNER || user.isEliminated())
             return;
-                                }
 
                 int touchedIndex = -1;
                 for (int i = 0; i < map.arenaCheckpoints.size(); i++) {
@@ -159,14 +147,21 @@ public class ArenaCheckpointReachedListener implements Listener {
                                 if (touchedIndex < 0)
                         return;
 
-                int lastCompletedIndex = this.progressionByPlayer.getOrDefault(player.getUniqueId(), -1);
-                int expectedIndex = lastCompletedIndex + 1;
+                int lastCompletedIndex = -1;
+                if (user.getCheckpoint() != null) {
+                        for (int i = 0; i < map.arenaCheckpoints.size(); i++) {
+                                if (map.arenaCheckpoints.get(i).id().equals(user.getCheckpoint().id())) {
+                                        lastCompletedIndex = i;
+                                        break;
+                                }
+                        }
+                }
 
+                int expectedIndex = lastCompletedIndex + 1;
                 if (touchedIndex != expectedIndex)
                         return;
 
                 Checkpoint checkpoint = map.arenaCheckpoints.get(touchedIndex);
-                this.progressionByPlayer.put(player.getUniqueId(), touchedIndex);
 
         UserArenaCheckpointEvent userArenaCheckpointEvent = new UserArenaCheckpointEvent(user, checkpoint);
         this.server.getPluginManager().callEvent(userArenaCheckpointEvent);
