@@ -1,18 +1,15 @@
-name: Bootstrap and build DeathRun Classic26
+name: Build DeathRun Classic26
 
 on:
   workflow_dispatch:
   push:
     branches: [main]
-    paths:
-      - '.github/workflows/bootstrap-build.yml'
-      - '.bootstrap/DeathRun_Classic26_patchset_v3.zip'
 
 permissions:
   contents: write
 
 jobs:
-  bootstrap-build:
+  build:
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
@@ -22,51 +19,24 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Bootstrap CIlie23 DeathRun 1.4.1 source
+        if: ${{ hashFiles('core/build.gradle.kts') == '' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+
+          git remote add upstream https://github.com/CIlie23/DeathRun.git || true
+          git fetch --no-tags upstream ver/latest
+          git merge --allow-unrelated-histories --no-edit upstream/ver/latest
+          git push origin HEAD:main
+
       - name: Install Java 25
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '25'
-
-      - name: Import CIlie23 DeathRun 1.4.1 and apply Classic26 patchset
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-
-          if [ ! -f core/build.gradle.kts ]; then
-            if ! git remote get-url upstream >/dev/null 2>&1; then
-              git remote add upstream https://github.com/CIlie23/DeathRun.git
-            fi
-            git fetch --no-tags upstream ver/latest
-            git merge --allow-unrelated-histories --no-edit upstream/ver/latest
-          fi
-
-          PATCH_ZIP='.bootstrap/DeathRun_Classic26_patchset_v3.zip'
-          test -f "$PATCH_ZIP"
-          rm -rf /tmp/deathrun-classic26-patchset
-          mkdir -p /tmp/deathrun-classic26-patchset
-          unzip -q -o "$PATCH_ZIP" -d /tmp/deathrun-classic26-patchset
-          ROOT='/tmp/deathrun-classic26-patchset/DeathRun_Classic26_patchset_v3'
-
-          cp -a "$ROOT/overlay/." .
-          for patch in "$ROOT"/patches/*.patch; do
-            git apply --whitespace=fix "$patch"
-          done
-
-          mkdir -p docs/classic26
-          cp "$ROOT/STATUS.md" docs/classic26/STATUS.md
-          cp "$ROOT/APPLY_ORDER.md" docs/classic26/APPLY_ORDER.md
-
-          rm -rf .bootstrap
-
-          git add -A
-          if ! git diff --cached --quiet; then
-            git commit -m 'feat: import DeathRun 1.4.1 and apply Classic26 v3 migration'
-            git push origin HEAD:main
-          fi
 
       - name: Configure Gradle cache
         uses: gradle/actions/setup-gradle@v4
@@ -78,7 +48,8 @@ jobs:
           chmod +x ./gradlew
           ./gradlew clean shadowJar --stacktrace --no-daemon
 
-      - name: Upload playable plugin JAR
+      - name: Upload plugin JAR
+        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: DeathRun-Classic26-dev
