@@ -46,6 +46,8 @@ public final class PlayerSnapshotService {
         this.recoveryDirectory = new File(plugin.getDataFolder(), "recovery");
         if (!this.recoveryDirectory.exists() && !this.recoveryDirectory.mkdirs())
             plugin.getLogger().warning("[DeathRun] Could not create recovery directory: " + this.recoveryDirectory);
+
+        this.recoverInterruptedJournalMoves();
     }
 
     public boolean hasPending(@NotNull UUID playerId) {
@@ -384,6 +386,68 @@ public final class PlayerSnapshotService {
             return GameMode.valueOf(yaml.getString("gamemode", GameMode.SURVIVAL.name()));
         } catch (IllegalArgumentException ignored) {
             return GameMode.SURVIVAL;
+        }
+    }
+
+    private void recoverInterruptedJournalMoves() {
+        File[] tempFiles = this.recoveryDirectory.listFiles(
+                (directory, name) -> name.endsWith(".yml.tmp")
+        );
+        if (tempFiles == null || tempFiles.length == 0)
+            return;
+
+        for (File temp : tempFiles) {
+            String name = temp.getName();
+            String playerIdText = name.substring(0, name.length() - ".yml.tmp".length());
+
+            UUID playerId;
+            try {
+                playerId = UUID.fromString(playerIdText);
+            } catch (IllegalArgumentException invalidName) {
+                this.plugin.getLogger().warning(
+                        "[DeathRun] Ignoring malformed recovery temp journal: " + name
+                );
+                continue;
+            }
+
+            File target = this.fileFor(playerId);
+            if (target.isFile()) {
+                try {
+                    Files.deleteIfExists(temp.toPath());
+                } catch (IOException ignored) {
+                }
+                continue;
+            }
+
+            try {
+                YamlConfiguration yaml = YamlConfiguration.loadConfiguration(temp);
+                if (!playerId.toString().equalsIgnoreCase(yaml.getString("uuid", "")))
+                    throw new IllegalStateException("recovery UUID mismatch");
+
+                int formatVersion = yaml.getInt("format-version", -1);
+                if (formatVersion < 1 || formatVersion > FORMAT_VERSION)
+                    throw new IllegalStateException("unsupported recovery format " + formatVersion);
+
+                try {
+                    Files.move(
+                            temp.toPath(),
+                            target.toPath(),
+                            StandardCopyOption.ATOMIC_MOVE,
+                            StandardCopyOption.REPLACE_EXISTING
+                    );
+                } catch (AtomicMoveNotSupportedException ignored) {
+                    Files.move(temp.toPath(), target.toPath(), StandardCopyOption.REPLACE_EXISTING);
+                }
+
+                this.plugin.getLogger().warning(
+                        "[DeathRun] Recovered interrupted snapshot journal for " + playerId
+                );
+            } catch (Exception exception) {
+                this.plugin.getLogger().severe(
+                        "[DeathRun] Could not recover temp snapshot journal " + name
+                                + ": " + exception.getMessage()
+                );
+            }
         }
     }
 

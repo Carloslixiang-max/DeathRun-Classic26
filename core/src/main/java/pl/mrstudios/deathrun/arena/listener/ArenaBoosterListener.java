@@ -18,6 +18,7 @@ import pl.mrstudios.deathrun.api.arena.user.IUser;
 import pl.mrstudios.deathrun.arena.Arena;
 import pl.mrstudios.deathrun.arena.ArenaManager;
 import pl.mrstudios.deathrun.config.Configuration;
+import pl.mrstudios.deathrun.classic.strafe.ClassicStrafeService;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -41,6 +42,7 @@ public class ArenaBoosterListener implements Listener {
     private final Plugin plugin;
     private final Server server;
     private final Configuration configuration;
+    private final ClassicStrafeService classicStrafeService;
 
     protected final Map<String, Map<IBooster, Long>> delay = new HashMap<>();
 
@@ -55,6 +57,7 @@ public class ArenaBoosterListener implements Listener {
         this.plugin = plugin;
         this.server = server;
         this.configuration = configuration;
+        this.classicStrafeService = new ClassicStrafeService(plugin);
     }
 
     @EventHandler(priority = MONITOR)
@@ -67,6 +70,9 @@ public class ArenaBoosterListener implements Listener {
 
         ItemStack usedItem = this.resolveUsedItem(event);
         if (usedItem == null || usedItem.getType() == Material.AIR)
+            return;
+
+        if (this.classicStrafeService.directionOf(usedItem) != null)
             return;
 
         if (event.getHand() == EquipmentSlot.OFF_HAND) {
