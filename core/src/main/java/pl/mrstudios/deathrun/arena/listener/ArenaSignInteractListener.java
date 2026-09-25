@@ -103,7 +103,10 @@ public class ArenaSignInteractListener implements Listener {
                 }
 
                 if (leftMap) {
-                    player.sendMessage(ChatColor.YELLOW + "You have left DeathRun and your previous state was restored.");
+                    if (this.arenaManager.hasPendingSnapshot(player))
+                        player.sendMessage(ChatColor.RED + "You left DeathRun, but recovery is still pending. Use /dr recover after the saved world is available.");
+                    else
+                        player.sendMessage(ChatColor.YELLOW + "You have left DeathRun and your previous state was restored.");
                     return;
                 }
 

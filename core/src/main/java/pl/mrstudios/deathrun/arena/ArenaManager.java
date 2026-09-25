@@ -387,9 +387,15 @@ public class ArenaManager {
         for (Player player : players) {
             try {
                 this.leaveCurrentMap(player, false);
-                player.sendMessage(miniMessage().deserialize(
-                        "<red>[DeathRun]</red> <gray>The test match hit an internal error and your pre-game state was restored. Check latest.log for <white>[DR-START]</white>."
-                ));
+                if (this.hasPendingSnapshot(player)) {
+                    player.sendMessage(miniMessage().deserialize(
+                            "<red>[DeathRun]</red> <gray>The match hit an internal error. Recovery is still pending; use <white>/dr recover</white> after the saved world is available."
+                    ));
+                } else {
+                    player.sendMessage(miniMessage().deserialize(
+                            "<red>[DeathRun]</red> <gray>The match hit an internal error and your pre-game state was restored. Check latest.log for <white>[DR-START]</white>."
+                    ));
+                }
             } catch (Throwable restoreFailure) {
                 this.plugin.getLogger().log(
                         java.util.logging.Level.SEVERE,
@@ -489,7 +495,11 @@ public class ArenaManager {
                 onlinePlayer.showPlayer(this.plugin, player);
                 player.showPlayer(this.plugin, onlinePlayer);
             });
-            this.playerSnapshotService.restore(player);
+            if (!this.playerSnapshotService.restore(player))
+                this.plugin.getLogger().warning(
+                        "[DeathRun] Player " + player.getName()
+                                + " left the runtime but recovery is still pending."
+                );
         }
         return removed;
     }

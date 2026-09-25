@@ -62,7 +62,10 @@ public class ArenaClickItemListener implements Listener {
         event.setCancelled(true);
 
         if (leftMap) {
-            event.getPlayer().sendMessage(org.bukkit.ChatColor.YELLOW + "You have left DeathRun and your previous state was restored.");
+            if (this.arenaManager.hasPendingSnapshot(event.getPlayer()))
+                event.getPlayer().sendMessage(org.bukkit.ChatColor.RED + "You left DeathRun, but recovery is still pending. Use /dr recover after the saved world is available.");
+            else
+                event.getPlayer().sendMessage(org.bukkit.ChatColor.YELLOW + "You have left DeathRun and your previous state was restored.");
             return;
         }
 

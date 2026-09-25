@@ -53,8 +53,12 @@ public class ArenaPlayerRespawnListener implements Listener {
             this.plugin.getServer().getScheduler().runTask(this.plugin, () -> {
                 if (this.arenaManager.runtimeForPlayer(event.getPlayer()) != null) {
                     this.arenaManager.leaveCurrentMap(event.getPlayer(), true);
-                    event.getPlayer().sendMessage(org.bukkit.ChatColor.YELLOW
-                            + "[DeathRun] Unexpected vanilla death detected; your pre-game state was restored.");
+                    if (this.arenaManager.hasPendingSnapshot(event.getPlayer()))
+                        event.getPlayer().sendMessage(org.bukkit.ChatColor.RED
+                                + "[DeathRun] Unexpected vanilla death detected; recovery is still pending. Use /dr recover.");
+                    else
+                        event.getPlayer().sendMessage(org.bukkit.ChatColor.YELLOW
+                                + "[DeathRun] Unexpected vanilla death detected; your pre-game state was restored.");
                 }
             });
             return;

@@ -306,6 +306,11 @@ public class CommandDeathRun {
                 this.arenaManager.returnPlayerToHub(player);
             }
         }
+        if (leftMap && this.arenaManager.hasPendingSnapshot(player)) {
+            this.message(player, "<red>You left DeathRun, but recovery is still pending. Use <white>/dr recover</white> after the saved world is available.");
+            return;
+        }
+
         this.message(player, leftMap
                 ? "<yellow>You have left DeathRun and your previous state was restored."
                 : "<yellow>You have left the DeathRun queue.");
