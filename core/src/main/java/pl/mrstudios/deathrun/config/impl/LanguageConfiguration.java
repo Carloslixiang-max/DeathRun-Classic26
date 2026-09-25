@@ -290,21 +290,19 @@ public class LanguageConfiguration extends OkaeriConfig {
     public List<String> arenaScoreboardLinesWaiting = asList(
             "<reset>",
             "<white>Map: <green><map>",
+            "<white>Creator: <gray><creator>",
             "<white>Players: <green><currentPlayers>/<maxPlayers>",
             "<reset>",
-            "<white>Waiting..",
-            "<reset>",
-            "<yellow>www.example.com"
+            "<white>Waiting.."
     );
 
     public List<String> arenaScoreboardLinesStarting = asList(
             "<reset>",
             "<white>Map: <green><map>",
+            "<white>Creator: <gray><creator>",
             "<white>Players: <green><currentPlayers>/<maxPlayers>",
             "<reset>",
-            "<white>Start in <green><timer> seconds",
-            "<reset>",
-            "<yellow>www.example.com"
+            "<white>Start in <green><timer> seconds"
     );
 
     public List<String> arenaScoreboardLinesPlaying = asList(
@@ -318,7 +316,8 @@ public class LanguageConfiguration extends OkaeriConfig {
             "<white>Runners: <green><runners>",
             "<white>Deaths: <red><deaths>",
             "<reset>",
-            "<white>Map: <green><map>"
+            "<white>Map: <green><map>",
+            "<white>Creator: <gray><creator>"
     );
 
     @Comment({
