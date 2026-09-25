@@ -1616,7 +1616,7 @@ public class CommandDeathRun {
             @NotNull String message
     ) {
         if (sender instanceof Player player) {
-            this.audiences.player(player).sendMessage(miniMessage().deserialize(this.parsePlaceholders(player, message)));
+            player.sendMessage(miniMessage().deserialize(this.parsePlaceholders(player, message)));
             return;
         }
 
