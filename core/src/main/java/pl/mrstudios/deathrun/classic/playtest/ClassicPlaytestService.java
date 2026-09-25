@@ -8,11 +8,10 @@ import org.bukkit.WorldCreator;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
 import org.jetbrains.annotations.NotNull;
+import pl.mrstudios.deathrun.api.arena.trap.ITrap;
 import pl.mrstudios.deathrun.arena.ArenaManager;
 import pl.mrstudios.deathrun.arena.checkpoint.Checkpoint;
-import pl.mrstudios.deathrun.arena.trap.impl.TrapDisappearingParkour;
-import pl.mrstudios.deathrun.arena.trap.impl.TrapFireFloor;
-import pl.mrstudios.deathrun.arena.trap.impl.TrapKnockBack;
+import pl.mrstudios.deathrun.arena.trap.impl.*;
 import pl.mrstudios.deathrun.config.Configuration;
 import pl.mrstudios.deathrun.config.impl.MapConfiguration;
 
@@ -29,7 +28,11 @@ public final class ClassicPlaytestService {
     private final Configuration configuration;
     private final ArenaManager arenaManager;
 
-    public ClassicPlaytestService(@NotNull Plugin plugin, @NotNull Configuration configuration, @NotNull ArenaManager arenaManager) {
+    public ClassicPlaytestService(
+            @NotNull Plugin plugin,
+            @NotNull Configuration configuration,
+            @NotNull ArenaManager arenaManager
+    ) {
         this.plugin = plugin;
         this.configuration = configuration;
         this.arenaManager = arenaManager;
@@ -55,97 +58,130 @@ public final class ClassicPlaytestService {
 
             for (int row = 0; row < 4; row++)
                 for (int x = -2; x <= 2; x++)
-                    map.arenaRunnerSpawnLocations.add(new Location(world, x + 0.5, FLOOR_Y + 1, row + 0.5, 0f, 0f));
+                    map.arenaRunnerSpawnLocations.add(
+                            new Location(world, x + 0.5, FLOOR_Y + 1, row + 0.5, 0f, 0f)
+                    );
 
-            map.arenaDeathSpawnLocations.add(new Location(world, 9.5, FLOOR_Y + 4, 20.5, 0f, 0f));
-            map.arenaDeathSpawnLocations.add(new Location(world, 9.5, FLOOR_Y + 4, 50.5, 180f, 0f));
+            map.arenaDeathSpawnLocations.add(new Location(world, 9.5, FLOOR_Y + 4, 25.5, 0f, 0f));
+            map.arenaDeathSpawnLocations.add(new Location(world, 9.5, FLOOR_Y + 4, 135.5, 180f, 0f));
 
-            map.arenaCheckpoints.add(checkpoint(world, 1, 20, "Checkpoint 1"));
-            map.arenaCheckpoints.add(checkpoint(world, 2, 40, "Checkpoint 2"));
-            map.arenaCheckpoints.add(checkpoint(world, 3, 68, "Finish"));
-            map.arenaCheckpointPoints = new ArrayList<>(List.of(3, 7, 10));
-            map.arenaFinishCheckpointId = 3;
+            map.arenaCheckpoints.add(checkpoint(world, 1, 38, "Checkpoint 1"));
+            map.arenaCheckpoints.add(checkpoint(world, 2, 78, "Checkpoint 2"));
+            map.arenaCheckpoints.add(checkpoint(world, 3, 118, "Checkpoint 3"));
+            map.arenaCheckpoints.add(checkpoint(world, 4, 158, "Finish"));
+            map.arenaCheckpointPoints = new ArrayList<>(List.of(3, 7, 10, 13));
+            map.arenaFinishCheckpointId = 4;
 
             for (int x = -3; x <= 3; x++)
                 for (int y = FLOOR_Y + 1; y <= FLOOR_Y + 4; y++) {
                     Location barrier = new Location(world, x, y, 5);
-                    barrier.getBlock().setType(Material.BARRIER);
+                    barrier.getBlock().setType(Material.BARRIER, false);
                     map.arenaStartBarrierBlocks.add(barrier);
                     map.arenaStartBarrierRestoreMaterials.add(Material.BARRIER);
                 }
 
-            TrapDisappearingParkour disappearing = new TrapDisappearingParkour();
-            disappearing.setButton(button(world, 29));
-            disappearing.setLocations(floorRegion(world, 26, 29));
-            map.arenaTraps.add(disappearing);
-
-            TrapKnockBack knockBack = new TrapKnockBack();
-            knockBack.setButton(button(world, 46));
-            knockBack.setLocations(hitboxRegion(world, 44, 47));
-            map.arenaTraps.add(knockBack);
-
-            TrapFireFloor fireFloor = new TrapFireFloor();
-            fireFloor.setButton(button(world, 57));
-            fireFloor.setLocations(floorRegion(world, 55, 59));
-            map.arenaTraps.add(fireFloor);
+            this.addTrap(map, new TrapDisappearingParkour(), button(world, 14), floorRegion(world, 15, 18));
+            this.addTrap(map, new TrapKnockBack(), button(world, 26), hitboxRegion(world, 27, 30));
+            this.addTrap(map, new TrapFireFloor(), button(world, 46), floorRegion(world, 47, 50));
+            this.addTrap(map, new TrapFlood(), button(world, 58), feetRegion(world, 59, 62));
+            this.addTrap(map, new TrapWallSpawn(), button(world, 70), wallRegion(world, 71));
+            this.addTrap(map, new TrapLaunchPlayers(), button(world, 86), hitboxRegion(world, 87, 90));
+            this.addTrap(map, new TrapGiant(), button(world, 98), hitboxRegion(world, 99, 102));
+            this.addTrap(map, new TrapFireTrail(), button(world, 110), floorRegion(world, 111, 114));
+            this.addTrap(map, new TrapGlassFloor(), button(world, 126), floorRegion(world, 127, 130));
+            this.addTrap(map, new TrapQuicksand(), button(world, 138), floorRegion(world, 139, 142));
+            this.addTrap(map, new TrapBlockReplace(), button(world, 146), wallRegion(world, 147));
+            this.addTrap(map, new TrapMinefield(), button(world, 150), feetRegion(world, 151, 154));
 
             map.arenaMaxPlayers = 22;
             map.arenaRequiredPlayersToStart = 11;
 
             this.configuration.map().ensureMapsMutable();
-            this.configuration.map().maps.removeIf(existing -> MAP_ID.equalsIgnoreCase(this.configuration.map().normalizedMapId(existing.id)));
+            this.configuration.map().maps.removeIf(existing ->
+                    MAP_ID.equalsIgnoreCase(this.configuration.map().normalizedMapId(existing.id))
+            );
             this.configuration.map().maps.add(map);
             this.configuration.map().save();
             this.arenaManager.reloadRuntime(MAP_ID);
 
             actor.teleport(map.arenaWaitingLobbyLocation);
-            this.plugin.getLogger().info("[DeathRun] Rebuilt engineering playtest map " + MAP_ID + " in " + WORLD_NAME);
+            this.plugin.getLogger().info(
+                    "[DeathRun] Rebuilt full Classic26 engineering playtest map "
+                            + MAP_ID + " with " + map.arenaTraps.size() + " trap types."
+            );
             return new Result(true, "ready");
         } catch (Exception exception) {
-            this.plugin.getLogger().severe("[DeathRun] Playtest map creation failed: " + exception.getMessage());
+            this.plugin.getLogger().severe(
+                    "[DeathRun] Playtest map creation failed: "
+                            + exception.getClass().getSimpleName() + ": " + exception.getMessage()
+            );
             return new Result(false, exception.getClass().getSimpleName() + ": " + exception.getMessage());
         }
     }
 
-    private void buildCourse(World world) {
+    private void buildCourse(@NotNull World world) {
         for (int x = -15; x <= 15; x++)
-            for (int z = -20; z <= 80; z++)
+            for (int z = -20; z <= 170; z++)
                 for (int y = FLOOR_Y - 15; y <= FLOOR_Y + 8; y++)
-                    world.getBlockAt(x, y, z).setType(Material.AIR);
+                    world.getBlockAt(x, y, z).setType(Material.AIR, false);
 
         fill(world, -5, 5, FLOOR_Y, FLOOR_Y, -15, -8, Material.SMOOTH_STONE);
-        fill(world, -3, 3, FLOOR_Y, FLOOR_Y, -1, 70, Material.SMOOTH_STONE);
-        fill(world, 8, 10, FLOOR_Y + 3, FLOOR_Y + 3, 0, 70, Material.POLISHED_BLACKSTONE);
+        fill(world, -3, 3, FLOOR_Y, FLOOR_Y, -1, 162, Material.SMOOTH_STONE);
+        fill(world, 8, 10, FLOOR_Y + 3, FLOOR_Y + 3, 0, 162, Material.POLISHED_BLACKSTONE);
 
-        for (int z : new int[]{29, 46, 57}) {
-            world.getBlockAt(8, FLOOR_Y + 3, z).setType(Material.POLISHED_BLACKSTONE);
-            world.getBlockAt(8, FLOOR_Y + 4, z).setType(Material.STONE_BUTTON);
+        for (int z : new int[]{14, 26, 46, 58, 70, 86, 98, 110, 126, 138, 146, 150}) {
+            world.getBlockAt(8, FLOOR_Y + 3, z).setType(Material.POLISHED_BLACKSTONE, false);
+            world.getBlockAt(8, FLOOR_Y + 4, z).setType(Material.STONE_BUTTON, false);
         }
 
-        for (int z : new int[]{20, 40, 68})
+        for (int z : new int[]{38, 78, 118, 158})
             for (int x = -3; x <= 3; x++)
-                world.getBlockAt(x, FLOOR_Y, z).setType(Material.GOLD_BLOCK);
+                world.getBlockAt(x, FLOOR_Y, z).setType(Material.GOLD_BLOCK, false);
 
-        world.getBlockAt(0, FLOOR_Y, 68).setType(Material.EMERALD_BLOCK);
+        world.getBlockAt(0, FLOOR_Y, 158).setType(Material.EMERALD_BLOCK, false);
     }
 
-    private void fill(World world, int minX, int maxX, int minY, int maxY, int minZ, int maxZ, Material material) {
+    private void addTrap(
+            @NotNull MapConfiguration.MapDefinition map,
+            @NotNull ITrap trap,
+            @NotNull Location button,
+            @NotNull List<Location> locations
+    ) {
+        trap.setButton(button);
+        trap.setLocations(locations);
+        map.arenaTraps.add(trap);
+    }
+
+    private void fill(
+            @NotNull World world,
+            int minX, int maxX,
+            int minY, int maxY,
+            int minZ, int maxZ,
+            @NotNull Material material
+    ) {
         for (int x = minX; x <= maxX; x++)
             for (int y = minY; y <= maxY; y++)
                 for (int z = minZ; z <= maxZ; z++)
-                    world.getBlockAt(x, y, z).setType(material);
+                    world.getBlockAt(x, y, z).setType(material, false);
     }
 
-    private Checkpoint checkpoint(World world, int id, int z, String name) {
-        return new Checkpoint(id, new Location(world, 0.5, FLOOR_Y + 1, z + 1.5, 0f, 0f), List.of(
-                new Location(world, -3, FLOOR_Y + 1, z),
-                new Location(world, 3, FLOOR_Y + 4, z)
-        ), name);
+    private @NotNull Checkpoint checkpoint(@NotNull World world, int id, int z, @NotNull String name) {
+        return new Checkpoint(
+                id,
+                new Location(world, 0.5, FLOOR_Y + 1, z + 1.5, 0f, 0f),
+                List.of(
+                        new Location(world, -3, FLOOR_Y + 1, z),
+                        new Location(world, 3, FLOOR_Y + 4, z)
+                ),
+                name
+        );
     }
 
-    private Location button(World world, int z) { return new Location(world, 8, FLOOR_Y + 4, z); }
+    private @NotNull Location button(@NotNull World world, int z) {
+        return new Location(world, 8, FLOOR_Y + 4, z);
+    }
 
-    private List<Location> floorRegion(World world, int minZ, int maxZ) {
+    private @NotNull List<Location> floorRegion(@NotNull World world, int minZ, int maxZ) {
         List<Location> locations = new ArrayList<>();
         for (int x = -3; x <= 3; x++)
             for (int z = minZ; z <= maxZ; z++)
@@ -153,8 +189,27 @@ public final class ClassicPlaytestService {
         return locations;
     }
 
-    private List<Location> hitboxRegion(World world, int minZ, int maxZ) {
-        return List.of(new Location(world, -3, FLOOR_Y + 1, minZ), new Location(world, 3, FLOOR_Y + 3, maxZ));
+    private @NotNull List<Location> feetRegion(@NotNull World world, int minZ, int maxZ) {
+        List<Location> locations = new ArrayList<>();
+        for (int x = -3; x <= 3; x++)
+            for (int z = minZ; z <= maxZ; z++)
+                locations.add(new Location(world, x, FLOOR_Y + 1, z));
+        return locations;
+    }
+
+    private @NotNull List<Location> wallRegion(@NotNull World world, int z) {
+        List<Location> locations = new ArrayList<>();
+        for (int x = -3; x <= 3; x++)
+            for (int y = FLOOR_Y + 1; y <= FLOOR_Y + 4; y++)
+                locations.add(new Location(world, x, y, z));
+        return locations;
+    }
+
+    private @NotNull List<Location> hitboxRegion(@NotNull World world, int minZ, int maxZ) {
+        return List.of(
+                new Location(world, -3, FLOOR_Y + 1, minZ),
+                new Location(world, 3, FLOOR_Y + 3, maxZ)
+        );
     }
 
     public record Result(boolean success, @NotNull String message) {}
