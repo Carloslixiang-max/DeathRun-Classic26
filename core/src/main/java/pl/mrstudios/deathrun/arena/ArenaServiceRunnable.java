@@ -221,7 +221,34 @@ public class ArenaServiceRunnable extends BukkitRunnable {
 
     }
 
-    protected void stateSwitchToStarting() {}
+    protected void stateSwitchToStarting() {
+        String mapName = this.map.name == null || this.map.name.isBlank()
+                ? this.resolvedMapId()
+                : this.map.name;
+        String creator = this.map.creator == null || this.map.creator.isBlank()
+                ? "Unknown"
+                : this.map.creator;
+
+        mapName = mapName.replace("<", "").replace(">", "");
+        creator = creator.replace("<", "").replace(">", "");
+
+        String finalMapName = mapName;
+        String finalCreator = creator;
+        this.arena.getUsers().stream()
+                .map(IUser::asBukkit)
+                .filter(Objects::nonNull)
+                .forEach(player -> player.showTitle(title(
+                        miniMessage().deserialize(
+                                this.configuration.language().classicPreshowTitle
+                                        .replace("<map>", finalMapName)
+                        ),
+                        miniMessage().deserialize(
+                                this.configuration.language().classicPreshowSubtitle
+                                        .replace("<creator>", finalCreator)
+                        ),
+                        times(ofMillis(250), ofSeconds(2), ofMillis(250))
+                )));
+    }
 
     /* Playing */
     private int barrierTimer;
