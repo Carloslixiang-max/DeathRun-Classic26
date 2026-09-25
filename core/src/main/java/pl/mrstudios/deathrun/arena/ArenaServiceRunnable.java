@@ -1,7 +1,6 @@
 package pl.mrstudios.deathrun.arena;
 
 import me.clip.placeholderapi.PlaceholderAPI;
-import net.kyori.adventure.platform.bukkit.BukkitAudiences;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Location;
 import org.bukkit.Server;
@@ -65,7 +64,6 @@ public class ArenaServiceRunnable extends BukkitRunnable {
     private final RewardService rewardService;
     private final Plugin plugin;
     private final Server server;
-    private final BukkitAudiences audiences;
     private final Configuration configuration;
 
     private BukkitTask sidebarTask;
@@ -83,7 +81,6 @@ public class ArenaServiceRunnable extends BukkitRunnable {
             @NotNull RewardService rewardService,
             @NotNull Plugin plugin,
             @NotNull Server server,
-            @NotNull BukkitAudiences audiences,
             @NotNull Configuration configuration
     ) {
 
@@ -94,7 +91,6 @@ public class ArenaServiceRunnable extends BukkitRunnable {
         this.rewardService = rewardService;
         this.server = server;
         this.plugin = plugin;
-        this.audiences = audiences;
         this.configuration = configuration;
         this.setState(WAITING);
 
@@ -210,7 +206,7 @@ public class ArenaServiceRunnable extends BukkitRunnable {
                                 ),
                                 times(ofMillis(250), ofMillis(1000), ofMillis(250))
                         ));
-                        this.audiences.player(player).sendMessage(miniMessage().deserialize(
+                        player.sendMessage(miniMessage().deserialize(
                                 this.configuration.language().chatMessageArenaStartingTimer
                                         .replace("<timer>", valueOf(this.startingTimer))
                         ));
@@ -387,12 +383,12 @@ public class ArenaServiceRunnable extends BukkitRunnable {
                     if (user.getRole() == RUNNER)
                         this.configuration.language().chatMessageArenaGameStartRunner.stream()
                                 .map(miniMessage()::deserialize)
-                                .forEach((component) -> this.audiences.player(player).sendMessage(component));
+                                .forEach((component) -> player.sendMessage(component));
 
                     if (user.getRole() == DEATH)
                         this.configuration.language().chatMessageArenaGameStartDeath.stream()
                                 .map(miniMessage()::deserialize)
-                                .forEach((component) -> this.audiences.player(player).sendMessage(component));
+                                .forEach((component) -> player.sendMessage(component));
 
                     this.server.getPluginManager().callEvent(new UserArenaRoleAssignedEvent(user.getRole(), user));
                     player.getInventory().clear();
@@ -453,7 +449,7 @@ public class ArenaServiceRunnable extends BukkitRunnable {
                 .filter(Objects::nonNull)
                 .toList()
                 .forEach((player) -> {
-                    this.audiences.player(player).sendMessage(miniMessage().deserialize(this.configuration.language().arenaMoveServerChat));
+                    player.sendMessage(miniMessage().deserialize(this.configuration.language().arenaMoveServerChat));
                     // Exact pre-DeathRun snapshot restoration happens in leaveCurrentMap.
                     this.arenaManager.leaveCurrentMap(player, false);
                 });
