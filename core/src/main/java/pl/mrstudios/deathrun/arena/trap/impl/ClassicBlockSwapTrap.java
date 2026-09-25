@@ -25,12 +25,12 @@ public abstract class ClassicBlockSwapTrap extends Trap {
         this.backup.clear();
         for (Location location : this.locations) {
             this.backup.put(location, location.getBlock().getBlockData());
-            location.getBlock().setType(this.replacement());
+            location.getBlock().setType(this.replacement(), false);
         }
     }
 
     @Override public void end() {
-        this.backup.forEach((location, blockData) -> location.getBlock().setBlockData(blockData));
+        this.backup.forEach((location, blockData) -> location.getBlock().setBlockData(blockData, false));
         this.backup.clear();
     }
 
