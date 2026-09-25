@@ -185,6 +185,30 @@ public final class ClassicPlaytestService {
         return new Location(world, 8, FLOOR_Y + 4, z);
     }
 
+    private @NotNull List<Location> arrowDispensers(@NotNull World world, int z) {
+        List<Location> locations = new ArrayList<>();
+        for (int x : new int[]{-5, 5}) {
+            var block = world.getBlockAt(x, FLOOR_Y + 1, z);
+            block.setType(Material.DISPENSER, false);
+            if (block.getBlockData() instanceof Directional directional) {
+                directional.setFacing(x < 0 ? BlockFace.EAST : BlockFace.WEST);
+                block.setBlockData(directional, false);
+            }
+            locations.add(block.getLocation());
+        }
+        return locations;
+    }
+
+    private @NotNull List<Location> tntPads(@NotNull World world, int z) {
+        List<Location> locations = new ArrayList<>();
+        for (int x : new int[]{-4, 4}) {
+            var block = world.getBlockAt(x, FLOOR_Y + 1, z);
+            block.setType(Material.TNT, false);
+            locations.add(block.getLocation());
+        }
+        return locations;
+    }
+
     private @NotNull List<Location> floorRegion(@NotNull World world, int minZ, int maxZ) {
         List<Location> locations = new ArrayList<>();
         for (int x = -3; x <= 3; x++)
