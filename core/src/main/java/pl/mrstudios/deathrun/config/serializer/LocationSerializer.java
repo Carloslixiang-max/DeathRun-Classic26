@@ -10,7 +10,12 @@ import org.bukkit.World;
 import org.jetbrains.annotations.NotNull;
 import pl.mrstudios.deathrun.util.LocationResolveUtil;
 
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+
 public class LocationSerializer implements ObjectSerializer<Location> {
+
+    private static final Set<String> WARNED_UNRESOLVED_WORLD_REFERENCES = ConcurrentHashMap.newKeySet();
 
     @Override
     public void serialize(
@@ -62,9 +67,12 @@ public class LocationSerializer implements ObjectSerializer<Location> {
 
         World resolved = LocationResolveUtil.resolveWorld(worldName, worldUuid, legacyWorldName);
         if (resolved == null && (worldName != null || worldUuid != null || legacyWorldName != null)) {
-            Bukkit.getLogger().warning("[DeathRun] Location deserialized with unresolved world reference: "
-                    + LocationResolveUtil.summarizeWorldReference(worldName, worldUuid, legacyWorldName)
-                    + ". The location will remain world-null until runtime rebinding.");
+            String summary = LocationResolveUtil.summarizeWorldReference(worldName, worldUuid, legacyWorldName);
+            if (WARNED_UNRESOLVED_WORLD_REFERENCES.add(summary)) {
+                Bukkit.getLogger().warning("[DeathRun] Locations reference an unloaded world: "
+                        + summary
+                        + ". Further locations with the same reference are suppressed until runtime rebinding.");
+            }
         }
 
         return resolved;

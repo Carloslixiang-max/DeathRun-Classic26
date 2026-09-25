@@ -599,51 +599,71 @@ public class CommandDeathRun {
     @Execute(name = "map restore")
     @Permission("mrstudios.command.deathrun.setup")
     public void setupMapsRestore(
-            @Context Player player,
+            @Context CommandSender sender,
             @Arg("id") String id
     ) {
         this.configuration.map().ensureMapsMutable();
         MapConfiguration.MapDefinition map = this.configuration.map().getMapById(id);
         if (map == null) {
-            this.message(player, this.configuration.language().commandMessageSetupMapMissing.replace("<map>", id));
+            this.message(sender, this.configuration.language().commandMessageSetupMapMissing.replace("<map>", id));
             return;
         }
 
         if (this.arenaManager.playersInMap(map.id) > 0) {
-            this.message(player, this.configuration.language().commandMessageSetupMapRestorePlayersPresent);
+            this.message(sender, this.configuration.language().commandMessageSetupMapRestorePlayersPresent);
             return;
         }
 
         String worldName = map.world;
         if (worldName == null || worldName.isBlank()) {
-            this.message(player, this.configuration.language().commandMessageSetupMapRestoreWorldMissing.replace("<world>", "unknown"));
+            this.message(sender, this.configuration.language().commandMessageSetupMapRestoreWorldMissing.replace("<world>", "unknown"));
             return;
         }
 
         Path backupZip = get(this.plugin.getDataFolder().toString(), "backup", worldName + ".zip");
         if (!exists(backupZip)) {
-            this.message(player, this.configuration.language().commandMessageSetupMapRestoreMissingBackup.replace("<world>", worldName));
+            this.message(sender, this.configuration.language().commandMessageSetupMapRestoreMissingBackup.replace("<world>", worldName));
             return;
         }
 
         try {
             World loadedWorld = this.plugin.getServer().getWorld(worldName);
-            if (loadedWorld != null && !this.plugin.getServer().unloadWorld(loadedWorld, false)) {
-                this.message(player, this.configuration.language().commandMessageSetupMapRestoreUnloadFailed.replace("<world>", worldName));
+            if (loadedWorld == null) {
+                this.arenaManager.ensureMapWorldBindings(map);
+                loadedWorld = this.plugin.getServer().getWorld(worldName);
+            }
+            if (loadedWorld == null) {
+                this.message(sender, this.configuration.language().commandMessageSetupMapRestoreLoadFailed.replace("<world>", worldName));
                 return;
             }
 
-            Path worldFolder = this.plugin.getServer().getWorldContainer().toPath().resolve(worldName);
+            // Backups are created from World#getWorldFolder(). On Paper 26.2
+            // this can be <level>/dimensions/<namespace>/<key>, not the old
+            // server-root/<worldName> layout. Restore next to the exact folder
+            // returned by the loaded world so legacy and 26.2 layouts both work.
+            Path worldFolder = loadedWorld.getWorldFolder().toPath().toAbsolutePath().normalize();
+            Path extractionParent = worldFolder.getParent();
+            if (extractionParent == null)
+                throw new IllegalStateException("World folder has no parent: " + worldFolder);
+
+            if (!this.plugin.getServer().unloadWorld(loadedWorld, false)) {
+                this.message(sender, this.configuration.language().commandMessageSetupMapRestoreUnloadFailed.replace("<world>", worldName));
+                return;
+            }
+
             if (exists(worldFolder))
                 deleteDirectory(worldFolder.toFile());
 
             try (ZipFile zipFile = new ZipFile(backupZip.toFile())) {
-                zipFile.extractAll(this.plugin.getServer().getWorldContainer().getAbsolutePath());
+                zipFile.extractAll(extractionParent.toString());
             }
+
+            if (!exists(worldFolder))
+                throw new IllegalStateException("Backup did not restore expected world folder: " + worldFolder);
 
             World restoredWorld = this.plugin.getServer().createWorld(new WorldCreator(worldName));
             if (restoredWorld == null) {
-                this.message(player, this.configuration.language().commandMessageSetupMapRestoreLoadFailed.replace("<world>", worldName));
+                this.message(sender, this.configuration.language().commandMessageSetupMapRestoreLoadFailed.replace("<world>", worldName));
                 return;
             }
 
@@ -651,11 +671,11 @@ public class CommandDeathRun {
             this.configuration.map().save();
             this.arenaManager.reloadRuntime(map.id);
 
-            this.message(player, this.configuration.language().commandMessageSetupMapRestoreSuccess
+            this.message(sender, this.configuration.language().commandMessageSetupMapRestoreSuccess
                     .replace("<map>", map.id)
                     .replace("<world>", worldName));
         } catch (Exception exception) {
-            this.message(player, this.configuration.language().commandMessageSetupMapRestoreFailed
+            this.message(sender, this.configuration.language().commandMessageSetupMapRestoreFailed
                     .replace("<reason>", requireNonNull(exception.getMessage(), "unknown")));
         }
     }
@@ -771,40 +791,40 @@ public class CommandDeathRun {
     @Execute(name = "map backup")
     @Permission("mrstudios.command.deathrun.setup")
     public void setupMapsBackup(
-            @Context Player player,
+            @Context CommandSender sender,
             @Arg("id") String id
     ) {
         this.configuration.map().ensureMapsMutable();
         MapConfiguration.MapDefinition map = this.configuration.map().getMapById(id);
         if (map == null) {
-            this.message(player, this.configuration.language().commandMessageSetupMapMissing.replace("<map>", id));
+            this.message(sender, this.configuration.language().commandMessageSetupMapMissing.replace("<map>", id));
             return;
         }
 
         if (this.arenaManager.playersInMap(map.id) > 0) {
-            this.message(player, this.configuration.language().commandMessageSetupMapBackupPlayersPresent);
+            this.message(sender, this.configuration.language().commandMessageSetupMapBackupPlayersPresent);
             return;
         }
 
         String worldName = map.world;
         if (worldName == null || worldName.isBlank()) {
-            this.message(player, this.configuration.language().commandMessageSetupMapRestoreWorldMissing.replace("<world>", "unknown"));
+            this.message(sender, this.configuration.language().commandMessageSetupMapRestoreWorldMissing.replace("<world>", "unknown"));
             return;
         }
 
         World world = this.plugin.getServer().getWorld(worldName);
         if (world == null) {
-            this.message(player, this.configuration.language().commandMessageSetupMapBackupWorldMissing.replace("<world>", worldName));
+            this.message(sender, this.configuration.language().commandMessageSetupMapBackupWorldMissing.replace("<world>", worldName));
             return;
         }
 
         try {
             this.refreshWorldBackup(worldName, world);
-            this.message(player, this.configuration.language().commandMessageSetupMapBackupSuccess
+            this.message(sender, this.configuration.language().commandMessageSetupMapBackupSuccess
                     .replace("<map>", this.safe(map.id))
                     .replace("<world>", worldName));
         } catch (Exception exception) {
-            this.message(player, this.configuration.language().commandMessageSetupMapBackupFailed
+            this.message(sender, this.configuration.language().commandMessageSetupMapBackupFailed
                     .replace("<reason>", requireNonNull(exception.getMessage(), "unknown")));
         }
     }

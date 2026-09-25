@@ -234,6 +234,54 @@ jobs:
           done
           test "$VERIFY1" -eq 1
 
+          # Exercise a real Paper 26.2 map backup/restore cycle. World#getWorldFolder()
+          # points into the 26.2 dimensions layout, so this specifically protects
+          # against accidentally restoring backups into the obsolete root layout.
+          printf 'dr map backup classic26-playtest\n' >&3
+          BACKUP_OK=0
+          for _ in $(seq 1 45); do
+            if grep -q 'Backup refreshed for map classic26-playtest' server.log; then
+              BACKUP_OK=1
+              break
+            fi
+            if ! kill -0 "$PID" 2>/dev/null; then
+              break
+            fi
+            sleep 1
+          done
+          test "$BACKUP_OK" -eq 1
+          test -s plugins/DeathRun/backup/deathrun_playtest.zip
+
+          printf 'dr map restore classic26-playtest\n' >&3
+          RESTORE_OK=0
+          for _ in $(seq 1 90); do
+            if grep -q 'Restored world deathrun_playtest for map classic26-playtest' server.log; then
+              RESTORE_OK=1
+              break
+            fi
+            if ! kill -0 "$PID" 2>/dev/null; then
+              break
+            fi
+            sleep 1
+          done
+          test "$RESTORE_OK" -eq 1
+
+          PASS_BEFORE_RESTORE_VERIFY=$(grep -c 'Classic26 playtest verification PASS' server.log || true)
+          printf 'dr playtest verify\n' >&3
+          VERIFY_RESTORE=0
+          for _ in $(seq 1 45); do
+            PASS_NOW=$(grep -c 'Classic26 playtest verification PASS' server.log || true)
+            if [ "$PASS_NOW" -gt "$PASS_BEFORE_RESTORE_VERIFY" ]; then
+              VERIFY_RESTORE=1
+              break
+            fi
+            if ! kill -0 "$PID" 2>/dev/null; then
+              break
+            fi
+            sleep 1
+          done
+          test "$VERIFY_RESTORE" -eq 1
+
           printf 'stop\n' >&3 || true
           exec 3>&-
           stop_server_process "$PID"
@@ -243,7 +291,7 @@ jobs:
           grep -Eq 'Enabling DeathRun|Enabled DeathRun|DeathRun v1\.4\.1-classic26\.1' server.log
           grep -q 'Registered listeners via reflection:' server.log
           ! grep -Eq 'Error occurred while enabling DeathRun|Could not load.*DeathRun|UnknownDependencyException.*WorldEdit|NoClassDefFoundError.*deathrun' server.log
-          ! grep -Eq 'Failed to register listener via reflection|\[DeathRun\].*SEVERE|\[DR-START\].*Fatal arena tick failure' server.log
+          ! grep -Eq 'Failed to register listener via reflection|\[DeathRun\].*SEVERE|ERROR\]: \[DeathRun\]|\[DR-START\].*Fatal arena tick failure' server.log
 
           # Restart the exact same server once more. This verifies that the
           # generated map.yml can deserialize every persisted Classic trap and
@@ -302,4 +350,4 @@ jobs:
           grep -Eq 'Enabling DeathRun|Enabled DeathRun|DeathRun v1\.4\.1-classic26\.1' server-restart.log
           grep -q 'Registered listeners via reflection:' server-restart.log
           ! grep -Eq 'SerializerException|Unable to deserialize|Error occurred while enabling DeathRun|Could not load.*DeathRun|NoClassDefFoundError.*deathrun' server-restart.log
-          ! grep -Eq 'Failed to register listener via reflection|\[DeathRun\].*SEVERE|\[DR-START\].*Fatal arena tick failure' server-restart.log
+          ! grep -Eq 'Failed to register listener via reflection|\[DeathRun\].*SEVERE|ERROR\]: \[DeathRun\]|\[DR-START\].*Fatal arena tick failure' server-restart.log
