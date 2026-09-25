@@ -1,0 +1,19 @@
+--- a/core/src/main/java/pl/mrstudios/deathrun/config/impl/MapConfiguration.java
++++ b/core/src/main/java/pl/mrstudios/deathrun/config/impl/MapConfiguration.java
+@@
+     public List<Checkpoint> arenaCheckpoints = new ArrayList<>();;
+     public Integer arenaFinishCheckpointId;
++    public List<Integer> arenaCheckpointPoints = new ArrayList<>();
+@@
+         legacyMap.arenaFinishCheckpointId = this.arenaFinishCheckpointId;
++        legacyMap.arenaCheckpointPoints = new ArrayList<>(this.arenaCheckpointPoints);
+@@
+         migrated.arenaFinishCheckpointId = legacy.arenaFinishCheckpointId;
++        migrated.arenaCheckpointPoints = new ArrayList<>(legacy.arenaCheckpointPoints);
+@@
+         map.arenaCheckpoints = new ArrayList<>(map.arenaCheckpoints);
++        map.arenaCheckpointPoints = new ArrayList<>(map.arenaCheckpointPoints);
+@@
+         public List<Checkpoint> arenaCheckpoints = new ArrayList<>();
+         public Integer arenaFinishCheckpointId;
++        public List<Integer> arenaCheckpointPoints = new ArrayList<>();
