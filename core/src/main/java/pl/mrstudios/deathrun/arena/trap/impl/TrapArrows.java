@@ -10,7 +10,7 @@ import pl.mrstudios.deathrun.arena.trap.Trap;
 import java.time.Duration;
 import java.util.List;
 
-import static java.time.Duration.ZERO;
+import static java.time.Duration.ofSeconds;
 import static org.bukkit.Material.DISPENSER;
 
 public class TrapArrows extends Trap {
@@ -28,11 +28,12 @@ public class TrapArrows extends Trap {
                     if (block.getRelative(blockFace).getType().isSolid())
                         return;
 
-                    block.getLocation().getWorld().spawnArrow(
+                    var arrow = block.getLocation().getWorld().spawnArrow(
                             block.getRelative(blockFace).getLocation().toCenterLocation(),
                             block.getRelative(blockFace).getRelative(blockFace).getLocation().toVector().subtract(block.getRelative(blockFace).getLocation().toVector()),
                             1.5f, 1
                     );
+                    arrow.addScoreboardTag(pl.mrstudios.deathrun.classic.trap.DeathRunEntityTags.TRAP_PROJECTILE);
                 });
 
     }
@@ -58,7 +59,7 @@ public class TrapArrows extends Trap {
 
     @Override
     public @NotNull Duration getDuration() {
-        return ZERO;
+        return ofSeconds(3);
     }
 
 }
