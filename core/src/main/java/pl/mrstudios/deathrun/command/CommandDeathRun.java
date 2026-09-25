@@ -375,6 +375,31 @@ public class CommandDeathRun {
                 .replace("<map>", this.safe(map.id)));
     }
 
+    @Execute(name = "map creator")
+    @Permission("mrstudios.command.deathrun.setup")
+    public void setupMapCreator(
+            @Context Player player,
+            @Arg("id") String id,
+            @Arg("creator") String creator
+    ) {
+        this.configuration.map().ensureMapsMutable();
+        MapConfiguration.MapDefinition map = this.configuration.map().getMapById(id);
+        if (map == null) {
+            this.message(player, this.configuration.language().commandMessageSetupMapMissing.replace("<map>", id));
+            return;
+        }
+
+        String safeCreator = creator == null ? "" : creator.trim().replace("<", "").replace(">", "");
+        if (safeCreator.isBlank())
+            safeCreator = "Unknown";
+
+        map.creator = safeCreator;
+        this.configuration.map().save();
+        this.message(player, this.configuration.language().commandMessageMapCreatorSet
+                .replace("<map>", this.safe(map.id))
+                .replace("<creator>", this.safe(safeCreator)));
+    }
+
     @Execute(name = "map edit")
     @Permission("mrstudios.command.deathrun.setup")
     public void setupMapsUse(
@@ -816,6 +841,8 @@ public class CommandDeathRun {
         map.arenaCheckpoints.add(
             new Checkpoint(checkpointId, player.getLocation().toCenterLocation(), selectedLocations, "")
         );
+        if (!map.arenaCheckpointPoints.isEmpty())
+            map.arenaCheckpointPoints.add(0);
 
         this.configuration.map().save();
 
@@ -857,6 +884,11 @@ public class CommandDeathRun {
                 .append(Component.text(displayName, NamedTextColor.WHITE))
                 .append(Component.text(" - ", NamedTextColor.DARK_GRAY))
                 .append(Component.text(spawn.getBlockX() + ", " + spawn.getBlockY() + ", " + spawn.getBlockZ(), NamedTextColor.GRAY))
+                .append(Component.text(" | points ", NamedTextColor.DARK_GRAY))
+                .append(Component.text(
+                        i < map.arenaCheckpointPoints.size() ? map.arenaCheckpointPoints.get(i) : 0,
+                        NamedTextColor.GOLD
+                ))
                 .append(Component.text(" | ", NamedTextColor.DARK_GRAY))
                 .append(Component.text("[Teleport]", NamedTextColor.GREEN)
                     .clickEvent(ClickEvent.runCommand("/dr cp tpclick " + token + " " + checkpoint.id())))
@@ -968,11 +1000,13 @@ public class CommandDeathRun {
         this.ensureMutableSetupCollections(map);
 
         Checkpoint removed = null;
+        int removedIndex = -1;
         List<Checkpoint> checkpoints = new ArrayList<>(map.arenaCheckpoints);
         for (int i = 0; i < checkpoints.size(); i++) {
             if (checkpoints.get(i).id() != checkpointId)
                 continue;
 
+            removedIndex = i;
             removed = checkpoints.remove(i);
             break;
         }
@@ -985,6 +1019,8 @@ public class CommandDeathRun {
         }
 
         map.arenaCheckpoints = checkpoints;
+        if (removedIndex >= 0 && removedIndex < map.arenaCheckpointPoints.size())
+            map.arenaCheckpointPoints.remove(removedIndex);
         this.normalizeCheckpointIds(map);
         if (map.arenaFinishCheckpointId != null && map.arenaFinishCheckpointId == removed.id())
             map.arenaFinishCheckpointId = null;
@@ -1054,6 +1090,14 @@ public class CommandDeathRun {
         Checkpoint checkpoint = reordered.remove(sourceIndex);
         reordered.add(targetIndex, checkpoint);
         map.arenaCheckpoints = reordered;
+
+        if (map.arenaCheckpointPoints.size() == reordered.size()) {
+            List<Integer> reorderedPoints = new ArrayList<>(map.arenaCheckpointPoints);
+            Integer points = reorderedPoints.remove(sourceIndex);
+            reorderedPoints.add(targetIndex, points);
+            map.arenaCheckpointPoints = reorderedPoints;
+        }
+
         this.normalizeCheckpointIds(map);
         this.configuration.map().save();
 
@@ -1096,6 +1140,14 @@ public class CommandDeathRun {
         Checkpoint checkpoint = reordered.remove(sourceIndex);
         reordered.add(checkpoint);
         map.arenaCheckpoints = reordered;
+
+        if (map.arenaCheckpointPoints.size() == reordered.size()) {
+            List<Integer> reorderedPoints = new ArrayList<>(map.arenaCheckpointPoints);
+            Integer points = reorderedPoints.remove(sourceIndex);
+            reorderedPoints.add(points);
+            map.arenaCheckpointPoints = reorderedPoints;
+        }
+
         this.normalizeCheckpointIds(map);
         map.arenaFinishCheckpointId = map.arenaCheckpoints.get(map.arenaCheckpoints.size() - 1).id();
         this.configuration.map().save();
@@ -1179,6 +1231,48 @@ public class CommandDeathRun {
         this.message(player, this.configuration.language().commandMessageCheckpointNotFound
                 .replace("<checkpoint>", String.valueOf(checkpointId))
                 .replace("<map>", this.safe(map.id)));
+    }
+
+    @Execute(name = "cp points")
+    @Permission("mrstudios.command.deathrun.setup")
+    public void setupCheckpointPoints(
+            @Context Player player,
+            @Arg("id") int checkpointId,
+            @Arg("points") int points
+    ) {
+        MapConfiguration.MapDefinition map = this.selectedMapForSetup(player, true);
+        if (map == null)
+            return;
+
+        this.ensureMutableSetupCollections(map);
+
+        int index = -1;
+        for (int i = 0; i < map.arenaCheckpoints.size(); i++) {
+            if (map.arenaCheckpoints.get(i).id() == checkpointId) {
+                index = i;
+                break;
+            }
+        }
+
+        if (index < 0) {
+            this.message(player, this.configuration.language().commandMessageCheckpointNotFound
+                    .replace("<checkpoint>", String.valueOf(checkpointId))
+                    .replace("<map>", this.safe(map.id)));
+            return;
+        }
+
+        while (map.arenaCheckpointPoints.size() < map.arenaCheckpoints.size())
+            map.arenaCheckpointPoints.add(0);
+        while (map.arenaCheckpointPoints.size() > map.arenaCheckpoints.size())
+            map.arenaCheckpointPoints.remove(map.arenaCheckpointPoints.size() - 1);
+
+        int safePoints = Math.max(0, points);
+        map.arenaCheckpointPoints.set(index, safePoints);
+        this.configuration.map().save();
+
+        this.message(player, this.configuration.language().commandMessageCheckpointPointsSet
+                .replace("<checkpoint>", String.valueOf(index + 1))
+                .replace("<points>", String.valueOf(safePoints)));
     }
 
     @Execute(name = "cp move")

@@ -109,6 +109,7 @@ public class LanguageConfiguration extends OkaeriConfig {
                 public String commandMessageCheckpointNameSet = "<reset> <dark_green><b>*</b> <green>Renamed checkpoint <dark_green>#<checkpoint> <green>to <dark_green><name><green>.";
                 public String commandMessageCheckpointFinishSet = "<reset> <dark_green><b>*</b> <green>Checkpoint <dark_green>#<checkpoint> <green>is now the finish checkpoint.";
                 public String commandMessageCheckpointMoved = "<reset> <dark_green><b>*</b> <green>Moved checkpoint <dark_green>#<checkpoint> <green>spawn to your current location.";
+                public String commandMessageCheckpointPointsSet = "<reset> <dark_green><b>*</b> <green>Checkpoint <dark_green>#<checkpoint> <green>points set to <gold><points><green>.";
     public String commandMessageRoleInvalid = "<reset> <dark_red><b>*</b> <red>You must select <dark_red>RUNNER <red>or <dark_red>DEATH <red>role.";
     public String commandMessageRoleSpawnAdded = "<reset> <dark_green><b>*</b> <green>Added <dark_green><role> <green>role spawn.";
     public String commandMessageArenaNameSet = "<reset> <dark_green><b>*</b> <green>Arena name has been set to <dark_green><name><green>.";
@@ -135,6 +136,7 @@ public class LanguageConfiguration extends OkaeriConfig {
                 public String commandMessageJoinForcedActor = "<dark_green><b>*</b> <green>Executed join for <dark_green><player><green> on map <dark_green><map><green>.";
                 public String commandMessageJoinForcedLobbyActor = "<dark_green><b>*</b> <green>Sent <dark_green><player> <green>to lobby.";
         public String commandMessageSetupMapSelected = "<reset> <dark_green><b>*</b> <green>Selected setup map <dark_green><map><green>.";
+        public String commandMessageMapCreatorSet = "<reset> <dark_green><b>*</b> <green>Map <dark_green><map> <green>creator set to <white><creator><green>.";
         public String commandMessageSetupMapCreated = "<reset> <dark_green><b>*</b> <green>Created map <dark_green><map><green> in world <dark_green><world><green>.";
         public String commandMessageSetupMapDeleted = "<reset> <dark_green><b>*</b> <green>Deleted map <dark_green><map><green>.";
         public String commandMessageSetupMapEnabled = "<reset> <dark_green><b>*</b> <green>Enabled setup mode for map <dark_green><map><green>.";
