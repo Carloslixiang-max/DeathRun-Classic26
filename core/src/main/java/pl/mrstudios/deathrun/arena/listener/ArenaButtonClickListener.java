@@ -1,6 +1,5 @@
 package pl.mrstudios.deathrun.arena.listener;
 
-import org.bukkit.Material;
 import org.bukkit.Server;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -13,10 +12,6 @@ import pl.mrstudios.deathrun.arena.ArenaManager;
 import pl.mrstudios.deathrun.classic.trap.TrapActivationService;
 import pl.mrstudios.deathrun.config.Configuration;
 
-import java.util.Collection;
-import java.util.List;
-
-import static org.bukkit.Material.*;
 import static org.bukkit.event.EventPriority.MONITOR;
 import static org.bukkit.event.block.Action.RIGHT_CLICK_BLOCK;
 import static pl.mrstudios.deathrun.api.arena.user.enums.Role.DEATH;
@@ -43,7 +38,7 @@ public class ArenaButtonClickListener implements Listener {
     public void onArenaButtonClick(@NotNull PlayerInteractEvent event) {
         if (event.getClickedBlock() == null || event.getAction() != RIGHT_CLICK_BLOCK)
             return;
-        if (!this.materials.contains(event.getClickedBlock().getType()))
+        if (!event.getClickedBlock().getType().name().endsWith("_BUTTON"))
             return;
 
         ArenaManager.ArenaRuntime runtime = this.arenaManager.runtimeForPlayer(event.getPlayer());
@@ -75,8 +70,5 @@ public class ArenaButtonClickListener implements Listener {
             event.getPlayer().playSound(event.getPlayer().getLocation(), this.configuration.plugin().arenaSoundTrapDelay, 1.0f, 1.0f);
     }
 
-    private final Collection<Material> materials = List.of(
-            STONE_BUTTON, OAK_BUTTON, ACACIA_BUTTON, BIRCH_BUTTON, CRIMSON_BUTTON,
-            JUNGLE_BUTTON, SPRUCE_BUTTON, WARPED_BUTTON, POLISHED_BLACKSTONE_BUTTON, DARK_OAK_BUTTON
-    );
+
 }
