@@ -64,6 +64,11 @@ public final class TrapActivationService {
 
         TrapKey key = new TrapKey(runtime.mapId(), trapIndex);
         long now = System.currentTimeMillis();
+
+        TrapActivationContext activeContext = ACTIVE.get(key);
+        if (activeContext != null && activeContext.expiresAt() > now)
+            return ActivationResult.COOLDOWN;
+
         if (COOLDOWN_UNTIL.getOrDefault(key, 0L) > now)
             return ActivationResult.COOLDOWN;
 
@@ -75,8 +80,10 @@ public final class TrapActivationService {
 
         long cooldownMillis = Duration.ofSeconds(Math.max(0, this.configuration.plugin().arenaTrapDelay)).toMillis();
         long durationMillis = Math.max(50L, trap.getDuration().toMillis());
-        long cooldownEnd = now + cooldownMillis;
         long activeEnd = now + durationMillis;
+        // A trap cannot become reusable while its previous world mutation is
+        // still active. Longer configured cooldowns still win.
+        long cooldownEnd = now + Math.max(cooldownMillis, durationMillis);
 
         Set<UUID> victims = ConcurrentHashMap.newKeySet();
         TrapActivationContext context = new TrapActivationContext(
