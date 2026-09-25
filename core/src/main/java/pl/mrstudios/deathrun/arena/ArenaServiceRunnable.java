@@ -579,6 +579,7 @@ public class ArenaServiceRunnable extends BukkitRunnable {
                                             (user) -> component.set(miniMessage().deserialize(
                                                     this.applySidebarPlaceholders(player,
                                                             content.replace("<map>", this.displayMapName())
+                                                            .replace("<creator>", this.displayMapCreator())
                                                             .replace("<role>", this.rolePrefix(user.getRole()))
                                                             .replace("<currentPlayers>", valueOf(this.currentPlayersForDisplay()))
                                                             .replace("<maxPlayers>", valueOf(this.arenaManager.maxPlayers(this.map)))
@@ -739,6 +740,13 @@ public class ArenaServiceRunnable extends BukkitRunnable {
                         return this.map.id;
 
                 return "default";
+        }
+
+        private @NotNull String displayMapCreator() {
+                if (this.map.creator == null || this.map.creator.isBlank())
+                        return "Unknown";
+
+                return this.map.creator.replace("<", "").replace(">", "");
         }
 
     /* Constants */
