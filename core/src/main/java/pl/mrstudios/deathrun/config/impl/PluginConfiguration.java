@@ -75,6 +75,13 @@ public class PluginConfiguration extends OkaeriConfig {
     @Comment({ "", "Maximum real map candidates shown before the Random option." })
     public int classicVoteMapCandidates = 5;
 
+    @Comment({
+            "",
+            "Optional fixed Classic vote rotation, in display order.",
+            "Use normalized map ids. When empty, all eligible maps are considered."
+    })
+    public List<String> classicVoteMapIds = of();
+
     @Comment({ "", "Max ,,survivable`` distance that player can fall." })
     public int arenaMaxFallDistance = 8;
 
