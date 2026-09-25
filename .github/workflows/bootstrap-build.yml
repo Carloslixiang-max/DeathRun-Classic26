@@ -188,3 +188,42 @@ jobs:
           grep -q 'Registered listeners via reflection:' server.log
           ! grep -Eq 'Error occurred while enabling DeathRun|Could not load.*DeathRun|UnknownDependencyException.*WorldEdit|NoClassDefFoundError.*deathrun' server.log
           ! grep -Eq 'Failed to register listener via reflection|\[DeathRun\].*SEVERE|\[DR-START\].*Fatal arena tick failure' server.log
+
+          # Restart the exact same server once more. This verifies that the
+          # generated map.yml can deserialize every persisted Classic trap and
+          # rebuild its runtime cleanly after a real shutdown.
+          rm -f server.in
+          mkfifo server.in
+          exec 4<>server.in
+          java -Xms512M -Xmx1024M -jar paper.jar --nogui <server.in > server-restart.log 2>&1 &
+          PID2=$!
+
+          READY2=0
+          for _ in $(seq 1 120); do
+            if grep -q 'Done (' server-restart.log; then
+              READY2=1
+              break
+            fi
+            if ! kill -0 "$PID2" 2>/dev/null; then
+              break
+            fi
+            sleep 1
+          done
+
+          test "$READY2" -eq 1
+          printf 'stop\n' >&4 || true
+          exec 4>&-
+          for _ in $(seq 1 30); do
+            if ! kill -0 "$PID2" 2>/dev/null; then
+              break
+            fi
+            sleep 1
+          done
+          kill "$PID2" 2>/dev/null || true
+          wait "$PID2" 2>/dev/null || true
+
+          cat server-restart.log
+          grep -Eq 'Enabling DeathRun|Enabled DeathRun|DeathRun v1\.4\.1-classic26-dev' server-restart.log
+          grep -q 'Registered listeners via reflection:' server-restart.log
+          ! grep -Eq 'SerializerException|Unable to deserialize|Error occurred while enabling DeathRun|Could not load.*DeathRun|NoClassDefFoundError.*deathrun' server-restart.log
+          ! grep -Eq 'Failed to register listener via reflection|\[DeathRun\].*SEVERE|\[DR-START\].*Fatal arena tick failure' server-restart.log
