@@ -19,7 +19,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
@@ -44,13 +44,13 @@ jobs:
           git push origin HEAD:main
 
       - name: Install Java 25
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: '25'
 
       - name: Configure Gradle cache
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@v6
 
       - name: Build Java 25 / Paper 26.2 plugin
         shell: bash
@@ -75,7 +75,7 @@ jobs:
 
       - name: Upload plugin JAR
         if: success()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: DeathRun-Classic26-dev
           path: core/build/libs/DeathRun-Classic26-*.jar
@@ -89,13 +89,13 @@ jobs:
 
     steps:
       - name: Install Java 25
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: '25'
 
       - name: Download built DeathRun plugin
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: DeathRun-Classic26-dev
           path: smoke/plugins
@@ -137,7 +137,9 @@ jobs:
           max-players=4
           EOF
 
-          java -Xms512M -Xmx1024M -jar paper.jar --nogui </dev/null > server.log 2>&1 &
+          mkfifo server.in
+          exec 3<>server.in
+          java -Xms512M -Xmx1024M -jar paper.jar --nogui <server.in > server.log 2>&1 &
           PID=$!
 
           READY=0
@@ -152,11 +154,37 @@ jobs:
             sleep 1
           done
 
+          test "$READY" -eq 1
+
+          # Exercise real Classic26 world creation, map serialization, trap
+          # registration and runtime reload inside a live Paper process.
+          printf 'dr playtest create\n' >&3
+          PLAYTEST=0
+          for _ in $(seq 1 60); do
+            if grep -q 'Rebuilt full Classic26 engineering playtest map classic26-playtest with 14 trap types' server.log; then
+              PLAYTEST=1
+              break
+            fi
+            if ! kill -0 "$PID" 2>/dev/null; then
+              break
+            fi
+            sleep 1
+          done
+
+          printf 'stop\n' >&3 || true
+          exec 3>&-
+          for _ in $(seq 1 30); do
+            if ! kill -0 "$PID" 2>/dev/null; then
+              break
+            fi
+            sleep 1
+          done
           kill "$PID" 2>/dev/null || true
           wait "$PID" 2>/dev/null || true
 
           cat server.log
-          test "$READY" -eq 1
+          test "$PLAYTEST" -eq 1
           grep -Eq 'Enabling DeathRun|Enabled DeathRun|DeathRun v1\.4\.1-classic26-dev' server.log
+          grep -q 'Registered listeners via reflection:' server.log
           ! grep -Eq 'Error occurred while enabling DeathRun|Could not load.*DeathRun|UnknownDependencyException.*WorldEdit|NoClassDefFoundError.*deathrun' server.log
           ! grep -Eq 'Failed to register listener via reflection|\[DeathRun\].*SEVERE|\[DR-START\].*Fatal arena tick failure' server.log
