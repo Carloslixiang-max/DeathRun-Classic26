@@ -14,22 +14,14 @@ public class ArenaPlayerQuitListener implements Listener {
     private final ArenaManager arenaManager;
 
     @Inject
-    public ArenaPlayerQuitListener(
-            @NotNull ArenaManager arenaManager
-    ) {
+    public ArenaPlayerQuitListener(@NotNull ArenaManager arenaManager) {
         this.arenaManager = arenaManager;
     }
 
-    @SuppressWarnings("deprecation")
     @EventHandler(priority = MONITOR)
-    public void onPlayerQuit(
-            @NotNull PlayerQuitEvent event
-    ) {
-
-        event.setQuitMessage("");
+    public void onPlayerQuit(@NotNull PlayerQuitEvent event) {
         this.arenaManager.leaveQueue(event.getPlayer());
-        this.arenaManager.leaveCurrentMap(event.getPlayer(), true);
-
+        if (this.arenaManager.runtimeForPlayer(event.getPlayer()) != null)
+            this.arenaManager.leaveCurrentMap(event.getPlayer(), true);
     }
-
 }
