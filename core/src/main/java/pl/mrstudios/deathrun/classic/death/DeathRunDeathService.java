@@ -15,6 +15,7 @@ import pl.mrstudios.deathrun.arena.ArenaManager;
 import pl.mrstudios.deathrun.arena.win.WinMapManager;
 import pl.mrstudios.deathrun.classic.trap.TrapActivationContext;
 import pl.mrstudios.deathrun.classic.trap.TrapActivationService;
+import pl.mrstudios.deathrun.classic.score.ClassicScoring;
 import pl.mrstudios.deathrun.config.Configuration;
 import pl.mrstudios.deathrun.plugin.Entrypoint;
 
@@ -83,7 +84,7 @@ public final class DeathRunDeathService {
 
         TrapActivationContext attribution = this.trapActivationService.recentAttribution(player.getUniqueId());
         user.setDeaths(user.getDeaths() + 1);
-        user.setLives(user.getLives() - 1);
+        user.setLives(ClassicScoring.afterDeathLives(user.getLives()));
         if (user.getLives() <= 0) {
             user.setLives(0);
             user.setEliminated(true);

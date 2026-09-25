@@ -26,6 +26,7 @@ import pl.mrstudios.deathrun.reward.RewardService;
 import pl.mrstudios.deathrun.classic.strafe.ClassicStrafeService;
 import pl.mrstudios.deathrun.classic.death.DeathNavigatorService;
 import pl.mrstudios.deathrun.classic.role.ClassicRoleAllocation;
+import pl.mrstudios.deathrun.classic.score.ClassicScoring;
 import pl.mrstudios.deathrun.classic.trap.TrapActivationService;
 
 import java.io.File;
@@ -345,7 +346,7 @@ public class ArenaServiceRunnable extends BukkitRunnable {
                 .forEach((user) -> user.setRole(RUNNER));
 
         this.arena.getRunners().forEach(user -> {
-            user.setLives(2);
+            user.setLives(ClassicScoring.RUNNER_START_LIVES);
             user.setRoundPoints(0);
             user.setEliminated(false);
         });

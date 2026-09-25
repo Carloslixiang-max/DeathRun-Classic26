@@ -25,6 +25,7 @@ import pl.mrstudios.deathrun.config.impl.MapConfiguration;
 import pl.mrstudios.deathrun.plugin.Entrypoint;
 import pl.mrstudios.deathrun.reward.RewardService;
 import pl.mrstudios.deathrun.classic.checkpoint.SegmentAabb;
+import pl.mrstudios.deathrun.classic.score.ClassicScoring;
 
 import java.awt.image.BufferedImage;
 import java.util.Objects;
@@ -175,9 +176,11 @@ public class ArenaCheckpointReachedListener implements Listener {
         int finishIndex = finishCheckpoint == null ? -1 : map.arenaCheckpoints.indexOf(finishCheckpoint);
         boolean reachedFinishCheckpoint = finishIndex >= 0 && touchedIndex == finishIndex;
 
-        user.setRoundPoints(user.getRoundPoints() + this.checkpointPoints(map, touchedIndex));
-        if (!reachedFinishCheckpoint)
-            user.setLives(user.getLives() + 2);
+        user.setRoundPoints(ClassicScoring.afterCheckpointPoints(
+                user.getRoundPoints(),
+                this.checkpointPoints(map, touchedIndex)
+        ));
+        user.setLives(ClassicScoring.afterCheckpointLives(user.getLives(), reachedFinishCheckpoint));
 
         player.showTitle(
                 title(
@@ -210,7 +213,7 @@ public class ArenaCheckpointReachedListener implements Listener {
         if (!completedFullSequence || !reachedFinishCheckpoint)
             return;
 
-        user.setRoundPoints(user.getRoundPoints() + user.getLives());
+        user.setRoundPoints(ClassicScoring.afterFinishPoints(user.getRoundPoints(), user.getLives()));
 
         arena.setFinishedRuns(arena.getFinishedRuns() + 1);
 
@@ -221,9 +224,7 @@ public class ArenaCheckpointReachedListener implements Listener {
 
         this.rewardService.rewardRunnerFinish(player, runtime.mapId(), position);
 
-        if (position == 1)
-            if (arena.getRemainingTime() >= 60)
-                arena.setRemainingTime(60);
+        arena.setRemainingTime(ClassicScoring.remainingAfterFinish(arena.getRemainingTime(), position));
 
         player.showTitle(
                 title(
