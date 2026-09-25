@@ -1,8 +1,5 @@
 package pl.mrstudios.deathrun.arena;
 
-import com.xxmicloxx.NoteBlockAPI.model.Song;
-import com.xxmicloxx.NoteBlockAPI.songplayer.RadioSongPlayer;
-import com.xxmicloxx.NoteBlockAPI.utils.NBSDecoder;
 import me.clip.placeholderapi.PlaceholderAPI;
 import net.kyori.adventure.platform.bukkit.BukkitAudiences;
 import net.kyori.adventure.text.Component;
@@ -71,7 +68,7 @@ public class ArenaServiceRunnable extends BukkitRunnable {
     private final Configuration configuration;
 
     private BukkitTask sidebarTask;
-                private RadioSongPlayer backgroundSongPlayer;
+        private boolean backgroundSongWarningLogged;
         private boolean forceStartRequested;
         private boolean timerExpired;
 
@@ -626,67 +623,24 @@ public class ArenaServiceRunnable extends BukkitRunnable {
     }
 
         private void startBackgroundSong() {
-                if (!this.configuration.plugin().arenaBackgroundSongEnabled) {
+                if (!this.configuration.plugin().arenaBackgroundSongEnabled)
                         return;
+
+                if (!this.backgroundSongWarningLogged) {
+                        this.backgroundSongWarningLogged = true;
+                        this.plugin.getLogger().warning(
+                                "[DeathRun] NBS background music is disabled in the Classic26 runtime build. "
+                                        + "Gameplay is unaffected; use the server resource-pack music system instead."
+                        );
                 }
-
-                String fileName = this.resolveSongFileName();
-
-                if (fileName == null || fileName.isBlank()) {
-                        return;
-                }
-
-                File songsDirectory = new File(this.plugin.getDataFolder(), "songs");
-                if (!songsDirectory.exists() && !songsDirectory.mkdirs()) {
-                        this.plugin.getLogger().warning("Failed to create songs directory: " + songsDirectory.getAbsolutePath());
-                        return;
-                }
-
-                File songFile = new File(songsDirectory, fileName);
-                if (!songFile.exists()) {
-                        this.plugin.getLogger().warning("Background song file not found: " + songFile.getAbsolutePath());
-                        return;
-                }
-
-                Song song;
-                try {
-                        song = NBSDecoder.parse(songFile);
-                }
-                catch (Exception exception) {
-                        this.plugin.getLogger().warning("Failed to parse NBS song file: " + songFile.getAbsolutePath() + " reason=" + exception.getMessage());
-                        return;
-                }
-
-                if (song == null) {
-                        this.plugin.getLogger().warning("Parsed NBS song is null: " + songFile.getAbsolutePath());
-                        return;
-                }
-
-                this.backgroundSongPlayer = new RadioSongPlayer(song);
-                this.backgroundSongPlayer.setLoop(this.resolveSongLoop());
-
-                this.arena.getRunners().stream()
-                        .map(IUser::asBukkit)
-                        .filter(Objects::nonNull)
-                        .forEach((player) -> this.backgroundSongPlayer.addPlayer(player));
-
-                this.backgroundSongPlayer.setPlaying(true);
         }
 
         private void stopBackgroundSong() {
-                if (this.backgroundSongPlayer == null)
-                        return;
-
-                this.backgroundSongPlayer.setPlaying(false);
-                this.backgroundSongPlayer.destroy();
-                this.backgroundSongPlayer = null;
+                // No-op in the Classic26 runtime build.
         }
 
         public void removeBackgroundSongPlayer(@NotNull Player player) {
-                if (this.backgroundSongPlayer == null)
-                        return;
-
-                this.backgroundSongPlayer.removePlayer(player);
+                // No-op in the Classic26 runtime build.
         }
 
         private String resolveSongFileName() {

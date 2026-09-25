@@ -379,8 +379,13 @@ public class ArenaManager {
         }
 
         this.playerMapIndex.remove(player.getUniqueId());
-        if (removed)
+        if (removed) {
+            this.server.getOnlinePlayers().forEach((onlinePlayer) -> {
+                onlinePlayer.showPlayer(this.plugin, player);
+                player.showPlayer(this.plugin, onlinePlayer);
+            });
             this.playerSnapshotService.restore(player);
+        }
         return removed;
     }
 
@@ -504,6 +509,23 @@ public class ArenaManager {
         this.returnPlayerToHub(player);
         if (notify)
             this.audiences.player(player).sendMessage(miniMessage().deserialize("<gold>[DR]</gold> <gray>Your previous arena session has ended; you were returned to the hub."));
+    }
+
+    public void restoreActivePlayersOnDisable() {
+        List<Player> activePlayers = this.runtimesByMapId.values().stream()
+                .flatMap(runtime -> runtime.arena().getUsers().stream())
+                .map(IUser::asBukkit)
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+
+        for (Player player : activePlayers)
+            this.leaveCurrentMap(player, false);
+
+        for (Player online : this.server.getOnlinePlayers())
+            this.playerSnapshotService.restorePending(online);
+
+        this.playerMapIndex.clear();
     }
 
     public void saveLoadedMapWorlds() {

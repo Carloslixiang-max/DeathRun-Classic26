@@ -5,9 +5,10 @@ main: "pl.mrstudios.deathrun.plugin.Entrypoint"
 load: "POSTWORLD"
 api-version: "26.2"
 
-softdepend:
+depend:
   - "WorldEdit"
-  - "NoteBlockAPI"
+
+softdepend:
   - "PlaceholderAPI"
 
 commands:

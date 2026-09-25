@@ -38,7 +38,6 @@ dependencies {
     implementation("net.lingala.zip4j:zip4j:${project.parent?.property("zip4j.version")}")
     compileOnly("com.sk89q.worldedit:worldedit-bukkit:${project.parent?.property("worldedit.version")}")
     compileOnly("me.clip:placeholderapi:2.12.2")
-    compileOnly("com.github.koca2000:NoteBlockAPI:1.6.2")
     compileOnly("org.jetbrains:annotations:${project.parent?.property("jetbrains.annotations.version")}")
     annotationProcessor("org.jetbrains:annotations:${project.parent?.property("jetbrains.annotations.version")}")
 }

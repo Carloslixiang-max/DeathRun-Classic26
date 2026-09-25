@@ -27,6 +27,7 @@ import static pl.mrstudios.deathrun.api.arena.user.enums.Role.DEATH;
 public final class TrapActivationService {
 
     private static final long RECENT_CONTACT_MILLIS = 4_000L;
+    private static final String HOLOGRAM_TAG = "deathrun_classic26_trap_hologram";
     private static final Map<TrapKey, Long> COOLDOWN_UNTIL = new ConcurrentHashMap<>();
     private static final Map<TrapKey, TrapActivationContext> ACTIVE = new ConcurrentHashMap<>();
     private static final Map<UUID, RecentContact> RECENT_CONTACT = new ConcurrentHashMap<>();
@@ -87,6 +88,26 @@ public final class TrapActivationService {
         return ActivationResult.ACTIVATED;
     }
 
+    public static void shutdownAll(@NotNull Server server) {
+        for (TrapActivationContext context : java.util.List.copyOf(ACTIVE.values())) {
+            try {
+                context.trap().end();
+            } catch (Exception ignored) {
+                // Best-effort rollback during plugin disable.
+            }
+        }
+
+        ACTIVE.clear();
+        COOLDOWN_UNTIL.clear();
+        RECENT_CONTACT.clear();
+
+        server.getWorlds().forEach(world ->
+                world.getEntitiesByClass(ArmorStand.class).stream()
+                        .filter(stand -> stand.getScoreboardTags().contains(HOLOGRAM_TAG))
+                        .forEach(ArmorStand::remove)
+        );
+    }
+
     public long cooldownRemainingMillis(@NotNull String mapId, int trapIndex) {
         return Math.max(0L, COOLDOWN_UNTIL.getOrDefault(new TrapKey(mapId, trapIndex), 0L) - System.currentTimeMillis());
     }
@@ -128,6 +149,7 @@ public final class TrapActivationService {
                     entity.setInvisible(true);
                     entity.setInvulnerable(true);
                     entity.setCustomNameVisible(true);
+                    entity.addScoreboardTag(HOLOGRAM_TAG);
                 }
         );
         new BukkitRunnable() {

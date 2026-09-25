@@ -43,6 +43,7 @@ import pl.mrstudios.deathrun.exception.MissingDependencyException;
 import pl.mrstudios.deathrun.placeholder.DeathRunPlaceholderExpansion;
 import pl.mrstudios.deathrun.player.PlayerStatisticsService;
 import pl.mrstudios.deathrun.reward.RewardService;
+import pl.mrstudios.deathrun.classic.trap.TrapActivationService;
 import org.bukkit.map.MapPalette;
 import org.jetbrains.annotations.Nullable;
 
@@ -280,8 +281,12 @@ public class Entrypoint extends JavaPlugin {
     @Override
     public void onDisable() {
 
-        if (this.arenaManager != null)
+        TrapActivationService.shutdownAll(this.getServer());
+
+        if (this.arenaManager != null) {
+            this.arenaManager.restoreActivePlayersOnDisable();
             this.arenaManager.saveLoadedMapWorlds();
+        }
 
         if (this.playerStatisticsService != null)
             this.playerStatisticsService.save();
