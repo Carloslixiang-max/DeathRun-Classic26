@@ -14,7 +14,7 @@ softdepend:
 commands:
   dr:
     description: "DeathRun main command"
-    usage: "/<command> [join|start|stop|reload|maps|leave|map|cp|trap|save|cancel]"
+    usage: "/<command> [maps|vote|join|leave|start|stop|reload|playtest|map|cp|trap|save|cancel]"
     aliases:
       - "deathrun"
     permission: "mrstudios.command.deathrun"
