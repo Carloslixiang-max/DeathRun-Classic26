@@ -107,7 +107,10 @@ public class ArenaCheckpointReachedListener implements Listener {
                 if (event.getTo() == null)
                         return;
 
-                this.processCheckpoint(event.getPlayer(), event.getFrom(), event.getTo(), "teleport");
+                // Teleports must not sweep the whole path: an internal respawn/start
+                // teleport can cross later checkpoint boxes geometrically. Only test the
+                // destination point; high-speed normal movement is handled by PlayerMoveEvent.
+                this.processCheckpoint(event.getPlayer(), event.getTo(), event.getTo(), "teleport");
     }
 
     private void processCheckpoint(
