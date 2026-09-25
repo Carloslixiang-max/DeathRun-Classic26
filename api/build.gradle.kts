@@ -7,7 +7,7 @@ plugins {
     id("java")
     id("net.kyori.blossom") version "1.3.1"
     id("com.palantir.git-version") version "3.1.0"
-    id("com.github.johnrengelman.shadow") version "8.1.1"
+    id("com.gradleup.shadow") version "9.6.1"
 }
 
 val versionDetails: Closure<VersionDetails> by extra
@@ -18,7 +18,7 @@ project.group = project.parent?.group!!
 project.version = project.parent?.version!!
 
 java {
-    toolchain.languageVersion.set(JavaLanguageVersion.of(21))
+    toolchain.languageVersion.set(JavaLanguageVersion.of(25))
 }
 
 blossom {
@@ -33,20 +33,15 @@ repositories {
 }
 
 dependencies {
-
-    /* Minecraft */
-    //compileOnly("com.destroystokyo.paper:paper-api:${project.parent?.property("minecraft.version")}")
     compileOnly("io.papermc.paper:paper-api:${project.parent?.property("minecraft.version")}")
-    /* JetBrains Annotations */
     compileOnly("org.jetbrains:annotations:${project.parent?.property("jetbrains.annotations.version")}")
     annotationProcessor("org.jetbrains:annotations:${project.parent?.property("jetbrains.annotations.version")}")
-
 }
 
 tasks {
-
     withType<JavaCompile> {
         options.encoding = "UTF-8"
+        options.release.set(25)
     }
 
     shadowJar {
@@ -54,13 +49,6 @@ tasks {
     }
 
     build {
-        finalizedBy("finalize")
+        dependsOn(shadowJar)
     }
-
-    register("finalize") {
-        doLast {
-            file("build/libs/${project.name}-${project.version}.jar").delete()
-        }
-    }
-
 }
