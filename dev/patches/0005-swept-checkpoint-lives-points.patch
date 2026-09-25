@@ -1,0 +1,92 @@
+--- a/core/src/main/java/pl/mrstudios/deathrun/arena/listener/ArenaCheckpointReachedListener.java
++++ b/core/src/main/java/pl/mrstudios/deathrun/arena/listener/ArenaCheckpointReachedListener.java
+@@
+ import pl.mrstudios.deathrun.reward.RewardService;
++import pl.mrstudios.deathrun.classic.checkpoint.SegmentAabb;
+@@
+-        this.processCheckpoint(event.getPlayer(), event.getTo(), "move");
++        this.processCheckpoint(event.getPlayer(), event.getFrom(), event.getTo(), "move");
+@@
+-        this.processCheckpoint(event.getPlayer(), event.getFrom(), "portal");
++        this.processCheckpoint(event.getPlayer(), event.getFrom(), event.getFrom(), "portal");
+@@
+-        this.processCheckpoint(event.getPlayer(), event.getTo(), "teleport");
++        this.processCheckpoint(event.getPlayer(), event.getFrom(), event.getTo(), "teleport");
+@@
+     private void processCheckpoint(
+             @NotNull org.bukkit.entity.Player player,
+-            @NotNull Location probeLocation,
++            @NotNull Location from,
++            @NotNull Location to,
+             @NotNull String source
+     ) {
+@@
+         int touchedIndex = -1;
+         for (int i = 0; i < map.arenaCheckpoints.size(); i++) {
+-            if (!this.isInsideCheckpointRegion(map.arenaCheckpoints.get(i), probeLocation))
++            if (!this.sweptTouchesCheckpoint(map.arenaCheckpoints.get(i), from, to))
+                 continue;
+@@
+         Checkpoint checkpoint = map.arenaCheckpoints.get(touchedIndex);
+         this.progressionByPlayer.put(player.getUniqueId(), touchedIndex);
+@@
+         user.setCheckpoint(checkpoint);
++
++        Checkpoint finishCheckpoint = this.finishCheckpoint(map);
++        int finishIndex = finishCheckpoint == null ? -1 : map.arenaCheckpoints.indexOf(finishCheckpoint);
++        boolean reachedFinishCheckpoint = finishIndex >= 0 && touchedIndex == finishIndex;
++
++        user.setRoundPoints(user.getRoundPoints() + this.checkpointPoints(map, touchedIndex));
++        if (!reachedFinishCheckpoint)
++            user.setLives(user.getLives() + 2);
+@@
+-        Checkpoint finishCheckpoint = this.finishCheckpoint(map);
+-        int finishIndex = finishCheckpoint == null ? -1 : map.arenaCheckpoints.indexOf(finishCheckpoint);
+         boolean completedFullSequence = touchedIndex == map.arenaCheckpoints.size() - 1;
+-        boolean reachedFinishCheckpoint = finishIndex >= 0 && touchedIndex == finishIndex;
+@@
+         if (!completedFullSequence || !reachedFinishCheckpoint)
+             return;
++
++        user.setRoundPoints(user.getRoundPoints() + user.getLives());
+@@
+-    private boolean isInsideCheckpointRegion(
+-            @NotNull Checkpoint checkpoint,
+-            @NotNull Location playerLoc
+-    ) {
++    private boolean sweptTouchesCheckpoint(@NotNull Checkpoint checkpoint, @NotNull Location from, @NotNull Location to) {
+         if (checkpoint.locations().isEmpty())
+             return false;
+-
+-        if (playerLoc.getWorld() == null || checkpoint.locations().get(0).getWorld() == null)
++
++        if (from.getWorld() == null || to.getWorld() == null || checkpoint.locations().get(0).getWorld() == null)
+             return false;
+-
+-        if (!checkpoint.locations().get(0).getWorld().getUID().equals(playerLoc.getWorld().getUID()))
++
++        if (!from.getWorld().getUID().equals(to.getWorld().getUID())
++                || !checkpoint.locations().get(0).getWorld().getUID().equals(from.getWorld().getUID()))
+             return false;
+@@
+-        double px = playerLoc.getX();
+-        double py = playerLoc.getY();
+-        double pz = playerLoc.getZ();
+-
+-        return px >= minX && px <= maxX + 1
+-                && py >= minY && py <= maxY + 1
+-                && pz >= minZ && pz <= maxZ + 1;
++        return SegmentAabb.intersects(
++                from.getX(), from.getY(), from.getZ(),
++                to.getX(), to.getY(), to.getZ(),
++                minX, minY, minZ,
++                maxX + 1.0, maxY + 1.0, maxZ + 1.0
++        );
+     }
++
++    private int checkpointPoints(@NotNull MapConfiguration.MapDefinition map, int index) {
++        if (index < 0 || index >= map.arenaCheckpointPoints.size())
++            return 0;
++        Integer points = map.arenaCheckpointPoints.get(index);
++        return points == null ? 0 : Math.max(0, points);
++    }
