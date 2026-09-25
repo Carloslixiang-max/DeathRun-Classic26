@@ -108,6 +108,8 @@ public final class DeathRunDeathService {
         }
 
         player.teleport(this.respawnLocation(user));
+        player.setVelocity(new org.bukkit.util.Vector(0.0, 0.0, 0.0));
+        player.setFallDistance(0.0f);
         player.playSound(player.getLocation(), this.configuration.plugin().arenaSoundPlayerDeath, 1.0f, 1.0f);
         player.addPotionEffect(FIRE_RESISTANCE_EFFECT);
         player.setFireTicks(0);
@@ -130,24 +132,25 @@ public final class DeathRunDeathService {
 
     private org.bukkit.Location respawnLocation(IUser user) {
         var checkpoint = user.getCheckpoint();
+        org.bukkit.Location configured = checkpoint.spawn();
+        if (configured != null && configured.getWorld() != null)
+            return configured.clone();
+
         List<org.bukkit.Location> area = checkpoint.locations();
         if (area.isEmpty() || area.get(0).getWorld() == null)
-            return checkpoint.spawn();
-        int minX = area.stream().mapToInt(org.bukkit.Location::getBlockX).min().orElse(checkpoint.spawn().getBlockX());
-        int maxX = area.stream().mapToInt(org.bukkit.Location::getBlockX).max().orElse(checkpoint.spawn().getBlockX());
-        int minY = area.stream().mapToInt(org.bukkit.Location::getBlockY).min().orElse(checkpoint.spawn().getBlockY());
-        int maxY = area.stream().mapToInt(org.bukkit.Location::getBlockY).max().orElse(checkpoint.spawn().getBlockY());
-        int minZ = area.stream().mapToInt(org.bukkit.Location::getBlockZ).min().orElse(checkpoint.spawn().getBlockZ());
-        int maxZ = area.stream().mapToInt(org.bukkit.Location::getBlockZ).max().orElse(checkpoint.spawn().getBlockZ());
-        org.bukkit.Location safe = new org.bukkit.Location(
+            return configured;
+
+        int minX = area.stream().mapToInt(org.bukkit.Location::getBlockX).min().orElse(0);
+        int maxX = area.stream().mapToInt(org.bukkit.Location::getBlockX).max().orElse(0);
+        int maxY = area.stream().mapToInt(org.bukkit.Location::getBlockY).max().orElse(0);
+        int minZ = area.stream().mapToInt(org.bukkit.Location::getBlockZ).min().orElse(0);
+        int maxZ = area.stream().mapToInt(org.bukkit.Location::getBlockZ).max().orElse(0);
+        return new org.bukkit.Location(
                 area.get(0).getWorld(),
                 (minX + maxX) / 2.0 + 0.5,
-                Math.max(minY + 1, maxY + 1),
+                maxY + 1.0,
                 (minZ + maxZ) / 2.0 + 0.5
         );
-        safe.setYaw(checkpoint.spawn().getYaw());
-        safe.setPitch(checkpoint.spawn().getPitch());
-        return safe;
     }
 
     public record DeathResult(
