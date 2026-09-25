@@ -336,6 +336,41 @@ public class CommandDeathRun {
         }
     }
 
+    @Execute(name = "map profile interstellar")
+    @Permission("mrstudios.command.deathrun.setup")
+    public void applyInterstellarProfile(
+            @Context Player player,
+            @Arg("id") String id
+    ) {
+        this.configuration.map().ensureMapsMutable();
+        MapConfiguration.MapDefinition map = this.configuration.map().getMapById(id);
+        if (map == null) {
+            this.message(player, this.configuration.language().commandMessageSetupMapMissing.replace("<map>", id));
+            return;
+        }
+
+        if (map.arenaCheckpoints.size() != 8) {
+            this.message(player, this.configuration.language().commandMessageClassicProfileCheckpointCount
+                    .replace("<profile>", "Interstellar")
+                    .replace("<required>", "8")
+                    .replace("<actual>", String.valueOf(map.arenaCheckpoints.size())));
+            return;
+        }
+
+        map.creator = "Dlimit";
+        map.arenaCheckpointPoints = new ArrayList<>(List.of(3, 7, 10, 13, 16, 20, 23, 26));
+        map.arenaFinishCheckpointId = map.arenaCheckpoints.get(7).id();
+        map.arenaMaxPlayers = 22;
+        map.arenaRequiredPlayersToStart = 11;
+
+        this.configuration.map().save();
+        this.arenaManager.reloadRuntime(map.id);
+
+        this.message(player, this.configuration.language().commandMessageClassicProfileApplied
+                .replace("<profile>", "Interstellar")
+                .replace("<map>", this.safe(map.id)));
+    }
+
     @Execute(name = "map edit")
     @Permission("mrstudios.command.deathrun.setup")
     public void setupMapsUse(
@@ -1942,6 +1977,28 @@ public class CommandDeathRun {
             issues.add("finish-checkpoint-not-set");
         } else if (map.arenaCheckpoints.stream().noneMatch((checkpoint) -> checkpoint.id().equals(map.arenaFinishCheckpointId))) {
             issues.add("finish-checkpoint-invalid");
+        } else if (!map.arenaCheckpoints.get(map.arenaCheckpoints.size() - 1).id().equals(map.arenaFinishCheckpointId)) {
+            issues.add("finish-checkpoint-not-last");
+        }
+
+        if (!map.arenaCheckpointPoints.isEmpty() && map.arenaCheckpointPoints.size() != map.arenaCheckpoints.size())
+            issues.add("checkpoint-points-size-mismatch");
+
+        if (!map.arenaCheckpoints.isEmpty() && map.arenaCheckpoints.stream().anyMatch(checkpoint ->
+                checkpoint.spawn() == null
+                        || checkpoint.spawn().getWorld() == null
+                        || checkpoint.locations().isEmpty()
+                        || checkpoint.locations().stream().anyMatch(location -> location == null || location.getWorld() == null)))
+            issues.add("checkpoint-location-invalid");
+
+        if (map.arenaTraps.isEmpty()) {
+            issues.add("missing-traps");
+        } else {
+            if (map.arenaTraps.stream().anyMatch(trap -> trap.getButton() == null || trap.getButton().getWorld() == null))
+                issues.add("trap-button-invalid");
+            if (map.arenaTraps.stream().anyMatch(trap -> trap.getLocations() == null || trap.getLocations().isEmpty()
+                    || trap.getLocations().stream().anyMatch(location -> location == null || location.getWorld() == null)))
+                issues.add("trap-region-invalid");
         }
 
         if (map.arenaStartBarrierBlocks.isEmpty())
@@ -1970,6 +2027,12 @@ public class CommandDeathRun {
                          "missing-checkpoints",
                          "finish-checkpoint-not-set",
                          "finish-checkpoint-invalid",
+                         "finish-checkpoint-not-last",
+                         "checkpoint-points-size-mismatch",
+                         "checkpoint-location-invalid",
+                         "missing-traps",
+                         "trap-button-invalid",
+                         "trap-region-invalid",
                          "missing-start-barrier",
                          "barrier-restore-size-mismatch" -> true;
                     case "missing-backup" -> requireBackup;
@@ -2048,14 +2111,21 @@ public class CommandDeathRun {
 
         map.arenaTraps.forEach((trap) -> {
             trap.setButton(this.withWorld(trap.getButton(), world));
-            trap.setLocations(trap.getLocations().stream().map((location) -> this.withWorld(location, world)).toList());
+            List<Location> trapLocations = trap.getLocations() == null ? List.of() : trap.getLocations();
+            trap.setLocations(trapLocations.stream()
+                    .filter(Objects::nonNull)
+                    .map((location) -> this.withWorld(location, world))
+                    .toList());
         });
         }
 
-        private @NotNull Location withWorld(
-            @NotNull Location location,
+        private @Nullable Location withWorld(
+            @Nullable Location location,
             @NotNull World world
         ) {
+        if (location == null)
+            return null;
+
         Location clone = location.clone();
         clone.setWorld(world);
         return clone;
@@ -2064,13 +2134,14 @@ public class CommandDeathRun {
     private void ensureMutableSetupCollections(
             @NotNull MapConfiguration.MapDefinition map
     ) {
-        map.arenaRunnerSpawnLocations = new ArrayList<>(map.arenaRunnerSpawnLocations);
-        map.arenaDeathSpawnLocations = new ArrayList<>(map.arenaDeathSpawnLocations);
-        map.arenaCheckpoints = new ArrayList<>(map.arenaCheckpoints);
-        map.arenaTraps = new ArrayList<>(map.arenaTraps);
-        map.teleportPads = new ArrayList<>(map.teleportPads);
-        map.arenaStartBarrierBlocks = new ArrayList<>(map.arenaStartBarrierBlocks);
-        map.arenaStartBarrierRestoreMaterials = new ArrayList<>(map.arenaStartBarrierRestoreMaterials);
+        map.arenaRunnerSpawnLocations = new ArrayList<>(map.arenaRunnerSpawnLocations == null ? List.of() : map.arenaRunnerSpawnLocations);
+        map.arenaDeathSpawnLocations = new ArrayList<>(map.arenaDeathSpawnLocations == null ? List.of() : map.arenaDeathSpawnLocations);
+        map.arenaCheckpoints = new ArrayList<>(map.arenaCheckpoints == null ? List.of() : map.arenaCheckpoints);
+        map.arenaCheckpointPoints = new ArrayList<>(map.arenaCheckpointPoints == null ? List.of() : map.arenaCheckpointPoints);
+        map.arenaTraps = new ArrayList<>(map.arenaTraps == null ? List.of() : map.arenaTraps);
+        map.teleportPads = new ArrayList<>(map.teleportPads == null ? List.of() : map.teleportPads);
+        map.arenaStartBarrierBlocks = new ArrayList<>(map.arenaStartBarrierBlocks == null ? List.of() : map.arenaStartBarrierBlocks);
+        map.arenaStartBarrierRestoreMaterials = new ArrayList<>(map.arenaStartBarrierRestoreMaterials == null ? List.of() : map.arenaStartBarrierRestoreMaterials);
     }
 
     private @NotNull MapConfiguration.MapDefinition mutableSetupMap(
