@@ -30,6 +30,13 @@ jobs:
           git remote add upstream https://github.com/CIlie23/DeathRun.git || true
           git fetch --no-tags upstream ver/latest
           git merge --allow-unrelated-histories --no-edit upstream/ver/latest
+
+          # The upstream branch contains its own workflow. GitHub's GITHUB_TOKEN
+          # cannot introduce a new workflow file without workflows permission,
+          # so keep our Classic26 workflow and drop the imported one.
+          git rm -f .github/workflows/build.yml || true
+          git commit --amend --no-edit
+
           git push origin HEAD:main
 
       - name: Install Java 25
