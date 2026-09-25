@@ -20,6 +20,9 @@ import pl.mrstudios.deathrun.plugin.Entrypoint;
 
 import java.awt.image.BufferedImage;
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 import static java.time.Duration.ofMillis;
 import static java.time.Duration.ofSeconds;
@@ -33,6 +36,8 @@ import static pl.mrstudios.deathrun.api.arena.user.enums.Role.RUNNER;
 public final class DeathRunDeathService {
 
     private static final PotionEffect FIRE_RESISTANCE_EFFECT = new PotionEffect(FIRE_RESISTANCE, 20, 1, false, false, false);
+    private static final long DEATH_DEBOUNCE_MILLIS = 750L;
+    private static final Map<UUID, Long> LAST_DEATH_AT = new ConcurrentHashMap<>();
 
     private final ArenaManager arenaManager;
     private final Plugin plugin;
@@ -65,6 +70,12 @@ public final class DeathRunDeathService {
             return null;
         if (user.getCheckpoint() == null)
             return null;
+
+        long now = System.currentTimeMillis();
+        long lastDeath = LAST_DEATH_AT.getOrDefault(player.getUniqueId(), 0L);
+        if (now - lastDeath < DEATH_DEBOUNCE_MILLIS)
+            return null;
+        LAST_DEATH_AT.put(player.getUniqueId(), now);
 
         TrapActivationContext attribution = this.trapActivationService.recentAttribution(player.getUniqueId());
         user.setDeaths(user.getDeaths() + 1);
