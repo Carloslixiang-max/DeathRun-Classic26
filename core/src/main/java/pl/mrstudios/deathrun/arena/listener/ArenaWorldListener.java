@@ -29,7 +29,7 @@ public class ArenaWorldListener implements Listener {
     @EventHandler(priority = MONITOR)
     public void onWorldUnload(@NotNull WorldUnloadEvent event) {
         if (this.arenaManager.isDeathRunWorld(event.getWorld()))
-            event.getWorld().setAutoSave(false);
+            event.getWorld().setAutoSave(true);
     }
 
     @EventHandler(priority = MONITOR)

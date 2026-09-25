@@ -125,6 +125,7 @@ public class ArenaManager {
         this.runtimesByMapId.values().forEach((runtime) -> {
             TrapActivationService.resetMap(runtime.mapId());
             runtime.service().shutdown();
+            this.saveAndReleaseWorld(runtime.map());
         });
         this.runtimesByMapId.clear();
 
@@ -135,6 +136,7 @@ public class ArenaManager {
             ArenaServiceRunnable service = new ArenaServiceRunnable(arena, map, this, this.winMapManager, this.rewardService, this.plugin, this.server, this.configuration);
             service.runTaskTimer(this.plugin, 0, 20);
             this.runtimesByMapId.put(mapId, new ArenaRuntime(mapId, map, arena, service));
+            this.protectWorld(map);
         }
     }
 
@@ -270,6 +272,7 @@ public class ArenaManager {
 
             TrapActivationService.resetMap(normalizedMapId);
             previous.service().shutdown();
+            this.saveAndReleaseWorld(previous.map());
             this.runtimesByMapId.remove(normalizedMapId, previous);
         }
 
@@ -283,6 +286,7 @@ public class ArenaManager {
         ArenaServiceRunnable service = new ArenaServiceRunnable(arena, map, this, this.winMapManager, this.rewardService, this.plugin, this.server, this.configuration);
         service.runTaskTimer(this.plugin, 0, 20);
         this.runtimesByMapId.put(normalizedMapId, new ArenaRuntime(normalizedMapId, map, arena, service));
+        this.protectWorld(map);
     }
 
     public @NotNull JoinResult joinMap(
@@ -656,17 +660,39 @@ public class ArenaManager {
 
     public void saveLoadedMapWorlds() {
         for (MapConfiguration.MapDefinition map : this.configuration.map().resolvedMaps()) {
-            if (map.world == null || map.world.isBlank())
-                continue;
-
-            World world = this.server.getWorld(map.world);
-            if (world == null)
-                continue;
-
-            world.setAutoSave(true);
-            world.save();
-            world.setAutoSave(false);
+            this.saveAndReleaseWorld(map);
+            this.protectWorld(map);
         }
+    }
+
+    /**
+     * Called while the plugin is disabling/removing ownership of map worlds.
+     * Autosave must remain enabled after this method returns.
+     */
+    public void releaseLoadedMapWorlds() {
+        for (MapConfiguration.MapDefinition map : this.configuration.map().resolvedMaps())
+            this.saveAndReleaseWorld(map);
+    }
+
+    private void saveAndReleaseWorld(@NotNull MapConfiguration.MapDefinition map) {
+        if (map.world == null || map.world.isBlank())
+            return;
+
+        World world = this.server.getWorld(map.world);
+        if (world == null)
+            return;
+
+        world.setAutoSave(true);
+        world.save();
+    }
+
+    private void protectWorld(@NotNull MapConfiguration.MapDefinition map) {
+        if (map.world == null || map.world.isBlank())
+            return;
+
+        World world = this.server.getWorld(map.world);
+        if (world != null)
+            world.setAutoSave(false);
     }
 
         public void returnPlayerToHub(

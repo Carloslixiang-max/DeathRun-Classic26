@@ -290,7 +290,7 @@ public class Entrypoint extends JavaPlugin {
 
         if (this.arenaManager != null) {
             this.arenaManager.restoreActivePlayersOnDisable();
-            this.arenaManager.saveLoadedMapWorlds();
+            this.arenaManager.releaseLoadedMapWorlds();
         }
 
         if (this.playerStatisticsService != null)
