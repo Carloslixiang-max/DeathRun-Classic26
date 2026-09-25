@@ -1,6 +1,5 @@
 package pl.mrstudios.deathrun.arena.listener;
 
-import net.kyori.adventure.platform.bukkit.BukkitAudiences;
 import org.bukkit.Location;
 import org.bukkit.Server;
 import org.bukkit.entity.Player;
@@ -38,13 +37,12 @@ public final class ClassicTrapEffectListener implements Listener {
             @NotNull ArenaManager arenaManager,
             @NotNull Plugin plugin,
             @NotNull Server server,
-            @NotNull BukkitAudiences audiences,
             @NotNull Configuration configuration,
             @NotNull WinMapManager winMapManager
     ) {
         this.arenaManager = arenaManager;
         this.activationService = new TrapActivationService(plugin, server, configuration);
-        this.deathService = new DeathRunDeathService(arenaManager, plugin, server, audiences, configuration, winMapManager);
+        this.deathService = new DeathRunDeathService(arenaManager, plugin, server, configuration, winMapManager);
     }
 
     @EventHandler
