@@ -1,6 +1,5 @@
 package pl.mrstudios.deathrun.arena.listener;
 
-import net.kyori.adventure.platform.bukkit.BukkitAudiences;
 import org.bukkit.Server;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -39,13 +38,12 @@ public class ArenaPlayerDamageListener implements Listener {
             @NotNull ArenaManager arenaManager,
             @NotNull Plugin plugin,
             @NotNull Server server,
-            @NotNull BukkitAudiences audiences,
             @NotNull Configuration configuration,
             @NotNull WinMapManager winMapManager
     ) {
         this.arenaManager = arenaManager;
         this.configuration = configuration;
-        this.deathService = new DeathRunDeathService(arenaManager, plugin, server, audiences, configuration, winMapManager);
+        this.deathService = new DeathRunDeathService(arenaManager, plugin, server, configuration, winMapManager);
         this.trapActivationService = new TrapActivationService(plugin, server, configuration);
     }
 
