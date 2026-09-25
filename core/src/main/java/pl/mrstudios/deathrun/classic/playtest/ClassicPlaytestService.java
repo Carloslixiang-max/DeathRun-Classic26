@@ -10,6 +10,7 @@ import org.bukkit.block.data.Directional;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import pl.mrstudios.deathrun.api.arena.trap.ITrap;
 import pl.mrstudios.deathrun.arena.ArenaManager;
 import pl.mrstudios.deathrun.arena.checkpoint.Checkpoint;
@@ -40,7 +41,7 @@ public final class ClassicPlaytestService {
         this.arenaManager = arenaManager;
     }
 
-    public @NotNull Result create(@NotNull Player actor) {
+    public @NotNull Result create(@Nullable Player actor) {
         try {
             World world = Bukkit.getWorld(WORLD_NAME);
             if (world == null)
@@ -108,7 +109,9 @@ public final class ClassicPlaytestService {
             this.configuration.map().save();
             this.arenaManager.reloadRuntime(MAP_ID);
 
-            actor.teleport(map.arenaWaitingLobbyLocation);
+            if (actor != null)
+                actor.teleport(map.arenaWaitingLobbyLocation);
+
             this.plugin.getLogger().info(
                     "[DeathRun] Rebuilt full Classic26 engineering playtest map "
                             + MAP_ID + " with " + map.arenaTraps.size() + " trap types."
