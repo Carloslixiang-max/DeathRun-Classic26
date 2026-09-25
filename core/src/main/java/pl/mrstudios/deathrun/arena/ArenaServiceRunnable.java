@@ -196,7 +196,7 @@ public class ArenaServiceRunnable extends BukkitRunnable {
             this.arena.getUsers().stream()
                     .map(IUser::asBukkit).filter(Objects::nonNull)
                     .forEach((player) -> {
-                        this.audiences.player(player).showTitle(title(
+                        player.showTitle(title(
                                 miniMessage().deserialize(
                                         this.configuration.language().arenaPreStartingTitle
                                                 .replace("<timer>", valueOf(this.startingTimer))
@@ -244,7 +244,7 @@ public class ArenaServiceRunnable extends BukkitRunnable {
                         .filter(Objects::nonNull).forEach((player) -> {
 
                             player.playSound(player.getLocation(), this.configuration.plugin().arenaSoundStarting, 1.0f, 1.0f);
-                            this.audiences.player(player).showTitle(title(
+                            player.showTitle(title(
                                     miniMessage().deserialize(
                                             this.configuration.language().arenaStartingTitle
                                                     .replace("<timer>", valueOf(this.barrierTimer))),
@@ -397,7 +397,7 @@ public class ArenaServiceRunnable extends BukkitRunnable {
                     .filter(Objects::nonNull)
                     .forEach(
                             (player) ->
-                                    this.audiences.player(player).showTitle(title(
+                                    player.showTitle(title(
                                             miniMessage().deserialize(
                                                     this.configuration.language().arenaMoveServerTitle
                                                             .replace("<endTimer>", valueOf(this.endDelayTimer))),
@@ -436,7 +436,7 @@ public class ArenaServiceRunnable extends BukkitRunnable {
                 .map(IUser::asBukkit)
                 .filter(Objects::nonNull)
                 .forEach((player) -> {
-                    this.audiences.player(player).showTitle(title(
+                    player.showTitle(title(
                             miniMessage().deserialize(this.configuration.language().arenaGameEndTitle),
                             miniMessage().deserialize(this.configuration.language().arenaGameEndSubtitle),
                             times(ofMillis(250), ofMillis(2500), ofMillis(250))

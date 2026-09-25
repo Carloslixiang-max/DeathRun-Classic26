@@ -185,7 +185,7 @@ public class ArenaCheckpointReachedListener implements Listener {
         if (!reachedFinishCheckpoint)
             user.setLives(user.getLives() + 2);
 
-        this.audiences.player(player).showTitle(
+        player.showTitle(
                 title(
                         miniMessage().deserialize(
                                 this.configuration.language().arenaCheckpointTitle
@@ -231,7 +231,7 @@ public class ArenaCheckpointReachedListener implements Listener {
             if (arena.getRemainingTime() >= 60)
                 arena.setRemainingTime(60);
 
-        this.audiences.player(player).showTitle(
+        player.showTitle(
                 title(
                         miniMessage().deserialize(
                                 this.configuration.language().arenaFinishTitle

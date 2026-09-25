@@ -88,7 +88,7 @@ public final class DeathRunDeathService {
                 : null;
         this.winMapManager.giveLoseMap(player, parchmentImage, user.getDeaths());
         this.server.getPluginManager().callEvent(new UserArenaDeathEvent(user, runtime.arena()));
-        this.audiences.player(player).showTitle(title(
+        player.showTitle(title(
                 miniMessage().deserialize(this.configuration.language().arenaDeathTitle),
                 miniMessage().deserialize(this.configuration.language().arenaDeathSubtitle),
                 times(ofMillis(250), ofSeconds(2), ofMillis(250))
