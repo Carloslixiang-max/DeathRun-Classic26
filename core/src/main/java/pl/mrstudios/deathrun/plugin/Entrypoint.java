@@ -87,7 +87,7 @@ public class Entrypoint extends JavaPlugin {
 
         /* Dependency Check */
         if (!this.getServer().getPluginManager().isPluginEnabled("WorldEdit"))
-            throw new MissingDependencyException("You must have WorldEdit (v7.2.9+) installed on your server to use this plugin.");
+            throw new MissingDependencyException("You must have WorldEdit 7.4.5+ installed on your server to use this plugin.");
 
         /* World Edit */
         this.worldEdit = getInstance();
@@ -257,26 +257,10 @@ public class Entrypoint extends JavaPlugin {
             new DeathRunPlaceholderExpansion(this).register();
         }
 
-        /* Check Branch */
-        if (!apiInstance().pluginGitBranch().equals("ver/latest"))
-            this.getLogger().warning(
-                    """
-                         
-                         --------------------------------------------------------
-                         
-                                       DEVELOPMENT BUILD DETECTED
-                                        
-                          You are running on a development build of the plugin,
-                          which may contain bugs and other issues. Please report
-                          any bugs you found on our GitHub repository.
-                          
-                          Version: {version}
-                          Current Branch: {branch}
-                         
-                         --------------------------------------------------------
-                         """.replace("{version}", apiInstance().pluginVersion())
-                            .replace("{branch}", apiInstance().pluginGitBranch())
-            );
+        this.getLogger().info(
+                "[DeathRun] Classic26 " + apiInstance().pluginVersion()
+                        + " enabled on Paper " + this.getServer().getMinecraftVersion() + "."
+        );
 
     }
 

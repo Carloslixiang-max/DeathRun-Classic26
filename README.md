@@ -56,6 +56,10 @@ A recovery file is deleted only after restoration succeeds. Inventory, armor,
 offhand, location, game mode, flight state, XP, health/food, effects, movement
 speeds, fire/fall state, and scoreboard data are restored.
 
+Reward commands are empty by default so installing Classic26 on a shared server
+does not silently inject diamonds, currency, or other economy items. Server
+owners can explicitly configure reward commands when desired.
+
 ## Engineering playtest
 
 For a quick functional test without importing a production map:
@@ -70,7 +74,7 @@ The generated engineering course exercises checkpoints, Lives/Points, Strafe,
 Death navigation, powerup blocks, and the Classic trap set including
 Disappearing Parkour, Knock Back, Arrow Dispenser, Fire Floor, Flood, Wall
 Spawn, Launch Players, Giant, Fire Trail, TNT, Glass Floor, Quicksand,
-Block Replace and Minefield.
+Block Replace, Minefield, Appearing Blocks, Disappearing Blocks and Particles.
 
 ## Main commands
 
@@ -79,12 +83,15 @@ Block Replace and Minefield.
 /dr vote
 /dr join <map>
 /dr leave
+/dr recover
 /dr start [map]
 /dr stop [map]
 /dr reload
 /dr map list
 /dr map status <id>
 /dr map profile interstellar <id>
+/dr map creator <id> <creator>
+/dr cp points <id> <points>
 /dr cp ...
 /dr trap ...
 ```

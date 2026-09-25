@@ -77,7 +77,7 @@ jobs:
         if: success()
         uses: actions/upload-artifact@v7
         with:
-          name: DeathRun-Classic26-dev
+          name: DeathRun-Classic26
           path: core/build/libs/DeathRun-Classic26-*.jar
           if-no-files-found: error
           retention-days: 14
@@ -97,7 +97,7 @@ jobs:
       - name: Download built DeathRun plugin
         uses: actions/download-artifact@v8
         with:
-          name: DeathRun-Classic26-dev
+          name: DeathRun-Classic26
           path: smoke/plugins
 
       - name: Download Paper 26.2 and WorldEdit 7.4.5
@@ -184,7 +184,7 @@ jobs:
 
           cat server.log
           test "$PLAYTEST" -eq 1
-          grep -Eq 'Enabling DeathRun|Enabled DeathRun|DeathRun v1\.4\.1-classic26-dev' server.log
+          grep -Eq 'Enabling DeathRun|Enabled DeathRun|DeathRun v1\.4\.1-classic26\.1' server.log
           grep -q 'Registered listeners via reflection:' server.log
           ! grep -Eq 'Error occurred while enabling DeathRun|Could not load.*DeathRun|UnknownDependencyException.*WorldEdit|NoClassDefFoundError.*deathrun' server.log
           ! grep -Eq 'Failed to register listener via reflection|\[DeathRun\].*SEVERE|\[DR-START\].*Fatal arena tick failure' server.log
@@ -223,7 +223,7 @@ jobs:
           wait "$PID2" 2>/dev/null || true
 
           cat server-restart.log
-          grep -Eq 'Enabling DeathRun|Enabled DeathRun|DeathRun v1\.4\.1-classic26-dev' server-restart.log
+          grep -Eq 'Enabling DeathRun|Enabled DeathRun|DeathRun v1\.4\.1-classic26\.1' server-restart.log
           grep -q 'Registered listeners via reflection:' server-restart.log
           ! grep -Eq 'SerializerException|Unable to deserialize|Error occurred while enabling DeathRun|Could not load.*DeathRun|NoClassDefFoundError.*deathrun' server-restart.log
           ! grep -Eq 'Failed to register listener via reflection|\[DeathRun\].*SEVERE|\[DR-START\].*Fatal arena tick failure' server-restart.log

@@ -51,11 +51,11 @@ public record API(
 
     /* Version Related */
     public @NotNull String pluginVersion() {
-        return "1.4.1-classic26-dev";
+        return "1.4.1-classic26.1";
     }
 
     public @NotNull String pluginGitBranch() {
-        return "classic26-dev";
+        return "main";
     }
 
     public @NotNull String pluginGitCommit() {
