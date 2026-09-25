@@ -79,6 +79,19 @@ public final class DeathNavigatorService {
         return player.teleport(button.clone().toCenterLocation().add(0, 1.0, 0));
     }
 
+    public @NotNull String selectionLabel(@NotNull Player player, @NotNull ArenaManager.ArenaRuntime runtime) {
+        int index = this.selectedIndex(player, runtime);
+        if (index < 0)
+            return "No traps";
+
+        var trap = runtime.map().arenaTraps.get(index);
+        String type = trap.getClass().getSimpleName();
+        if (type.startsWith("Trap"))
+            type = type.substring(4);
+        type = type.replaceAll("([a-z])([A-Z])", "$1 $2");
+        return "Trap " + (index + 1) + "/" + runtime.map().arenaTraps.size() + " · " + type;
+    }
+
     public void clear(@NotNull UUID playerId) {
         SELECTED_TRAP.remove(playerId);
     }
