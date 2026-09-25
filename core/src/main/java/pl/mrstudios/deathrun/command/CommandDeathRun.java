@@ -1859,6 +1859,45 @@ public class CommandDeathRun {
         this.message(player, PREFIX + "<green>Updated activation button for trap <white>#" + index + "<green>.");
     }
 
+    @Execute(name = "trap setregion")
+    @Permission("mrstudios.command.deathrun.setup")
+    public void setupTrapSetRegion(
+            @Context Player player,
+            @Arg("index") int index
+    ) {
+        MapConfiguration.MapDefinition map = this.selectedMapForSetup(player, true);
+        if (map == null || !this.playerInConfiguredMapWorld(player, map))
+            return;
+
+        this.ensureMutableSetupCollections(map);
+        if (index < 1 || index > map.arenaTraps.size()) {
+            this.message(player, PREFIX + "<red>Trap <white>#" + index + "<red> was not found on map <white>" + this.safe(map.id) + "<red>.");
+            return;
+        }
+
+        List<Location> selected = this.locations(player);
+        if (selected.isEmpty()) {
+            this.message(player, PREFIX + "<red>Select a non-empty WorldEdit region in the current map world first.");
+            return;
+        }
+
+        ITrap trap = map.arenaTraps.get(index - 1);
+        List<Location> filtered;
+        if (trap instanceof pl.mrstudios.deathrun.arena.trap.impl.TrapDisappearingBlocks disappearingBlocks)
+            filtered = trap.filter(selected, disappearingBlocks.getMaterial());
+        else
+            filtered = trap.filter(selected);
+
+        if (filtered.isEmpty()) {
+            this.message(player, PREFIX + "<red>The selected region contains no valid target blocks for trap <white>#" + index + "<red>.");
+            return;
+        }
+
+        trap.setLocations(filtered);
+        this.configuration.map().save();
+        this.message(player, PREFIX + "<green>Updated trap <white>#" + index + "<green> target region to <white>" + filtered.size() + "<green> block(s).");
+    }
+
     private boolean isSupportedTrapButton(
             @NotNull Block target
     ) {
