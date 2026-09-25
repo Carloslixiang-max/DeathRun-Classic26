@@ -10,7 +10,7 @@ import pl.mrstudios.deathrun.arena.trap.Trap;
 import java.time.Duration;
 import java.util.List;
 
-import static java.time.Duration.ZERO;
+import static java.time.Duration.ofSeconds;
 import static org.bukkit.Material.TNT;
 
 public class TrapTNT extends Trap {
@@ -23,6 +23,7 @@ public class TrapTNT extends Trap {
         super.locations.forEach(
                 (location) -> location.getWorld().spawn(location, TNTPrimed.class, (entity) -> {
                     entity.setFuseTicks(5);
+                    entity.setYield(0.0f);
                     entity.setVelocity(new Vector(0, 0.125, 0));
                 }));
     }
@@ -48,7 +49,7 @@ public class TrapTNT extends Trap {
 
     @Override
     public @NotNull Duration getDuration() {
-        return ZERO;
+        return ofSeconds(2);
     }
 
 }
