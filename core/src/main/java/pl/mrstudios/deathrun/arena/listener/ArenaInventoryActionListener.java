@@ -5,6 +5,7 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryCreativeEvent;
+import org.bukkit.event.inventory.InventoryDragEvent;
 import org.bukkit.event.player.PlayerAttemptPickupItemEvent;
 import org.bukkit.event.player.PlayerDropItemEvent;
 import org.bukkit.event.player.PlayerPickupArrowEvent;
@@ -15,7 +16,6 @@ import pl.mrstudios.commons.inject.annotation.Inject;
 import pl.mrstudios.deathrun.arena.ArenaManager;
 
 import static org.bukkit.event.EventPriority.MONITOR;
-import static org.bukkit.event.inventory.InventoryType.PLAYER;
 
 public class ArenaInventoryActionListener implements Listener {
 
@@ -36,8 +36,20 @@ public class ArenaInventoryActionListener implements Listener {
             return;
         if (!this.inDeathRun(player) || this.hasInventoryBypass(player))
             return;
-        if (event.getClickedInventory() == null || event.getClickedInventory().getType() != PLAYER)
+
+        // DeathRun owns the participant hotbar/inventory while they are inside
+        // a runtime. Cancelling the whole click also blocks shift-click and
+        // number-key routes that could otherwise overwrite Strafe/Death tools.
+        event.setCancelled(true);
+    }
+
+    @EventHandler(priority = MONITOR)
+    public void onInventoryDrag(@NotNull InventoryDragEvent event) {
+        if (!(event.getWhoClicked() instanceof Player player))
             return;
+        if (!this.inDeathRun(player) || this.hasInventoryBypass(player))
+            return;
+
         event.setCancelled(true);
     }
 
