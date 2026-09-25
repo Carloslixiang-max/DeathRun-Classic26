@@ -927,13 +927,47 @@ public class ArenaManager {
             return loaded;
 
         // Never generate a brand-new world merely because map.yml contains a
-        // typo or a removed production map. Only load worlds that already exist
-        // on disk.
-        java.io.File worldFolder = new java.io.File(this.server.getWorldContainer(), map.world);
-        if (!worldFolder.isDirectory()) {
+        // typo or a removed production map. Paper 26.2 stores secondary worlds
+        // as dimensions below the primary level instead of always creating a
+        // legacy top-level <worldName>/ directory, so accept both layouts.
+        java.io.File worldContainer = this.server.getWorldContainer();
+        java.io.File legacyWorldFolder = new java.io.File(worldContainer, map.world);
+
+        boolean existingWorldOnDisk = legacyWorldFolder.isDirectory();
+        if (!existingWorldOnDisk) {
+            for (World primaryCandidate : this.server.getWorlds()) {
+                java.io.File modernDimensionFolder = new java.io.File(
+                        new java.io.File(worldContainer, primaryCandidate.getName()),
+                        "dimensions/minecraft/" + map.world
+                );
+                if (modernDimensionFolder.isDirectory()) {
+                    existingWorldOnDisk = true;
+                    break;
+                }
+
+                // Also handle servers where getWorldFolder() already points at
+                // the 26.2 primary dimension path:
+                // <level>/dimensions/minecraft/overworld.
+                java.io.File currentWorldFolder = primaryCandidate.getWorldFolder();
+                java.io.File namespaceFolder = currentWorldFolder.getParentFile();
+                java.io.File dimensionsFolder = namespaceFolder == null ? null : namespaceFolder.getParentFile();
+                if (dimensionsFolder != null
+                        && "dimensions".equals(dimensionsFolder.getName())
+                        && namespaceFolder != null) {
+                    java.io.File siblingDimension = new java.io.File(namespaceFolder, map.world);
+                    if (siblingDimension.isDirectory()) {
+                        existingWorldOnDisk = true;
+                        break;
+                    }
+                }
+            }
+        }
+
+        if (!existingWorldOnDisk) {
             this.plugin.getLogger().warning(
                     "[DeathRun] Configured map world '" + map.world + "' for map "
-                            + this.mapId(map) + " is not loaded and no existing world folder was found."
+                            + this.mapId(map)
+                            + " is not loaded and no existing legacy or Paper 26.2 dimension folder was found."
             );
             return null;
         }
