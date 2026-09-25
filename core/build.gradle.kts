@@ -38,6 +38,7 @@ dependencies {
     compileOnly("me.clip:placeholderapi:2.12.2")
     compileOnly("org.jetbrains:annotations:${project.parent?.property("jetbrains.annotations.version")}")
     annotationProcessor("org.jetbrains:annotations:${project.parent?.property("jetbrains.annotations.version")}")
+    testImplementation("org.junit.jupiter:junit-jupiter:5.12.2")
 }
 
 tasks {
@@ -49,6 +50,10 @@ tasks {
     withType<JavaCompile> {
         options.encoding = "UTF-8"
         options.release.set(25)
+    }
+
+    test {
+        useJUnitPlatform()
     }
 
     shadowJar {
