@@ -106,5 +106,13 @@ public final class ClassicStrafeService {
 
         private final String displayName;
         Direction(String displayName) { this.displayName = displayName; }
+
+        public String label() {
+            return switch (this) {
+                case LEFT -> "Left Strafe";
+                case BACK -> "Back Strafe";
+                case RIGHT -> "Right Strafe";
+            };
+        }
     }
 }
