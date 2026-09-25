@@ -6,6 +6,7 @@ import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;
+import org.bukkit.inventory.InventoryHolder;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataType;
@@ -48,7 +49,9 @@ public class MapSelectorService {
         List<MapConfiguration.MapDefinition> maps = this.configuration.map().resolvedMaps();
         int size = min(max(((maps.size() + 8) / 9) * 9, 9), 54);
 
-        Inventory inventory = Bukkit.createInventory(null, size, this.configuration.language().mapSelectorTitle);
+        SelectorInventoryHolder holder = new SelectorInventoryHolder();
+        Inventory inventory = Bukkit.createInventory(holder, size, this.configuration.language().mapSelectorTitle);
+        holder.bind(inventory);
         for (int i = 0; i < maps.size() && i < size; i++) {
             MapConfiguration.MapDefinition map = maps.get(i);
             inventory.setItem(i, this.mapItem(map, this.currentPlayersForMap(map), this.maxPlayersForMap(map)));
@@ -58,9 +61,9 @@ public class MapSelectorService {
     }
 
     public boolean isSelectorInventory(
-            @NotNull String title
+            @NotNull Inventory inventory
     ) {
-        return this.configuration.language().mapSelectorTitle.equals(title);
+        return inventory.getHolder() instanceof SelectorInventoryHolder;
     }
 
     public void handleClick(
@@ -198,6 +201,19 @@ public class MapSelectorService {
             @NotNull MapConfiguration.MapDefinition map
     ) {
         return map.name == null || map.name.isBlank() ? "Unnamed" : map.name;
+    }
+
+    private static final class SelectorInventoryHolder implements InventoryHolder {
+        private Inventory inventory;
+
+        private void bind(@NotNull Inventory inventory) {
+            this.inventory = inventory;
+        }
+
+        @Override
+        public @NotNull Inventory getInventory() {
+            return java.util.Objects.requireNonNull(this.inventory, "selector inventory not bound");
+        }
     }
 
 }

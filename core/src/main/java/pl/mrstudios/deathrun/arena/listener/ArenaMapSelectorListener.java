@@ -24,10 +24,13 @@ public class ArenaMapSelectorListener implements Listener {
     public void onInventoryClick(
             @NotNull InventoryClickEvent event
     ) {
-        if (!this.mapSelectorService.isSelectorInventory(event.getView().getTitle()))
+        if (!this.mapSelectorService.isSelectorInventory(event.getView().getTopInventory()))
             return;
 
         event.setCancelled(true);
+        if (event.getRawSlot() < 0 || event.getRawSlot() >= event.getView().getTopInventory().getSize())
+            return;
+
         if (event.getWhoClicked() instanceof org.bukkit.entity.Player player)
             this.mapSelectorService.handleClick(player, event.getCurrentItem());
     }
@@ -36,7 +39,7 @@ public class ArenaMapSelectorListener implements Listener {
     public void onInventoryDrag(
             @NotNull InventoryDragEvent event
     ) {
-        if (!this.mapSelectorService.isSelectorInventory(event.getView().getTitle()))
+        if (!this.mapSelectorService.isSelectorInventory(event.getView().getTopInventory()))
             return;
 
         event.setCancelled(true);

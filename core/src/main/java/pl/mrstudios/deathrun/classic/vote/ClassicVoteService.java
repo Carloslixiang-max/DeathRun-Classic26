@@ -6,6 +6,7 @@ import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;
+import org.bukkit.inventory.InventoryHolder;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataType;
@@ -79,15 +80,17 @@ public final class ClassicVoteService {
         if (this.countdownTask == null)
             this.sessionCandidates = maps.stream().map(this::mapId).toList();
 
-        Inventory inventory = Bukkit.createInventory(null, 27, this.configuration.language().classicVoteTitle);
+        VoteInventoryHolder holder = new VoteInventoryHolder();
+        Inventory inventory = Bukkit.createInventory(holder, 27, this.configuration.language().classicVoteTitle);
+        holder.bind(inventory);
         for (int i = 0; i < maps.size() && i < MAP_SLOTS.length; i++)
             inventory.setItem(MAP_SLOTS[i], this.mapItem(maps.get(i)));
         inventory.setItem(RANDOM_SLOT, this.randomItem());
         player.openInventory(inventory);
     }
 
-    public boolean isVoteInventory(@NotNull String title) {
-        return this.configuration.language().classicVoteTitle.equals(title);
+    public boolean isVoteInventory(@NotNull Inventory inventory) {
+        return inventory.getHolder() instanceof VoteInventoryHolder;
     }
 
     public void handleClick(@NotNull Player player, @Nullable ItemStack item) {
@@ -355,5 +358,18 @@ public final class ClassicVoteService {
         this.participants.clear();
         this.sessionCandidates = List.of();
         this.secondsRemaining = 0;
+    }
+
+    private static final class VoteInventoryHolder implements InventoryHolder {
+        private Inventory inventory;
+
+        private void bind(@NotNull Inventory inventory) {
+            this.inventory = inventory;
+        }
+
+        @Override
+        public @NotNull Inventory getInventory() {
+            return java.util.Objects.requireNonNull(this.inventory, "vote inventory not bound");
+        }
     }
 }

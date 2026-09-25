@@ -21,17 +21,20 @@ public final class ClassicVoteListener implements Listener {
 
     @EventHandler(priority = EventPriority.MONITOR)
     public void onClick(@NotNull InventoryClickEvent event) {
-        if (!this.voteService.isVoteInventory(event.getView().getTitle()))
+        if (!this.voteService.isVoteInventory(event.getView().getTopInventory()))
             return;
 
         event.setCancelled(true);
+        if (event.getRawSlot() < 0 || event.getRawSlot() >= event.getView().getTopInventory().getSize())
+            return;
+
         if (event.getWhoClicked() instanceof org.bukkit.entity.Player player)
             this.voteService.handleClick(player, event.getCurrentItem());
     }
 
     @EventHandler(priority = EventPriority.MONITOR)
     public void onDrag(@NotNull InventoryDragEvent event) {
-        if (this.voteService.isVoteInventory(event.getView().getTitle()))
+        if (this.voteService.isVoteInventory(event.getView().getTopInventory()))
             event.setCancelled(true);
     }
 
