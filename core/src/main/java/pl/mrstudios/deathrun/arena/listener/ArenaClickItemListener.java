@@ -61,8 +61,13 @@ public class ArenaClickItemListener implements Listener {
         if (!leftMap && !leftQueue)
             return;
 
+        if (leftMap) {
+            event.getPlayer().sendMessage(org.bukkit.ChatColor.YELLOW + "You have left DeathRun and your previous state was restored.");
+            return;
+        }
+
         this.arenaManager.returnPlayerToHub(event.getPlayer());
-        event.getPlayer().sendMessage(org.bukkit.ChatColor.YELLOW + "You have left the match and returned to the Hub.");
+        event.getPlayer().sendMessage(org.bukkit.ChatColor.YELLOW + "You have left the DeathRun queue.");
 
     }
 
