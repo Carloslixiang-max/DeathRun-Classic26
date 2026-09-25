@@ -526,6 +526,9 @@ public class CommandDeathRun {
         }
 
         World world = this.plugin.getServer().getWorld(worldName);
+        if (world == null)
+            world = this.arenaManager.loadExistingMapWorld(worldName);
+
         if (world == null) {
             this.message(player, this.configuration.language().commandMessageSetupMapInvalidWorld.replace("<world>", worldName));
             return;

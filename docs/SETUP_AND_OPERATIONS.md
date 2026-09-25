@@ -65,7 +65,11 @@ GitHub CI also performs a real backup → restore → verify cycle and a full Pa
 
 ## Creating a real Classic26 map
 
-The world must already be loaded.
+Copy/import the real map world while the server is stopped, then start Paper.
+The world does **not** need to be preloaded by Multiverse or another plugin.
+`/dr map create` first uses an already loaded world; if needed it safely loads
+existing legacy/Paper 26.2 world data from disk. If no real world data exists,
+creation is refused instead of silently generating an empty production map.
 
 ```text
 /dr map create <id> <world>

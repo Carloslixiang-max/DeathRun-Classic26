@@ -975,43 +975,56 @@ public class ArenaManager {
     private @Nullable World ensureConfiguredMapWorldLoaded(
             @NotNull MapConfiguration.MapDefinition map
     ) {
-        if (map.world == null || map.world.isBlank())
+        return this.loadExistingMapWorld(map.world, "map " + this.mapId(map));
+    }
+
+    public @Nullable World loadExistingMapWorld(
+            @Nullable String worldName
+    ) {
+        return this.loadExistingMapWorld(worldName, "map import");
+    }
+
+    private @Nullable World loadExistingMapWorld(
+            @Nullable String worldName,
+            @NotNull String context
+    ) {
+        if (worldName == null || worldName.isBlank())
             return null;
 
-        World loaded = this.server.getWorld(map.world);
+        World loaded = this.server.getWorld(worldName);
         if (loaded != null)
             return loaded;
 
-        // Never generate a brand-new world merely because map.yml contains a
-        // typo or a removed production map. Paper 26.2 stores secondary worlds
-        // as dimensions below the primary level instead of always creating a
-        // legacy top-level <worldName>/ directory, so accept both layouts.
+        // Never generate a brand-new world merely because a command or map.yml
+        // contains a name. Only WorldCreator-load data that demonstrably exists
+        // on disk. Paper 26.2 stores secondary worlds below the primary level's
+        // dimensions namespace, while older Bukkit layouts use a top-level
+        // world directory.
         java.io.File worldContainer = this.server.getWorldContainer();
-        java.io.File legacyWorldFolder = new java.io.File(worldContainer, map.world);
+        java.io.File legacyWorldFolder = new java.io.File(worldContainer, worldName);
 
-        boolean existingWorldOnDisk = legacyWorldFolder.isDirectory();
+        boolean existingWorldOnDisk = this.looksLikeExistingWorldData(legacyWorldFolder);
         if (!existingWorldOnDisk) {
             for (World primaryCandidate : this.server.getWorlds()) {
                 java.io.File modernDimensionFolder = new java.io.File(
                         new java.io.File(worldContainer, primaryCandidate.getName()),
-                        "dimensions/minecraft/" + map.world
+                        "dimensions/minecraft/" + worldName
                 );
-                if (modernDimensionFolder.isDirectory()) {
+                if (this.looksLikeExistingWorldData(modernDimensionFolder)) {
                     existingWorldOnDisk = true;
                     break;
                 }
 
-                // Also handle servers where getWorldFolder() already points at
-                // the 26.2 primary dimension path:
-                // <level>/dimensions/minecraft/overworld.
+                // Also handle servers where getWorldFolder() itself already
+                // points at <level>/dimensions/minecraft/overworld.
                 java.io.File currentWorldFolder = primaryCandidate.getWorldFolder();
                 java.io.File namespaceFolder = currentWorldFolder.getParentFile();
                 java.io.File dimensionsFolder = namespaceFolder == null ? null : namespaceFolder.getParentFile();
                 if (dimensionsFolder != null
                         && "dimensions".equals(dimensionsFolder.getName())
                         && namespaceFolder != null) {
-                    java.io.File siblingDimension = new java.io.File(namespaceFolder, map.world);
-                    if (siblingDimension.isDirectory()) {
+                    java.io.File siblingDimension = new java.io.File(namespaceFolder, worldName);
+                    if (this.looksLikeExistingWorldData(siblingDimension)) {
                         existingWorldOnDisk = true;
                         break;
                     }
@@ -1021,37 +1034,48 @@ public class ArenaManager {
 
         if (!existingWorldOnDisk) {
             this.plugin.getLogger().warning(
-                    "[DeathRun] Configured map world '" + map.world + "' for map "
-                            + this.mapId(map)
-                            + " is not loaded and no existing legacy or Paper 26.2 dimension folder was found."
+                    "[DeathRun] World '" + worldName + "' for " + context
+                            + " is not loaded and no existing world data was found on disk."
             );
             return null;
         }
 
         try {
-            World world = this.server.createWorld(new WorldCreator(map.world));
+            World world = this.server.createWorld(new WorldCreator(worldName));
             if (world == null) {
                 this.plugin.getLogger().severe(
-                        "[DeathRun] Failed to load existing map world '" + map.world
-                                + "' for map " + this.mapId(map) + "."
+                        "[DeathRun] Failed to load existing world '" + worldName
+                                + "' for " + context + "."
                 );
                 return null;
             }
 
             this.plugin.getLogger().info(
-                    "[DeathRun] Loaded configured map world '" + map.world
-                            + "' for map " + this.mapId(map) + " before rebinding persisted locations."
+                    "[DeathRun] Loaded existing world '" + worldName
+                            + "' for " + context + " without generating a missing production map."
             );
             return world;
         } catch (Throwable throwable) {
             this.plugin.getLogger().log(
                     java.util.logging.Level.SEVERE,
-                    "[DeathRun] Failed to load configured map world '" + map.world
-                            + "' for map " + this.mapId(map) + ".",
+                    "[DeathRun] Failed to load existing world '" + worldName
+                            + "' for " + context + ".",
                     throwable
             );
             return null;
         }
+    }
+
+    private boolean looksLikeExistingWorldData(
+            @NotNull java.io.File folder
+    ) {
+        if (!folder.isDirectory())
+            return false;
+
+        return new java.io.File(folder, "level.dat").isFile()
+                || new java.io.File(folder, "region").isDirectory()
+                || new java.io.File(folder, "entities").isDirectory()
+                || new java.io.File(folder, "poi").isDirectory();
     }
 
     private void resetPlayerScoreboard(
