@@ -9,7 +9,6 @@ import dev.rollczi.litecommands.annotations.context.Context;
 import dev.rollczi.litecommands.annotations.execute.Execute;
 import dev.rollczi.litecommands.annotations.permission.Permission;
 import me.clip.placeholderapi.PlaceholderAPI;
-import net.kyori.adventure.platform.bukkit.BukkitAudiences;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.event.ClickEvent;
 import net.kyori.adventure.text.format.NamedTextColor;
@@ -63,7 +62,6 @@ import static java.util.Collections.emptyList;
 import static java.util.Optional.ofNullable;
 import static java.util.stream.Stream.of;
 import static net.kyori.adventure.text.minimessage.MiniMessage.miniMessage;
-import static net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer.plainText;
 import static org.apache.commons.io.FileUtils.deleteDirectory;
 import static org.bukkit.Material.*;
 import static pl.mrstudios.deathrun.api.arena.user.enums.Role.DEATH;
@@ -80,8 +78,6 @@ public class CommandDeathRun {
     private final Plugin plugin;
     private final WorldEdit worldEdit;
 
-    private final BukkitAudiences audiences;
-
     private final TrapRegistry  trapRegistry;
     private final ArenaManager arenaManager;
     private final MapSelectorService mapSelectorService;
@@ -97,7 +93,6 @@ public class CommandDeathRun {
     public CommandDeathRun(
             @NotNull Plugin plugin,
             @NotNull WorldEdit worldEdit,
-            @NotNull BukkitAudiences audiences,
             @NotNull TrapRegistry trapRegistry,
             @NotNull ArenaManager arenaManager,
             @NotNull MapSelectorService mapSelectorService,
@@ -107,7 +102,6 @@ public class CommandDeathRun {
     ) {
         this.plugin = plugin;
         this.worldEdit = worldEdit;
-        this.audiences = audiences;
         this.trapRegistry = trapRegistry;
         this.arenaManager = arenaManager;
         this.mapSelectorService = mapSelectorService;
@@ -1607,7 +1601,7 @@ public class CommandDeathRun {
             ? java.lang.String.format(message, args)
             : message;
         content = this.parsePlaceholders(player, content);
-        this.audiences.player(player).sendMessage(miniMessage().deserialize(content));
+        player.sendMessage(miniMessage().deserialize(content));
     }
 
     protected void message(
@@ -1626,7 +1620,7 @@ public class CommandDeathRun {
             return;
         }
 
-        sender.sendMessage(plainText().serialize(miniMessage().deserialize(message)));
+        sender.sendMessage(miniMessage().deserialize(message));
     }
 
     private @NotNull String parsePlaceholders(
