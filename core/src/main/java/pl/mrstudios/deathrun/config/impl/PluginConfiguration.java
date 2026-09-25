@@ -165,25 +165,13 @@ public class PluginConfiguration extends OkaeriConfig {
     @Names(strategy = HYPHEN_CASE, modifier = TO_LOWER_CASE)
     public static class RewardConfiguration extends OkaeriConfig {
 
-        public List<String> runnerFirstPlace = of(
-                "give %player% diamond 5"
-        );
-
-        public List<String> runnerSecondPlace = of(
-                "give %player% diamond 3"
-        );
-
-        public List<String> runnerThirdPlace = of(
-                "give %player% diamond 2"
-        );
-
-        public List<String> runnerParticipation = of(
-                "give %player% diamond 1"
-        );
-
-        public List<String> deathWin = of(
-                "give %player% gold_ingot 3"
-        );
+        // Shared-server-safe defaults: Classic26 never injects economy/items
+        // unless the server owner explicitly configures reward commands.
+        public List<String> runnerFirstPlace = of();
+        public List<String> runnerSecondPlace = of();
+        public List<String> runnerThirdPlace = of();
+        public List<String> runnerParticipation = of();
+        public List<String> deathWin = of();
 
     }
 
