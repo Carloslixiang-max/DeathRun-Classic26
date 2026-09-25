@@ -626,11 +626,55 @@ public class ArenaManager {
     public boolean isMapConfigured(
             @NotNull MapConfiguration.MapDefinition map
     ) {
-        return !map.arenaSetupEnabled
-                && map.arenaWaitingLobbyLocation != null
-                && !map.arenaRunnerSpawnLocations.isEmpty()
-                && !map.arenaDeathSpawnLocations.isEmpty()
-                && !map.arenaCheckpoints.isEmpty();
+        if (map.arenaSetupEnabled
+                || map.arenaWaitingLobbyLocation == null
+                || map.arenaWaitingLobbyLocation.getWorld() == null
+                || map.arenaRunnerSpawnLocations == null
+                || map.arenaRunnerSpawnLocations.isEmpty()
+                || map.arenaDeathSpawnLocations == null
+                || map.arenaDeathSpawnLocations.isEmpty()
+                || map.arenaCheckpoints == null
+                || map.arenaCheckpoints.isEmpty()
+                || map.arenaTraps == null
+                || map.arenaTraps.isEmpty()
+                || map.arenaStartBarrierBlocks == null
+                || map.arenaStartBarrierBlocks.isEmpty())
+            return false;
+
+        if (map.arenaRunnerSpawnLocations.stream().anyMatch(location -> location == null || location.getWorld() == null)
+                || map.arenaDeathSpawnLocations.stream().anyMatch(location -> location == null || location.getWorld() == null))
+            return false;
+
+        if (map.arenaCheckpoints.stream().anyMatch(checkpoint ->
+                checkpoint == null
+                        || checkpoint.spawn() == null
+                        || checkpoint.spawn().getWorld() == null
+                        || checkpoint.locations() == null
+                        || checkpoint.locations().isEmpty()
+                        || checkpoint.locations().stream().anyMatch(location -> location == null || location.getWorld() == null)))
+            return false;
+
+        Integer finishId = map.arenaFinishCheckpointId;
+        if (finishId == null
+                || !map.arenaCheckpoints.get(map.arenaCheckpoints.size() - 1).id().equals(finishId))
+            return false;
+
+        if (map.arenaCheckpointPoints != null
+                && !map.arenaCheckpointPoints.isEmpty()
+                && map.arenaCheckpointPoints.size() != map.arenaCheckpoints.size())
+            return false;
+
+        if (map.arenaTraps.stream().anyMatch(trap ->
+                trap == null
+                        || trap.getButton() == null
+                        || trap.getButton().getWorld() == null
+                        || trap.getLocations() == null
+                        || trap.getLocations().isEmpty()
+                        || trap.getLocations().stream().anyMatch(location -> location == null || location.getWorld() == null)))
+            return false;
+
+        return map.arenaStartBarrierRestoreMaterials != null
+                && map.arenaStartBarrierRestoreMaterials.size() == map.arenaStartBarrierBlocks.size();
     }
 
     private void preparePlayerForWaiting(
