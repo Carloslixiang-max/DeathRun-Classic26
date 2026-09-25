@@ -76,18 +76,14 @@ public final class ClassicStrafeService {
             return false;
 
         float snappedYaw = Math.round(player.getLocation().getYaw() / 90.0f) * 90.0f;
-        double radians = Math.toRadians(snappedYaw);
-        Vector forward = new Vector(-Math.sin(radians), 0.0, Math.cos(radians));
-        Vector right = new Vector(Math.cos(radians), 0.0, Math.sin(radians));
+        ClassicStrafeMath.Horizontal horizontalDirection = ClassicStrafeMath.horizontal(snappedYaw, direction);
+        Vector velocity = new Vector(
+                horizontalDirection.x() * HORIZONTAL_VELOCITY,
+                VERTICAL_VELOCITY,
+                horizontalDirection.z() * HORIZONTAL_VELOCITY
+        );
 
-        Vector horizontal = switch (direction) {
-            case LEFT -> right.clone().multiply(-1.0);
-            case BACK -> forward.clone().multiply(-1.0);
-            case RIGHT -> right;
-        };
-        horizontal.normalize().multiply(HORIZONTAL_VELOCITY).setY(VERTICAL_VELOCITY);
-
-        player.setVelocity(horizontal);
+        player.setVelocity(velocity);
         this.cooldownUntil
                 .computeIfAbsent(player.getUniqueId(), ignored -> new EnumMap<>(Direction.class))
                 .put(direction, System.currentTimeMillis() + COOLDOWN_MILLIS);
