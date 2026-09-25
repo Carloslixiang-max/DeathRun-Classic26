@@ -72,6 +72,7 @@ public class ArenaServiceRunnable extends BukkitRunnable {
         private boolean backgroundSongWarningLogged;
         private boolean forceStartRequested;
         private boolean timerExpired;
+        private boolean deathVictory;
 
     @Inject
     public ArenaServiceRunnable(
@@ -257,7 +258,10 @@ public class ArenaServiceRunnable extends BukkitRunnable {
 
     protected void playing() {
 
-                if (this.arena.getRunners().isEmpty()) {
+                boolean hasActiveRunner = this.arena.getRunners().stream()
+                        .anyMatch(user -> !user.isEliminated());
+                if (!hasActiveRunner) {
+                        this.deathVictory = this.arena.getFinishedRuns() == 0;
                         this.setState(ENDING);
                         return;
                 }
@@ -481,12 +485,13 @@ public class ArenaServiceRunnable extends BukkitRunnable {
                     );
                 });
 
-        if (this.timerExpired) {
+        if (this.timerExpired || this.deathVictory) {
             this.rewardService.rewardDeathWin(this.resolvedMapId(), this.arena.getDeaths().stream()
                     .map(IUser::asBukkit)
                     .filter(Objects::nonNull)
                     .toList());
             this.timerExpired = false;
+            this.deathVictory = false;
         }
 
     }
@@ -777,6 +782,7 @@ public class ArenaServiceRunnable extends BukkitRunnable {
 
         private void resetRoundState() {
                                 this.forceStartRequested = false;
+                this.deathVictory = false;
                 this.barrierTimer = this.configuration.plugin().arenaStartingTime;
                 this.arena.setRemainingTime(this.configuration.plugin().arenaGameTime);
                 this.startingTimer = this.configuration.plugin().arenaPreStartingTime + 1;
