@@ -33,6 +33,7 @@ public final class TrapActivationService {
     private static final String HOLOGRAM_TAG = "deathrun_classic26_trap_hologram";
     private static final Map<TrapKey, Long> COOLDOWN_UNTIL = new ConcurrentHashMap<>();
     private static final Map<TrapKey, TrapActivationContext> ACTIVE = new ConcurrentHashMap<>();
+    private static final Map<TrapKey, ArmorStand> HOLOGRAMS = new ConcurrentHashMap<>();
     private static final Map<UUID, RecentContact> RECENT_CONTACT = new ConcurrentHashMap<>();
 
     private final Plugin plugin;
@@ -136,11 +137,45 @@ public final class TrapActivationService {
         ACTIVE.clear();
         COOLDOWN_UNTIL.clear();
         RECENT_CONTACT.clear();
+        HOLOGRAMS.values().forEach(ArmorStand::remove);
+        HOLOGRAMS.clear();
 
         server.getWorlds().forEach(world ->
                 world.getEntitiesByClass(ArmorStand.class).stream()
                         .filter(stand -> stand.getScoreboardTags().contains(HOLOGRAM_TAG))
                         .forEach(ArmorStand::remove)
+        );
+    }
+
+    public static void resetMap(@NotNull String mapId) {
+        String normalized = mapId.toLowerCase(java.util.Locale.ROOT);
+
+        java.util.List<Map.Entry<TrapKey, TrapActivationContext>> active = ACTIVE.entrySet().stream()
+                .filter(entry -> entry.getKey().mapId().equalsIgnoreCase(normalized))
+                .toList();
+
+        for (Map.Entry<TrapKey, TrapActivationContext> entry : active) {
+            try {
+                entry.getValue().trap().end();
+            } catch (Throwable ignored) {
+                // Best-effort map reset.
+            }
+            ACTIVE.remove(entry.getKey(), entry.getValue());
+        }
+
+        COOLDOWN_UNTIL.keySet().removeIf(key -> key.mapId().equalsIgnoreCase(normalized));
+
+        java.util.List<TrapKey> hologramKeys = HOLOGRAMS.keySet().stream()
+                .filter(key -> key.mapId().equalsIgnoreCase(normalized))
+                .toList();
+        for (TrapKey key : hologramKeys) {
+            ArmorStand stand = HOLOGRAMS.remove(key);
+            if (stand != null)
+                stand.remove();
+        }
+
+        RECENT_CONTACT.entrySet().removeIf(entry ->
+                entry.getValue().context().mapId().equalsIgnoreCase(normalized)
         );
     }
 
@@ -231,12 +266,15 @@ public final class TrapActivationService {
                 }
         );
 
+        HOLOGRAMS.put(key, stand);
+
         new BukkitRunnable() {
             @Override
             public void run() {
                 long remaining = Math.max(0L, cooldownEnd - System.currentTimeMillis());
                 if (remaining <= 0L) {
                     stand.remove();
+                    HOLOGRAMS.remove(key, stand);
                     COOLDOWN_UNTIL.remove(key, cooldownEnd);
                     cancel();
                     return;
