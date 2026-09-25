@@ -5,6 +5,7 @@ import net.kyori.adventure.text.Component;
 import org.bukkit.Location;
 import org.bukkit.Server;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
@@ -160,6 +161,8 @@ public class ArenaServiceRunnable extends BukkitRunnable {
                 .forEach((player) -> {
                                         this.winMapManager.reclaimMap(player);
                     player.getInventory().clear();
+                    player.getInventory().setArmorContents(new ItemStack[4]);
+                    player.getInventory().setItemInOffHand(null);
                     player.setAllowFlight(false);
                     player.teleport(this.map.arenaWaitingLobbyLocation);
                 });
@@ -394,6 +397,8 @@ public class ArenaServiceRunnable extends BukkitRunnable {
 
                     this.server.getPluginManager().callEvent(new UserArenaRoleAssignedEvent(user.getRole(), user));
                     player.getInventory().clear();
+                    player.getInventory().setArmorContents(new ItemStack[4]);
+                    player.getInventory().setItemInOffHand(null);
                     player.setFoodLevel(20);
                     player.setSaturation(20.0f);
 

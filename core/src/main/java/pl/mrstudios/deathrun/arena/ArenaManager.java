@@ -6,6 +6,7 @@ import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemStack;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.plugin.Plugin;
 import org.jetbrains.annotations.NotNull;
@@ -681,6 +682,8 @@ public class ArenaManager {
             .forEach(player::removePotionEffect);
 
         player.getInventory().clear();
+        player.getInventory().setArmorContents(new ItemStack[4]);
+        player.getInventory().setItemInOffHand(null);
         player.setGameMode(ADVENTURE);
         player.setAllowFlight(false);
         player.setFoodLevel(20);
@@ -776,6 +779,8 @@ public class ArenaManager {
                 .forEach(player::removePotionEffect);
 
         player.getInventory().clear();
+        player.getInventory().setArmorContents(new ItemStack[4]);
+        player.getInventory().setItemInOffHand(null);
         player.setGameMode(ADVENTURE);
         player.setAllowFlight(false);
         player.setFoodLevel(20);

@@ -36,6 +36,8 @@ public class ArenaButtonClickListener implements Listener {
 
     @EventHandler(priority = MONITOR)
     public void onArenaButtonClick(@NotNull PlayerInteractEvent event) {
+        if (event.isCancelled())
+            return;
         if (event.getClickedBlock() == null || event.getAction() != RIGHT_CLICK_BLOCK)
             return;
         if (!event.getClickedBlock().getType().name().endsWith("_BUTTON"))
