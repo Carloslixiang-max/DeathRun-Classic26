@@ -185,7 +185,13 @@ During setup:
 ```text
 /dr map check <id>
 /dr map status <id>
+/dr map manifest <id>
 ```
+
+`/dr map manifest <id>` is the full authoring audit. It prints map metadata, waiting lobby,
+every Runner/Death spawn, checkpoint order/points/finish/region bounds, trap order/type/button/
+target bounds, start barrier, teleport pads, and the final preflight result. It is intended for
+final Safari/Temple coordinate review and can be run from the server console.
 
 The current preflight catches, among other things:
 

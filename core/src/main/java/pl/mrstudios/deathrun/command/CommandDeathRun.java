@@ -761,6 +761,93 @@ public class CommandDeathRun {
                 .replace("<issues>", String.join(", ", issues)));
     }
 
+    @Execute(name = "map manifest")
+    @Permission("mrstudios.command.deathrun.setup")
+    public void setupMapManifest(
+            @Context CommandSender sender,
+            @Arg("id") String id
+    ) {
+        this.configuration.map().ensureMapsMutable();
+        MapConfiguration.MapDefinition map = this.configuration.map().getMapById(id);
+        if (map == null) {
+            this.message(sender, this.configuration.language().commandMessageSetupMapMissing.replace("<map>", id));
+            return;
+        }
+
+        if (map.world != null && !map.world.isBlank())
+            this.arenaManager.loadExistingMapWorld(map.world);
+
+        try {
+            this.arenaManager.ensureMapWorldBindings(map);
+        } catch (RuntimeException exception) {
+            this.message(sender, PREFIX + "<yellow>Manifest warning: some persisted locations could not be rebound: <white>"
+                    + this.safe(exception.getMessage()));
+        }
+
+        int maxPlayers = this.arenaManager.maxPlayers(map);
+        int requiredPlayers = this.arenaManager.configuredRequiredPlayersToStart(map);
+        this.message(sender, PREFIX + "<gold>Map manifest <white>" + this.safe(map.id));
+        this.message(sender, PREFIX + "<gray>name=<white>" + this.safe(map.name)
+                + " <gray>creator=<white>" + this.safe(map.creator)
+                + " <gray>world=<white>" + this.safe(map.world));
+        this.message(sender, PREFIX + "<gray>setup=<white>" + map.arenaSetupEnabled
+                + " <gray>max=<white>" + maxPlayers
+                + " <gray>required=<white>" + requiredPlayers
+                + " <gray>finishCp=<white>" + String.valueOf(map.arenaFinishCheckpointId));
+        this.message(sender, PREFIX + "<gray>waiting=<white>" + this.locationSummary(map.arenaWaitingLobbyLocation));
+
+        this.message(sender, PREFIX + "<gray>runnerSpawns=<white>" + map.arenaRunnerSpawnLocations.size());
+        for (int i = 0; i < map.arenaRunnerSpawnLocations.size(); i++)
+            this.message(sender, PREFIX + "<gray>runner#" + (i + 1) + "=<white>"
+                    + this.locationSummary(map.arenaRunnerSpawnLocations.get(i)));
+
+        this.message(sender, PREFIX + "<gray>deathSpawns=<white>" + map.arenaDeathSpawnLocations.size());
+        for (int i = 0; i < map.arenaDeathSpawnLocations.size(); i++)
+            this.message(sender, PREFIX + "<gray>death#" + (i + 1) + "=<white>"
+                    + this.locationSummary(map.arenaDeathSpawnLocations.get(i)));
+
+        this.message(sender, PREFIX + "<gray>checkpoints=<white>" + map.arenaCheckpoints.size());
+        for (int i = 0; i < map.arenaCheckpoints.size(); i++) {
+            Checkpoint checkpoint = map.arenaCheckpoints.get(i);
+            int points = i < map.arenaCheckpointPoints.size() ? map.arenaCheckpointPoints.get(i) : 0;
+            boolean finish = map.arenaFinishCheckpointId != null
+                    && map.arenaFinishCheckpointId.equals(checkpoint.id());
+            this.message(sender, PREFIX + "<gray>cp#" + (i + 1)
+                    + " <gray>id=<white>" + checkpoint.id()
+                    + " <gray>name=<white>" + this.safe(checkpoint.name())
+                    + " <gray>points=<white>" + points
+                    + " <gray>finish=<white>" + finish
+                    + " <gray>spawn=<white>" + this.locationSummary(checkpoint.spawn())
+                    + " <gray>region=<white>" + this.regionSummary(checkpoint.locations()));
+        }
+
+        this.message(sender, PREFIX + "<gray>traps=<white>" + map.arenaTraps.size());
+        for (int i = 0; i < map.arenaTraps.size(); i++) {
+            ITrap trap = map.arenaTraps.get(i);
+            String type = trap == null ? "null" : trap.getClass().getSimpleName();
+            Location button = trap == null ? null : trap.getButton();
+            List<Location> targets = trap == null || trap.getLocations() == null ? List.of() : trap.getLocations();
+            this.message(sender, PREFIX + "<gray>trap#" + (i + 1)
+                    + " <gray>type=<white>" + type
+                    + " <gray>button=<white>" + this.locationSummary(button)
+                    + " <gray>targets=<white>" + this.regionSummary(targets));
+        }
+
+        this.message(sender, PREFIX + "<gray>barrier=<white>" + this.regionSummary(map.arenaStartBarrierBlocks));
+        this.message(sender, PREFIX + "<gray>teleportPads=<white>" + map.teleportPads.size());
+        for (int i = 0; i < map.teleportPads.size(); i++) {
+            TeleportPad pad = map.teleportPads.get(i);
+            this.message(sender, PREFIX + "<gray>teleport#" + (i + 1)
+                    + " <gray>source=<white>" + this.locationSummary(pad.padLocation())
+                    + " <gray>destination=<white>" + this.locationSummary(pad.teleportLocation()));
+        }
+
+        List<String> issues = this.mapIssues(map);
+        this.message(sender, PREFIX + "<gray>preflight=<white>"
+                + (issues.isEmpty() ? "healthy" : String.join(", ", issues)));
+        this.message(sender, PREFIX + "<green>Map manifest complete: <white>" + this.safe(map.id));
+    }
+
     @Execute(name = "map status")
     @Permission("mrstudios.command.deathrun.setup")
     public void setupMapsStatus(
@@ -2244,6 +2331,35 @@ public class CommandDeathRun {
         }
 
         return pressurePlates.get(0);
+    }
+
+    private @NotNull String regionSummary(
+            @Nullable List<Location> locations
+    ) {
+        if (locations == null || locations.isEmpty())
+            return "0 blocks";
+
+        List<Location> valid = locations.stream()
+                .filter(Objects::nonNull)
+                .filter(location -> location.getWorld() != null)
+                .toList();
+        if (valid.isEmpty())
+            return locations.size() + " blocks (unresolved)";
+
+        int minX = valid.stream().mapToInt(Location::getBlockX).min().orElse(0);
+        int minY = valid.stream().mapToInt(Location::getBlockY).min().orElse(0);
+        int minZ = valid.stream().mapToInt(Location::getBlockZ).min().orElse(0);
+        int maxX = valid.stream().mapToInt(Location::getBlockX).max().orElse(0);
+        int maxY = valid.stream().mapToInt(Location::getBlockY).max().orElse(0);
+        int maxZ = valid.stream().mapToInt(Location::getBlockZ).max().orElse(0);
+        String world = valid.get(0).getWorld().getName();
+
+        return locations.size() + " blocks "
+                + world + " ["
+                + minX + "," + minY + "," + minZ
+                + " -> "
+                + maxX + "," + maxY + "," + maxZ
+                + "]";
     }
 
     private @NotNull String locationSummary(

@@ -282,6 +282,20 @@ jobs:
           done
           test "$VERIFY_RESTORE" -eq 1
 
+          printf 'dr map manifest classic26-playtest\n' >&3
+          MANIFEST_OK=0
+          for _ in $(seq 1 30); do
+            if grep -q 'Map manifest complete: classic26-playtest' server.log; then
+              MANIFEST_OK=1
+              break
+            fi
+            if ! kill -0 "$PID" 2>/dev/null; then
+              break
+            fi
+            sleep 1
+          done
+          test "$MANIFEST_OK" -eq 1
+
           printf 'dr map check classic26-playtest\n' >&3
           MAP_CHECK_OK=0
           for _ in $(seq 1 30); do
