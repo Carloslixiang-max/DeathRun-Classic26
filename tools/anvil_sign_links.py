@@ -160,7 +160,24 @@ def render_report(
         for sign in signs
         if sign_kind(sign) == "DIRECTIONAL_ACTION"
     ]
-    linked = sum(1 for action in actions if action.nearby_buttons)
+    linked_actions = [action for action in actions if action.nearby_buttons]
+    linked = len(linked_actions)
+    unique_nearest = {
+        (
+            action.nearest_button.x,
+            action.nearest_button.y,
+            action.nearest_button.z,
+            action.nearest_button.name,
+        )
+        for action in linked_actions
+        if action.nearest_button is not None
+    }
+    single_candidate = sum(
+        len(action.nearby_buttons) == 1 for action in linked_actions
+    )
+    ambiguous = sum(
+        len(action.nearby_buttons) > 1 for action in linked_actions
+    )
 
     lines = [
         "# DeathRun Classic26 sign-to-button evidence",
@@ -170,6 +187,10 @@ def render_report(
             f"buttons={len(buttons)} signs={len(signs)} "
             f"directional_actions={kinds['DIRECTIONAL_ACTION']} "
             f"directional_with_button_within_radius={linked} "
+            f"unique_nearest_buttons={len(unique_nearest)} "
+            f"single_candidate_links={single_candidate} "
+            f"ambiguous_links={ambiguous} "
+            f"unlinked_actions={len(actions) - linked} "
             f"warnings={kinds['WARNING']} numeric_pairs={kinds['NUMERIC_PAIR']} "
             f"titles={kinds['TITLE']} credits={kinds['CREDIT']} "
             f"other={kinds['OTHER']} empty={kinds['EMPTY']} "
@@ -193,9 +214,10 @@ def render_report(
             for button in action.nearby_buttons
         ) or "none"
 
+        link_status = "STRONG" if action.nearby_buttons else "UNLINKED"
         lines.append(
             "ACTION_SIGN\t"
-            f"id={index:03d}\tpos={sign.x},{sign.y},{sign.z}\t"
+            f"id={index:03d}\tlink={link_status}\tpos={sign.x},{sign.y},{sign.z}\t"
             f"nearest_button={nearest}\tdistance={distance_text}\t"
             f"nearby_buttons={len(action.nearby_buttons)}\t"
             f"nearby={nearby_text}\ttext={sign.text}"
@@ -216,7 +238,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("probe_report", type=Path)
     parser.add_argument("--output", type=Path)
-    parser.add_argument("--nearby-radius", type=float, default=6.0)
+    parser.add_argument("--nearby-radius", type=float, default=9.0)
     parser.add_argument("--min-actions", type=int, default=0)
     args = parser.parse_args(argv)
 
