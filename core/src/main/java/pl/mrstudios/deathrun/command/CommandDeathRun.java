@@ -1046,6 +1046,7 @@ public class CommandDeathRun {
                     files = stream
                             .filter(java.nio.file.Files::isRegularFile)
                             .sorted()
+                            .limit(10_000)
                             .toList();
                 }
 

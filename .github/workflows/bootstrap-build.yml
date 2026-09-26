@@ -186,6 +186,20 @@ jobs:
           max-players=4
           EOF
 
+          # Legacy datapack scanner fixture. It is intentionally never executed;
+          # the scanner must recover exactly the relevant commands from disk.
+          mkdir -p world/datapacks/classic26-fixture/data/deathrun/function
+          cat > world/datapacks/classic26-fixture/pack.mcmeta <<'EOF'
+          {"pack":{"pack_format":94,"description":"DeathRun Classic26 legacy scanner fixture"}}
+          EOF
+          cat > world/datapacks/classic26-fixture/data/deathrun/function/fixture.mcfunction <<'EOF'
+          # scanner fixture
+          fill 0 70 0 2 70 2 air
+          tp @a 10 80 10
+          execute as @a at @s run setblock ~ ~-1 ~ stone
+          say this-line-must-not-be-reported
+          EOF
+
           mkfifo server.in
           exec 3<>server.in
           java -Xms512M -Xmx1024M -jar paper.jar --nogui <server.in > server.log 2>&1 &
@@ -295,6 +309,26 @@ jobs:
             sleep 1
           done
           test "$MANIFEST_OK" -eq 1
+
+          printf 'dr map legacyfilescan classic26-playtest\n' >&3
+          LEGACY_FILE_SCAN_OK=0
+          for _ in $(seq 1 30); do
+            if grep -q 'Legacy datapack scan complete for classic26-playtest' server.log; then
+              LEGACY_FILE_SCAN_OK=1
+              break
+            fi
+            if ! kill -0 "$PID" 2>/dev/null; then
+              break
+            fi
+            sleep 1
+          done
+          test "$LEGACY_FILE_SCAN_OK" -eq 1
+          LEGACY_REPORT='plugins/DeathRun/research/classic26-playtest-legacy-functions.txt'
+          test -s "$LEGACY_REPORT"
+          grep -q 'summary functionFiles=1 relevantCommands=3 .*truncated=false' "$LEGACY_REPORT"
+          grep -q 'fill 0 70 0 2 70 2 air' "$LEGACY_REPORT"
+          grep -q 'execute as @a at @s run setblock ~ ~-1 ~ stone' "$LEGACY_REPORT"
+          ! grep -q 'say this-line-must-not-be-reported' "$LEGACY_REPORT"
 
           printf 'dr map check classic26-playtest\n' >&3
           MAP_CHECK_OK=0

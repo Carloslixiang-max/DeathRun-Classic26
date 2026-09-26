@@ -210,6 +210,29 @@ candidate entries so a mistaken giant selection cannot stall the server or flood
 Use command-block coordinates and command text as evidence when recovering legacy trap/fill/teleport
 geometry, then author the measured result through the normal Classic26 checkpoint/trap/teleport tools.
 
+For legacy datapacks that no longer run on Paper 26.2, use:
+
+```text
+/dr map legacyfilescan <id>
+```
+
+This command is console-safe and read-only. It locates `datapacks/` by walking up from the map's real
+`World#getWorldFolder()`, so it works with both legacy top-level worlds and Paper 26.2
+`dimensions/<namespace>/<key>` worlds. It scans unpacked `.mcfunction` files and ZIP datapacks,
+extracting coordinate-bearing/runtime-relevant commands such as `fill`, `clone`, `setblock`,
+`tp`, `execute`, `summon`, `effect`, `particle`, `function`, and scoreboard/tag/data
+operations.
+
+The full result is written privately on the server to:
+
+```text
+plugins/DeathRun/research/<map>-legacy-functions.txt
+```
+
+The scanner does not execute old commands or modify the world. Safety limits cap the scan at 2,000
+function files, 8 MiB of function text, 1 MiB per function entry, and the first 10,000 files found
+under each datapack root.
+
 The current preflight catches, among other things:
 
 - missing/unloaded world
