@@ -344,6 +344,20 @@ jobs:
           done
           test "$MAP_CHECK_OK" -eq 1
 
+          printf 'dr map session classic26-playtest\n' >&3
+          SESSION_OK=0
+          for _ in $(seq 1 30); do
+            if grep -q 'Session classic26-playtest.*state=WAITING.*users=0.*queued=0' server.log; then
+              SESSION_OK=1
+              break
+            fi
+            if ! kill -0 "$PID" 2>/dev/null; then
+              break
+            fi
+            sleep 1
+          done
+          test "$SESSION_OK" -eq 1
+
           printf 'stop\n' >&3 || true
           exec 3>&-
           stop_server_process "$PID"

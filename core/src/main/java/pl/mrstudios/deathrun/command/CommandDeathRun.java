@@ -1155,6 +1155,71 @@ public class CommandDeathRun {
         }
     }
 
+    @Execute(name = "map session")
+    @Permission("mrstudios.command.deathrun.setup")
+    public void setupMapSession(
+            @Context CommandSender sender,
+            @Arg("id") String id
+    ) {
+        this.configuration.map().ensureMapsMutable();
+        MapConfiguration.MapDefinition map = this.configuration.map().getMapById(id);
+        if (map == null) {
+            this.message(sender, this.configuration.language().commandMessageSetupMapMissing.replace("<map>", id));
+            return;
+        }
+
+        ArenaManager.ArenaRuntime runtime = this.arenaManager.runtimeByMapId(
+                this.configuration.map().normalizedMapId(map.id)
+        );
+        if (runtime == null) {
+            this.message(sender, PREFIX + "<yellow>Session <white>" + this.safe(map.id)
+                    + "<yellow>: runtime unavailable"
+                    + " <gray>| configured=<white>" + this.arenaManager.isMapConfigured(map)
+                    + " <gray>| editLocked=<white>" + this.arenaManager.isMapLockedForEditing(map));
+            return;
+        }
+
+        int queued = this.arenaManager.queuedPlayersForMap(runtime.mapId());
+        this.message(sender, PREFIX + "<gold>Session <white>" + this.safe(runtime.mapId())
+                + " <gray>| state=<white>" + runtime.arena().getGameState()
+                + " <gray>| users=<white>" + runtime.arena().getUsers().size()
+                + " <gray>| queued=<white>" + queued
+                + " <gray>| elapsed=<white>" + runtime.arena().getElapsedTime()
+                + " <gray>| remaining=<white>" + runtime.arena().getRemainingTime()
+                + " <gray>| finished=<white>" + runtime.arena().getFinishedRuns());
+
+        this.message(sender, PREFIX + "<gray>timers"
+                + " <gray>| starting=<white>" + runtime.service().startingTimerForDisplay()
+                + " <gray>| barrier=<white>" + runtime.service().barrierTimerForDisplay()
+                + " <gray>| required=<white>" + runtime.service().requiredPlayersToStartForDisplay()
+                + " <gray>| max=<white>" + this.arenaManager.maxPlayers(map)
+                + " <gray>| editLocked=<white>" + this.arenaManager.isMapLockedForEditing(map));
+
+        if (runtime.arena().getUsers().isEmpty()) {
+            this.message(sender, PREFIX + "<gray>No active players in this session.");
+            return;
+        }
+
+        for (var user : runtime.arena().getUsers()) {
+            Player player = user.asBukkit();
+            String checkpoint = user.getCheckpoint() == null
+                    ? "-"
+                    : String.valueOf(user.getCheckpoint().id());
+            String location = player == null ? "offline" : this.locationSummary(player.getLocation());
+
+            this.message(sender, PREFIX + "<gray>player=<white>" + this.safe(user.getName())
+                    + " <gray>| role=<white>" + user.getRole()
+                    + " <gray>| lives=<white>" + user.getLives()
+                    + " <gray>| deaths=<white>" + user.getDeaths()
+                    + " <gray>| points=<white>" + user.getRoundPoints()
+                    + " <gray>| cp=<white>" + checkpoint
+                    + " <gray>| eliminated=<white>" + user.isEliminated()
+                    + " <gray>| online=<white>" + (player != null)
+                    + " <gray>| snapshotPending=<white>" + (player != null && this.arenaManager.hasPendingSnapshot(player))
+                    + " <gray>| loc=<white>" + location);
+        }
+    }
+
     @Execute(name = "map status")
     @Permission("mrstudios.command.deathrun.setup")
     public void setupMapsStatus(

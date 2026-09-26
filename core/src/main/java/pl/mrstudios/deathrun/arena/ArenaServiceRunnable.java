@@ -734,6 +734,14 @@ public class ArenaServiceRunnable extends BukkitRunnable {
                 return this.requiredPlayersToStart();
         }
 
+        public int startingTimerForDisplay() {
+                return Math.max(0, this.startingTimer);
+        }
+
+        public int barrierTimerForDisplay() {
+                return Math.max(0, this.barrierTimer);
+        }
+
         private int totalPlayersReadyToStart() {
                 return this.arena.getUsers().size() + this.arenaManager.queuedPlayersForMap(this.resolvedMapId());
         }
