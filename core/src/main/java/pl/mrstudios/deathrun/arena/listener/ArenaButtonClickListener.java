@@ -10,6 +10,7 @@ import pl.mrstudios.commons.inject.annotation.Inject;
 import pl.mrstudios.deathrun.api.arena.user.IUser;
 import pl.mrstudios.deathrun.arena.ArenaManager;
 import pl.mrstudios.deathrun.classic.trap.TrapActivationService;
+import pl.mrstudios.deathrun.classic.playtest.PlaytestTraceService;
 import pl.mrstudios.deathrun.config.Configuration;
 
 import static org.bukkit.event.EventPriority.MONITOR;
@@ -21,17 +22,20 @@ public class ArenaButtonClickListener implements Listener {
     private final ArenaManager arenaManager;
     private final Configuration configuration;
     private final TrapActivationService activationService;
+    private final PlaytestTraceService trace;
 
     @Inject
     public ArenaButtonClickListener(
             @NotNull ArenaManager arenaManager,
             @NotNull Plugin plugin,
             @NotNull Server server,
-            @NotNull Configuration configuration
+            @NotNull Configuration configuration,
+            @NotNull PlaytestTraceService trace
     ) {
         this.arenaManager = arenaManager;
         this.configuration = configuration;
         this.activationService = new TrapActivationService(plugin, server, configuration);
+        this.trace = trace;
     }
 
     @EventHandler(priority = MONITOR)
@@ -68,6 +72,10 @@ public class ArenaButtonClickListener implements Listener {
 
         event.setCancelled(true);
         TrapActivationService.ActivationResult result = this.activationService.activate(event.getPlayer(), runtime, trapIndex);
+        this.trace.record(runtime.mapId(), "TRAP_INPUT",
+                "player=" + event.getPlayer().getName()
+                        + " method=BUTTON index=" + (trapIndex + 1)
+                        + " result=" + result);
         if (result == TrapActivationService.ActivationResult.COOLDOWN)
             event.getPlayer().playSound(event.getPlayer().getLocation(), this.configuration.plugin().arenaSoundTrapDelay, 1.0f, 1.0f);
     }
