@@ -2720,6 +2720,15 @@ public class CommandDeathRun {
             int requiredRunnerSpawns = this.arenaManager.requiredRunnerSpawnCapacity(map);
             if (map.arenaRunnerSpawnLocations.size() < requiredRunnerSpawns)
                 issues.add("insufficient-runner-spawns(" + map.arenaRunnerSpawnLocations.size() + "/" + requiredRunnerSpawns + ")");
+
+            long distinctRunnerSpawns = map.arenaRunnerSpawnLocations.stream()
+                    .filter(Objects::nonNull)
+                    .filter(location -> location.getWorld() != null)
+                    .map(this::locationBlockKey)
+                    .distinct()
+                    .count();
+            if (distinctRunnerSpawns < map.arenaRunnerSpawnLocations.size())
+                issues.add("duplicate-runner-spawns");
         }
 
         if (map.arenaDeathSpawnLocations.isEmpty()) {
@@ -2735,7 +2744,29 @@ public class CommandDeathRun {
             int requiredDeathSpawns = this.arenaManager.requiredDeathSpawnCapacity(map);
             if (map.arenaDeathSpawnLocations.size() < requiredDeathSpawns)
                 issues.add("insufficient-death-spawns(" + map.arenaDeathSpawnLocations.size() + "/" + requiredDeathSpawns + ")");
+
+            long distinctDeathSpawns = map.arenaDeathSpawnLocations.stream()
+                    .filter(Objects::nonNull)
+                    .filter(location -> location.getWorld() != null)
+                    .map(this::locationBlockKey)
+                    .distinct()
+                    .count();
+            if (distinctDeathSpawns < map.arenaDeathSpawnLocations.size())
+                issues.add("duplicate-death-spawns");
         }
+
+        Set<String> runnerSpawnKeys = map.arenaRunnerSpawnLocations.stream()
+                .filter(Objects::nonNull)
+                .filter(location -> location.getWorld() != null)
+                .map(this::locationBlockKey)
+                .collect(Collectors.toSet());
+        boolean roleSpawnOverlap = map.arenaDeathSpawnLocations.stream()
+                .filter(Objects::nonNull)
+                .filter(location -> location.getWorld() != null)
+                .map(this::locationBlockKey)
+                .anyMatch(runnerSpawnKeys::contains);
+        if (roleSpawnOverlap)
+            issues.add("runner-death-spawn-overlap");
 
         int maxPlayers = this.arenaManager.maxPlayers(map);
         int requiredPlayers = this.arenaManager.configuredRequiredPlayersToStart(map);
@@ -2836,6 +2867,15 @@ public class CommandDeathRun {
         return issues.stream().distinct().collect(Collectors.toList());
     }
 
+    private @NotNull String locationBlockKey(
+            @NotNull Location location
+    ) {
+        String worldKey = location.getWorld() == null
+                ? "unresolved"
+                : location.getWorld().getUID().toString();
+        return worldKey + ":" + location.getBlockX() + ":" + location.getBlockY() + ":" + location.getBlockZ();
+    }
+
     private boolean sameWorld(
             @NotNull Location location,
             @NotNull World world
@@ -2853,6 +2893,11 @@ public class CommandDeathRun {
                     if (issue.startsWith("insufficient-runner-spawns(")
                             || issue.startsWith("insufficient-death-spawns(")
                             || issue.startsWith("required-players-exceed-max("))
+                        return true;
+
+                    if (issue.equals("duplicate-runner-spawns")
+                            || issue.equals("duplicate-death-spawns")
+                            || issue.equals("runner-death-spawn-overlap"))
                         return true;
 
                     return switch (issue) {
