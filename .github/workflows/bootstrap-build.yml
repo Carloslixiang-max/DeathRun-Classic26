@@ -161,7 +161,11 @@ jobs:
           grep '^BLOCK_ENTITY_INVENTORY' "$ROOT/toxic-factory-block-entity-evidence.txt" | head -n 120 || true
 
           echo '--- To Bee mechanism BlockState evidence ---'
-          grep           python3 tools/anvil_stage_evidence.py \
+          awk -F '\t' '$1 == "BLOCK" && $2 == "MECHANISM" { print; n++; if (n >= 160) exit }' "$ROOT/to-bee-or-not-to-bee-probe.txt"
+          echo '--- Toxic Factory mechanism BlockState evidence ---'
+          awk -F '\t' '$1 == "BLOCK" && $2 == "MECHANISM" { print; n++; if (n >= 160) exit }' "$ROOT/toxic-factory-probe.txt"
+
+          python3 tools/anvil_stage_evidence.py \
             "$ROOT/to-bee-or-not-to-bee-probe.txt" \
             "$ROOT/to-bee-or-not-to-bee-entity-evidence.txt" \
             "$ROOT/to-bee-or-not-to-bee-block-entity-evidence.txt" \
