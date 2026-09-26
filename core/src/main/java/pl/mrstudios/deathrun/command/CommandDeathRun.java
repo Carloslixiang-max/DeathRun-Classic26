@@ -1283,7 +1283,7 @@ public class CommandDeathRun {
             World world = this.plugin.getServer().getWorld(worldName);
             if (world != null) {
                 try {
-                    this.refreshWorldBackup(worldName, world);
+                    this.refreshWorldBackup(map, world);
                     actions.add("backup-refreshed");
                 } catch (Exception exception) {
                     this.message(player, this.configuration.language().commandMessageSetupMapBackupFailed
@@ -2806,7 +2806,7 @@ public class CommandDeathRun {
         }
 
         try {
-            this.refreshWorldBackup(worldName, world);
+            this.refreshWorldBackup(map, world);
         } catch (Exception exception) {
             throw new RuntimeException("Unable to save world backup due to an exception.", exception);
         }
