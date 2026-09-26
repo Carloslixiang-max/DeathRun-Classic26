@@ -3319,8 +3319,15 @@ public class CommandDeathRun {
             issues.add("finish-checkpoint-not-last");
         }
 
+        if (!map.arenaCheckpoints.isEmpty() && map.arenaCheckpointPoints.isEmpty())
+            issues.add("missing-checkpoint-points");
+
         if (!map.arenaCheckpointPoints.isEmpty() && map.arenaCheckpointPoints.size() != map.arenaCheckpoints.size())
             issues.add("checkpoint-points-size-mismatch");
+
+        if (!map.arenaCheckpointPoints.isEmpty()
+                && map.arenaCheckpointPoints.stream().anyMatch(points -> points == null || points < 0))
+            issues.add("checkpoint-points-invalid");
 
         if (!map.arenaCheckpoints.isEmpty() && map.arenaCheckpoints.stream().anyMatch(checkpoint ->
                 checkpoint == null
@@ -3484,7 +3491,9 @@ public class CommandDeathRun {
                              "finish-checkpoint-not-set",
                              "finish-checkpoint-invalid",
                              "finish-checkpoint-not-last",
+                             "missing-checkpoint-points",
                              "checkpoint-points-size-mismatch",
+                             "checkpoint-points-invalid",
                              "checkpoint-location-invalid",
                              "checkpoint-location-wrong-world",
                              "missing-traps",
