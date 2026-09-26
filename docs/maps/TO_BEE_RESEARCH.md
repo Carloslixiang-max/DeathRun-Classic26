@@ -58,23 +58,40 @@ plates, so trap type must be corroborated visually or behaviorally.
 
 ## level.dat evidence
 
-`tools/leveldat_probe.py` reads the pinned archive's `level.dat` and reports
-world spawn plus version/world metadata. Treat the world spawn as an orientation
-anchor only. It must not be copied into Classic26 as Runner or Death spawn
-unless separate evidence confirms that role.
+The pinned `level.dat` parses successfully as:
+
+- DataVersion: **2580**
+- Minecraft version: **1.16.3**
+- LevelName: **HiveMC - DR2BORNOT2B**
+- SpawnX/Y/Z: **0,0,0**
+- initialized: **0**
+- game type: **0**
+- difficulty: **1**
+
+Because this archive explicitly reports `initialized=0` together with a zero
+world spawn, Classic26 marks this as `spawn_status=placeholder`. It is **not**
+usable as a Runner spawn, Death spawn, waiting lobby, or orientation anchor.
+
+## Physical topology evidence
+
+`tools/anvil_topology.py` groups only physically adjacent pressure plates and
+portal blocks. This is stricter than the spatial review clustering and is meant
+to answer questions such as "how many separate pressure-plate surfaces survive
+in the archive?" It still does not label any component as a checkpoint or trap.
 
 ## Import procedure
 
 1. Keep the pinned archive immutable and use it only as source evidence.
-2. Use the level.dat world spawn as a navigation/orientation anchor.
-3. Review HIGH then MEDIUM local evidence groups in the original world.
-4. Correlate candidate groups with visible route geometry and surviving portal
+2. Ignore the placeholder `level.dat` spawn for gameplay configuration.
+3. Use physical pressure-plate/portal components to identify reviewable geometry.
+4. Review HIGH then MEDIUM local evidence groups in the original world.
+5. Correlate candidate groups with visible route geometry and surviving portal
    structures. Do not infer trap effects from block category alone.
-5. Establish all 9 checkpoint regions from world/video evidence before creating
+6. Establish all 9 checkpoint regions from world/video evidence before creating
    a formal Classic26 map profile.
-6. Establish Runner/Death spawns, start barrier, finish region, trap buttons and
+7. Establish Runner/Death spawns, start barrier, finish region, trap buttons and
    target regions independently.
-7. Run `/dr map check`, `/dr map manifest`, backup/restore verification and
+8. Run `/dr map check`, `/dr map manifest`, backup/restore verification and
    the human acceptance trace before considering the imported map playable.
 
 ## Still unknown

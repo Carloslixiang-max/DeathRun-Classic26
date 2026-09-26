@@ -50,6 +50,7 @@ jobs:
           python3 tools/test_anvil_probe.py
           python3 tools/test_anvil_cluster.py
           python3 tools/test_leveldat_probe.py
+          python3 tools/test_anvil_topology.py
 
           ROOT='/tmp/deathrun-archive-probe'
           rm -rf "$ROOT"
@@ -94,6 +95,16 @@ jobs:
           grep '^summary ' "$ROOT/to-bee-or-not-to-bee-clusters.txt"
           grep '^categories ' "$ROOT/to-bee-or-not-to-bee-clusters.txt"
           awk 'BEGIN { n=0 } /^CLUSTER/ { print; n++; if (n >= 20) exit 0 }' "$ROOT/to-bee-or-not-to-bee-clusters.txt"
+
+          python3 tools/anvil_topology.py \
+            "$ROOT/to-bee-or-not-to-bee-probe.txt" \
+            --output "$ROOT/to-bee-or-not-to-bee-topology.txt" \
+            --min-pressure-components 1 --min-portal-components 1
+          grep '^topology_summary ' "$ROOT/to-bee-or-not-to-bee-topology.txt"
+          grep '^pressure_plate_materials ' "$ROOT/to-bee-or-not-to-bee-topology.txt"
+          grep '^portal_materials ' "$ROOT/to-bee-or-not-to-bee-topology.txt"
+          awk 'BEGIN { n=0 } /^PRESSURE_PLATE_COMPONENT/ { print; n++; if (n >= 25) exit 0 }' "$ROOT/to-bee-or-not-to-bee-topology.txt"
+          awk 'BEGIN { n=0 } /^PORTAL_COMPONENT/ { print; n++; if (n >= 20) exit 0 }' "$ROOT/to-bee-or-not-to-bee-topology.txt"
 
           for report in "$ROOT/toxic-factory-probe.txt" "$ROOT/to-bee-or-not-to-bee-probe.txt"; do
             grep -Eq '^summary regions=[1-9][0-9]* chunks=[1-9][0-9]* .*candidate_blocks=[1-9][0-9]*' "$report"

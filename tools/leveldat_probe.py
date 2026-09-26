@@ -38,14 +38,21 @@ def extract_metadata(data: dict[str, Any]) -> dict[str, Any]:
         _value(data, "SpawnY"),
         _value(data, "SpawnZ"),
     )
+    initialized = _value(data, "initialized", "Initialized")
+    spawn_status = (
+        "placeholder"
+        if spawn == (0, 0, 0) and initialized in (0, False)
+        else "reported"
+    )
     return {
         "data_version": _value(data, "DataVersion"),
         "level_name": _value(data, "LevelName"),
         "spawn": spawn,
+        "spawn_status": spawn_status,
         "game_type": _value(data, "GameType"),
         "difficulty": _value(data, "Difficulty"),
         "hardcore": _value(data, "hardcore", "Hardcore"),
-        "initialized": _value(data, "initialized", "Initialized"),
+        "initialized": initialized,
         "time": _value(data, "Time"),
         "day_time": _value(data, "DayTime"),
         "version_name": (
@@ -75,6 +82,7 @@ def render_report(path: Path, metadata: dict[str, Any]) -> str:
         f"version_name={_render(metadata['version_name'])}",
         f"level_name={_render(metadata['level_name'])}",
         f"spawn={spawn}",
+        f"spawn_status={_render(metadata['spawn_status'])}",
         f"game_type={_render(metadata['game_type'])}",
         f"difficulty={_render(metadata['difficulty'])}",
         f"hardcore={_render(metadata['hardcore'])}",
