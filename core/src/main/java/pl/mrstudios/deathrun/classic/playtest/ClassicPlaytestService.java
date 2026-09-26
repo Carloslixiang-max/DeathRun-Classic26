@@ -7,6 +7,8 @@ import org.bukkit.World;
 import org.bukkit.WorldCreator;
 import org.bukkit.block.BlockFace;
 import org.bukkit.block.data.Directional;
+import org.bukkit.block.data.FaceAttachable;
+import org.bukkit.block.data.type.Switch;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
 import org.jetbrains.annotations.NotNull;
@@ -233,8 +235,12 @@ public final class ClassicPlaytestService {
             Set<String> actualTrapTypes = new HashSet<>();
             for (ITrap trap : map.arenaTraps) {
                 actualTrapTypes.add(trap.getClass().getSimpleName());
-                if (!this.locationOnWorld(trap.getButton(), world))
+                if (!this.locationOnWorld(trap.getButton(), world)) {
                     issues.add("trap-button-world:" + trap.getClass().getSimpleName());
+                } else if (!trap.getButton().getBlock().getType().name().endsWith("_BUTTON")) {
+                    issues.add("trap-button-type:" + trap.getClass().getSimpleName()
+                            + ":" + trap.getButton().getBlock().getType().name());
+                }
                 if (trap.getLocations() == null || trap.getLocations().isEmpty()) {
                     issues.add("trap-region-empty:" + trap.getClass().getSimpleName());
                 } else if (trap.getLocations().stream().anyMatch(location -> !this.locationOnWorld(location, world))) {
@@ -300,7 +306,13 @@ public final class ClassicPlaytestService {
 
         for (int z : new int[]{14, 26, 34, 46, 58, 70, 86, 98, 110, 122, 126, 138, 146, 150, 158, 170, 182}) {
             world.getBlockAt(8, FLOOR_Y + 3, z).setType(Material.POLISHED_BLACKSTONE, false);
-            world.getBlockAt(8, FLOOR_Y + 4, z).setType(Material.STONE_BUTTON, false);
+            var buttonBlock = world.getBlockAt(8, FLOOR_Y + 4, z);
+            buttonBlock.setType(Material.STONE_BUTTON, false);
+            if (buttonBlock.getBlockData() instanceof Switch buttonData) {
+                buttonData.setAttachedFace(FaceAttachable.AttachedFace.FLOOR);
+                buttonData.setFacing(BlockFace.NORTH);
+                buttonBlock.setBlockData(buttonData, false);
+            }
         }
 
         for (int z : new int[]{38, 78, 118, 198})
