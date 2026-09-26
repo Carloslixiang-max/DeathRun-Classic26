@@ -141,6 +141,81 @@ def _props(mechanism: Mechanism) -> str:
     return ",".join(f"{key}:{value}" for key, value in mechanism.properties) or "none"
 
 
+def _bbox(mechanisms: Sequence[Mechanism]) -> tuple[int, int, int, int, int, int]:
+    return (
+        min(item.x for item in mechanisms),
+        min(item.y for item in mechanisms),
+        min(item.z for item in mechanisms),
+        max(item.x for item in mechanisms),
+        max(item.y for item in mechanisms),
+        max(item.z for item in mechanisms),
+    )
+
+
+def _bbox_text(mechanisms: Sequence[Mechanism]) -> str:
+    min_x, min_y, min_z, max_x, max_y, max_z = _bbox(mechanisms)
+    return f"{min_x},{min_y},{min_z}:{max_x},{max_y},{max_z}"
+
+
+def dispenser_banks(
+    dispensers: Sequence[Mechanism],
+) -> dict[str, tuple[Mechanism, ...]]:
+    groups: dict[str, list[Mechanism]] = {}
+    for item in dispensers:
+        facing = item.property("facing")
+        if facing not in {"north", "south", "east", "west"}:
+            continue
+        groups.setdefault(facing, []).append(item)
+    return {
+        facing: tuple(
+            sorted(items, key=lambda item: (item.x, item.y, item.z, item.name))
+        )
+        for facing, items in sorted(groups.items())
+    }
+
+
+def _range_overlap(
+    left_min: int,
+    left_max: int,
+    right_min: int,
+    right_max: int,
+) -> tuple[int, int] | None:
+    low = max(left_min, right_min)
+    high = min(left_max, right_max)
+    return (low, high) if low <= high else None
+
+
+def opposing_bank_evidence(
+    banks: dict[str, tuple[Mechanism, ...]],
+) -> list[tuple[str, str, str, tuple[int, int] | None, tuple[int, int] | None]]:
+    """Return opposing horizontal-bank geometry without inferring a target cuboid.
+
+    Result tuples are (axis, facing_a, facing_b, cross_axis_overlap, y_overlap).
+    """
+    result = []
+    for axis, first, second in (
+        ("z", "north", "south"),
+        ("x", "west", "east"),
+    ):
+        left = banks.get(first)
+        right = banks.get(second)
+        if not left or not right:
+            continue
+        left_bbox = _bbox(left)
+        right_bbox = _bbox(right)
+        if axis == "z":
+            cross = _range_overlap(left_bbox[0], left_bbox[3], right_bbox[0], right_bbox[3])
+        else:
+            cross = _range_overlap(left_bbox[2], left_bbox[5], right_bbox[2], right_bbox[5])
+        vertical = _range_overlap(left_bbox[1], left_bbox[4], right_bbox[1], right_bbox[4])
+        result.append((axis, first, second, cross, vertical))
+    return result
+
+
+def _range_text(value: tuple[int, int] | None) -> str:
+    return "none" if value is None else f"{value[0]}:{value[1]}"
+
+
 def render_report(
     source: Path,
     signs: Sequence[Sign],
@@ -164,6 +239,8 @@ def render_report(
     pairs_with_consistent = 0
     fire_arrow_pairs = 0
     fire_arrow_consistent = 0
+    fire_arrow_pairs_with_banks = 0
+    fire_arrow_pairs_with_opposing_banks = 0
     details: list[str] = []
 
     for index, pair in enumerate(pairs, 1):
@@ -186,10 +263,16 @@ def render_report(
 
         label = pair.action.label
         is_fire_arrow = label.lower() == "fire arrows"
+        banks = dispenser_banks(dispensers) if is_fire_arrow else {}
+        opposing = opposing_bank_evidence(banks) if is_fire_arrow else []
         if is_fire_arrow:
             fire_arrow_pairs += 1
             if consistent:
                 fire_arrow_consistent += 1
+            if banks:
+                fire_arrow_pairs_with_banks += 1
+            if opposing:
+                fire_arrow_pairs_with_opposing_banks += 1
 
         details.append(
             "TRAP_MECHANISM_PAIR\t"
@@ -203,6 +286,28 @@ def render_report(
             f"facing_consistent_dispensers={len(consistent)}\t"
             f"warning_text={pair.warning.text}"
         )
+        if is_fire_arrow:
+            for facing, bank in banks.items():
+                faces_warning = sum(
+                    facing_consistent(item, pair.warning) for item in bank
+                )
+                details.append(
+                    "FIRE_ARROW_BANK\t"
+                    f"pair={index:03d}\tfacing={facing}\tcount={len(bank)}\t"
+                    f"bbox={_bbox_text(bank)}\t"
+                    f"faces_warning={faces_warning}"
+                )
+            for axis, first, second, cross, vertical in opposing:
+                cross_axis = "x" if axis == "z" else "z"
+                details.append(
+                    "FIRE_ARROW_OPPOSING_BANKS\t"
+                    f"pair={index:03d}\taxis={axis}\t"
+                    f"facings={first},{second}\t"
+                    f"cross_axis={cross_axis}\t"
+                    f"cross_overlap={_range_text(cross)}\t"
+                    f"vertical_overlap={_range_text(vertical)}"
+                )
+
         for mechanism in nearby:
             details.append(
                 "TRAP_MECHANISM\t"
@@ -225,6 +330,8 @@ def render_report(
         "pairs_with_consistent": pairs_with_consistent,
         "fire_arrow_pairs": fire_arrow_pairs,
         "fire_arrow_consistent": fire_arrow_consistent,
+        "fire_arrow_pairs_with_banks": fire_arrow_pairs_with_banks,
+        "fire_arrow_pairs_with_opposing_banks": fire_arrow_pairs_with_opposing_banks,
     }
     lines = [
         "# DeathRun Classic26 warning/action/mechanism evidence",
@@ -240,9 +347,13 @@ def render_report(
             f"pairs_with_facing_consistent_dispensers={stats['pairs_with_consistent']} "
             f"fire_arrow_pairs={stats['fire_arrow_pairs']} "
             f"fire_arrow_pairs_with_facing_consistent_dispensers={stats['fire_arrow_consistent']} "
+            f"fire_arrow_pairs_with_banks={stats['fire_arrow_pairs_with_banks']} "
+            f"fire_arrow_pairs_with_opposing_banks={stats['fire_arrow_pairs_with_opposing_banks']} "
             f"pair_distance={pair_distance:g} mechanism_radius={mechanism_radius:g}"
         ),
         "# Facing consistency is spatial corroboration only, not a confirmed trap definition.",
+        "# FIRE_ARROW_BANK / OPPOSING_BANKS describe preserved in-game dispenser geometry only.",
+        "# Bank overlap is not an exact projectile path, target cuboid, payload or timing definition.",
         "",
         *details,
     ]
@@ -258,6 +369,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--min-pairs-with-dispensers", type=int, default=0)
     parser.add_argument("--min-facing-consistent", type=int, default=0)
     parser.add_argument("--min-fire-arrow-consistent", type=int, default=0)
+    parser.add_argument("--min-fire-arrow-opposing-banks", type=int, default=0)
     args = parser.parse_args(argv)
 
     if args.pair_distance <= 0 or args.mechanism_radius <= 0:
@@ -304,6 +416,18 @@ def main(argv: Sequence[str] | None = None) -> int:
             file=sys.stderr,
         )
         return 4
+    if (
+        stats["fire_arrow_pairs_with_opposing_banks"]
+        < args.min_fire_arrow_opposing_banks
+    ):
+        print(
+            "anvil_mechanism_evidence: expected at least "
+            f"{args.min_fire_arrow_opposing_banks} Fire Arrows pairs with "
+            "opposing dispenser banks, got "
+            f"{stats['fire_arrow_pairs_with_opposing_banks']}",
+            file=sys.stderr,
+        )
+        return 5
     return 0
 
 

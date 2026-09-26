@@ -136,7 +136,7 @@ jobs:
             --output "$ROOT/to-bee-or-not-to-bee-mechanism-evidence.txt" \
             --pair-distance 30 --mechanism-radius 14 \
             --min-pairs-with-dispensers 1 --min-facing-consistent 1 \
-            --min-fire-arrow-consistent 3
+            --min-fire-arrow-consistent 3 --min-fire-arrow-opposing-banks 2
           cat "$ROOT/to-bee-or-not-to-bee-mechanism-evidence.txt"
 
           python3 tools/anvil_route_evidence.py \

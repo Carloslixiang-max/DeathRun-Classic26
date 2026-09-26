@@ -16,6 +16,7 @@ class AnvilMechanismEvidenceTest(unittest.TestCase):
 
     def test_parses_facing_and_correlates_fire_arrow_pair(self):
         fixture = """BLOCK\tMECHANISM\tminecraft:dispenser\t0\t64\t0\tregion=r.0.0.mca\tchunk=0,0\tprops=facing:south,triggered:false
+BLOCK\tMECHANISM\tminecraft:dispenser\t0\t64\t10\tregion=r.0.0.mca\tchunk=0,0\tprops=facing:north,triggered:false
 BLOCK\tMECHANISM\tminecraft:hopper\t2\t64\t3\tregion=r.0.0.mca\tchunk=0,0\tprops=enabled:true,facing:down
 SIGN\tminecraft:sign\t0\t64\t5\tregion=r.0.0.mca\tchunk=0,0\ttext=Warning! | Deadly fire arrows!
 SIGN\tminecraft:sign\t2\t64\t8\tregion=r.0.0.mca\tchunk=0,0\ttext=Fire Arrows | <<<
@@ -26,7 +27,7 @@ SIGN\tminecraft:sign\t2\t64\t8\tregion=r.0.0.mca\tchunk=0,0\ttext=Fire Arrows | 
             mechanisms = parse_mechanisms(path)
             _buttons, signs = parse_probe_report(path)
 
-            self.assertEqual(2, len(mechanisms))
+            self.assertEqual(3, len(mechanisms))
             dispenser = mechanisms[0]
             self.assertEqual("minecraft:dispenser", dispenser.name)
             self.assertEqual("south", dispenser.property("facing"))
@@ -46,7 +47,13 @@ SIGN\tminecraft:sign\t2\t64\t8\tregion=r.0.0.mca\tchunk=0,0\ttext=Fire Arrows | 
             self.assertEqual(1, stats["pairs_with_consistent"])
             self.assertEqual(1, stats["fire_arrow_pairs"])
             self.assertEqual(1, stats["fire_arrow_consistent"])
+            self.assertEqual(1, stats["fire_arrow_pairs_with_banks"])
+            self.assertEqual(1, stats["fire_arrow_pairs_with_opposing_banks"])
             self.assertIn("action=Fire Arrows", report)
+            self.assertIn("FIRE_ARROW_BANK", report)
+            self.assertIn("FIRE_ARROW_OPPOSING_BANKS", report)
+            self.assertIn("axis=z", report)
+            self.assertIn("cross_overlap=0:0", report)
             self.assertIn("faces_warning=true", report)
             self.assertNotIn("trap_type=", report)
 
