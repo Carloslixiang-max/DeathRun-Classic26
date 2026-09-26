@@ -55,6 +55,7 @@ jobs:
           python3 tools/test_anvil_trap_evidence.py
           python3 tools/test_anvil_route_evidence.py
           python3 tools/test_anvil_entity_evidence.py
+          python3 tools/test_anvil_block_entity_evidence.py
 
           ROOT='/tmp/deathrun-archive-probe'
           rm -rf "$ROOT"
@@ -137,6 +138,18 @@ jobs:
           cat "$ROOT/to-bee-or-not-to-bee-entity-evidence.txt"
           grep '^entity_evidence_summary ' "$ROOT/toxic-factory-entity-evidence.txt"
           grep '^ENTITY_EVIDENCE' "$ROOT/toxic-factory-entity-evidence.txt" | head -n 100 || true
+
+          python3 tools/anvil_block_entity_evidence.py \
+            --world-name to-bee-or-not-to-bee \
+            --output "$ROOT/to-bee-or-not-to-bee-block-entity-evidence.txt" \
+            --min-chunks 1 "$ROOT/to-bee-or-not-to-bee"
+          python3 tools/anvil_block_entity_evidence.py \
+            --world-name toxic-factory \
+            --output "$ROOT/toxic-factory-block-entity-evidence.txt" \
+            --min-chunks 1 "$ROOT/toxic-factory"
+          cat "$ROOT/to-bee-or-not-to-bee-block-entity-evidence.txt"
+          grep '^block_entity_summary ' "$ROOT/toxic-factory-block-entity-evidence.txt"
+          grep '^BLOCK_ENTITY_EVIDENCE' "$ROOT/toxic-factory-block-entity-evidence.txt" | head -n 100 || true
 
           python3 tools/leveldat_probe.py --require-spawn "$ROOT/toxic-factory-level.dat" --output "$ROOT/toxic-factory-leveldat.txt"
           python3 tools/leveldat_probe.py --require-spawn "$ROOT/to-bee-or-not-to-bee-level.dat" --output "$ROOT/to-bee-or-not-to-bee-leveldat.txt"
