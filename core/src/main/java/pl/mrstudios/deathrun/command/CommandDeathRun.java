@@ -3354,6 +3354,23 @@ public class CommandDeathRun {
                             .filter(Objects::nonNull)
                             .anyMatch(location -> location.getWorld() != null && !this.sameWorld(location, mapWorld)))))
                 issues.add("trap-location-wrong-world");
+
+            long distinctTrapButtons = map.arenaTraps.stream()
+                    .filter(Objects::nonNull)
+                    .map(ITrap::getButton)
+                    .filter(Objects::nonNull)
+                    .filter(location -> location.getWorld() != null)
+                    .map(this::locationBlockKey)
+                    .distinct()
+                    .count();
+            long validTrapButtons = map.arenaTraps.stream()
+                    .filter(Objects::nonNull)
+                    .map(ITrap::getButton)
+                    .filter(Objects::nonNull)
+                    .filter(location -> location.getWorld() != null)
+                    .count();
+            if (distinctTrapButtons < validTrapButtons)
+                issues.add("duplicate-trap-buttons");
         }
 
         if (map.arenaStartBarrierBlocks.isEmpty()) {
@@ -3391,6 +3408,25 @@ public class CommandDeathRun {
                         && pad.padLocation().getWorld() != null
                         && !pad.padLocation().getBlock().getType().name().endsWith("_PRESSURE_PLATE")))
             issues.add("teleport-pad-source-not-pressure-plate");
+
+        if (map.teleportPads != null) {
+            long validTeleportSources = map.teleportPads.stream()
+                    .filter(Objects::nonNull)
+                    .map(TeleportPad::padLocation)
+                    .filter(Objects::nonNull)
+                    .filter(location -> location.getWorld() != null)
+                    .count();
+            long distinctTeleportSources = map.teleportPads.stream()
+                    .filter(Objects::nonNull)
+                    .map(TeleportPad::padLocation)
+                    .filter(Objects::nonNull)
+                    .filter(location -> location.getWorld() != null)
+                    .map(this::locationBlockKey)
+                    .distinct()
+                    .count();
+            if (distinctTeleportSources < validTeleportSources)
+                issues.add("duplicate-teleport-pad-sources");
+        }
 
         if (map.arenaSetupEnabled)
             issues.add("setup-enabled");
@@ -3455,13 +3491,15 @@ public class CommandDeathRun {
                              "trap-button-invalid",
                              "trap-region-invalid",
                              "trap-location-wrong-world",
+                             "duplicate-trap-buttons",
                              "missing-start-barrier",
                              "barrier-location-invalid",
                              "barrier-location-wrong-world",
                              "barrier-restore-size-mismatch",
                              "teleport-pad-location-invalid",
                              "teleport-pad-wrong-world",
-                             "teleport-pad-source-not-pressure-plate" -> true;
+                             "teleport-pad-source-not-pressure-plate",
+                             "duplicate-teleport-pad-sources" -> true;
                         case "missing-backup" -> requireBackup;
                         default -> false;
                     };
