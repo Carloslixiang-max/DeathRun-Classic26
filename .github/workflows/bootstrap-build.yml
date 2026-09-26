@@ -193,7 +193,7 @@ jobs:
             "$ROOT/to-bee-or-not-to-bee-entity-evidence.txt" \
             "$ROOT/to-bee-or-not-to-bee-block-entity-evidence.txt" \
             --output "$ROOT/to-bee-or-not-to-bee-stage-evidence.txt" \
-            --horizontal-radius 12 --vertical-radius 10 --min-stage-markers 2
+            --horizontal-radius 12 --vertical-radius 10 --min-stage-markers 2 --min-stage-anchor-plates 2
           python3 tools/anvil_stage_evidence.py \
             "$ROOT/toxic-factory-probe.txt" \
             "$ROOT/toxic-factory-entity-evidence.txt" \

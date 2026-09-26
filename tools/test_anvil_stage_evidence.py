@@ -7,6 +7,7 @@ from pathlib import Path
 from anvil_stage_evidence import (
     build_neighborhood,
     parse_mechanisms,
+    parse_pressure_plates,
     parse_stage_markers,
     render_report,
 )
@@ -16,7 +17,8 @@ from anvil_sign_links import parse_probe_report
 class AnvilStageEvidenceTest(unittest.TestCase):
 
     def test_stage_marker_links_control_evidence(self):
-        probe = """BLOCK\tBUTTON\tminecraft:stone_button\t25\t48\t13\tregion=r.0.0.mca\tchunk=1,0
+        probe = """BLOCK\tPRESSURE_PLATE\tminecraft:light_weighted_pressure_plate\t24\t44\t13\tregion=r.0.0.mca\tchunk=1,0
+BLOCK\tBUTTON\tminecraft:stone_button\t25\t48\t13\tregion=r.0.0.mca\tchunk=1,0
 SIGN\tminecraft:sign\t29\t44\t9\tregion=r.0.0.mca\tchunk=1,0\ttext=Drop TNT | <<<
 SIGN\tminecraft:sign\t80\t44\t80\tregion=r.0.0.mca\tchunk=5,5\ttext=>>> | Far trap | >>>
 """
@@ -37,20 +39,28 @@ BLOCK_ENTITY_EVIDENCE\tid=minecraft:skull\tpos=25,45,13\troute_words=none\tmetad
             buttons, signs = parse_probe_report(probe_path)
             markers = parse_stage_markers(entity_path)
             mechanisms = parse_mechanisms(block_path)
+            plates = parse_pressure_plates(probe_path)
             self.assertEqual(1, len(markers))
             self.assertEqual(1, len(mechanisms))
+            self.assertEqual(1, len(plates))
 
             neighborhood = build_neighborhood(
                 markers[0],
                 buttons,
                 signs,
                 mechanisms,
+                plates,
                 horizontal_radius=12.0,
                 vertical_radius=10.0,
             )
             self.assertEqual(1, len(neighborhood.buttons))
             self.assertEqual(1, len(neighborhood.actions))
             self.assertEqual(1, len(neighborhood.mechanisms))
+            self.assertEqual(1, len(neighborhood.anchor_plates))
+            self.assertEqual(
+                "minecraft:light_weighted_pressure_plate",
+                neighborhood.anchor_plates[0].name,
+            )
 
             report = render_report(
                 probe_path,
@@ -62,6 +72,9 @@ BLOCK_ENTITY_EVIDENCE\tid=minecraft:skull\tpos=25,45,13\troute_words=none\tmetad
             self.assertIn("stage_markers=1", report)
             self.assertIn("next_markers=1", report)
             self.assertIn("markers_with_actions=1", report)
+            self.assertIn("markers_with_anchor_plates=1", report)
+            self.assertIn("markers_with_unique_anchor_plate=1", report)
+            self.assertIn("STAGE_ANCHOR_PLATE", report)
             self.assertIn("direction=NEXT", report)
             self.assertIn("Drop TNT", report)
             self.assertNotIn("trap_type=", report)

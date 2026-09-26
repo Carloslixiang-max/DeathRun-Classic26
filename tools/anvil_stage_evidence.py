@@ -41,11 +41,20 @@ class Mechanism:
 
 
 @dataclass(frozen=True)
+class PressurePlate:
+    name: str
+    x: int
+    y: int
+    z: int
+
+
+@dataclass(frozen=True)
 class StageNeighborhood:
     marker: StageMarker
     buttons: tuple[Button, ...]
     actions: tuple[Sign, ...]
     mechanisms: tuple[Mechanism, ...]
+    anchor_plates: tuple[PressurePlate, ...]
 
 
 def _fields(raw: str) -> dict[str, str]:
@@ -91,6 +100,29 @@ def parse_stage_markers(path: Path) -> list[StageMarker]:
         )
     markers.sort(key=lambda item: (item.x, item.y, item.z, item.name.lower()))
     return markers
+
+
+def parse_pressure_plates(path: Path) -> list[PressurePlate]:
+    plates: list[PressurePlate] = []
+    for raw in path.read_text(encoding="utf-8").splitlines():
+        if not raw.startswith("BLOCK\tPRESSURE_PLATE\t"):
+            continue
+        fields = raw.split("\t")
+        if len(fields) < 6:
+            continue
+        try:
+            plates.append(
+                PressurePlate(
+                    name=fields[2],
+                    x=int(fields[3]),
+                    y=int(fields[4]),
+                    z=int(fields[5]),
+                )
+            )
+        except ValueError:
+            continue
+    plates.sort(key=lambda item: (item.x, item.y, item.z, item.name))
+    return plates
 
 
 def parse_mechanisms(path: Path) -> list[Mechanism]:
@@ -145,8 +177,12 @@ def build_neighborhood(
     buttons: Sequence[Button],
     signs: Sequence[Sign],
     mechanisms: Sequence[Mechanism],
+    plates: Sequence[PressurePlate],
     horizontal_radius: float,
     vertical_radius: float,
+    anchor_horizontal_radius: float = 1.0,
+    anchor_vertical_below_min: float = 0.5,
+    anchor_vertical_below_max: float = 2.0,
 ) -> StageNeighborhood:
     nearby_buttons = tuple(
         sorted(
@@ -195,6 +231,27 @@ def build_neighborhood(
             ),
         )
     )
+    anchor_plates = tuple(
+        sorted(
+            (
+                plate
+                for plate in plates
+                if horizontal_distance(marker.x, marker.z, plate.x, plate.z)
+                <= anchor_horizontal_radius
+                and anchor_vertical_below_min
+                <= marker.y - plate.y
+                <= anchor_vertical_below_max
+            ),
+            key=lambda item: (
+                horizontal_distance(marker.x, marker.z, item.x, item.z),
+                abs(marker.y - item.y),
+                item.x,
+                item.y,
+                item.z,
+                item.name,
+            ),
+        )
+    )
     nearby_mechanisms = tuple(
         sorted(
             (
@@ -224,6 +281,7 @@ def build_neighborhood(
         buttons=nearby_buttons,
         actions=nearby_actions,
         mechanisms=nearby_mechanisms,
+        anchor_plates=anchor_plates,
     )
 
 
@@ -244,6 +302,10 @@ def _sign_text(sign: Sign) -> str:
     return f"{sign.x},{sign.y},{sign.z}:{sign.text}"
 
 
+def _plate_text(plate: PressurePlate) -> str:
+    return f"{plate.x},{plate.y},{plate.z}:{plate.name}"
+
+
 def _mechanism_text(mechanism: Mechanism) -> str:
     x = int(mechanism.x) if mechanism.x.is_integer() else mechanism.x
     y = int(mechanism.y) if mechanism.y.is_integer() else mechanism.y
@@ -261,12 +323,14 @@ def render_report(
     buttons, signs = parse_probe_report(probe_path)
     markers = parse_stage_markers(entity_path)
     mechanisms = parse_mechanisms(block_entity_path)
+    plates = parse_pressure_plates(probe_path)
     neighborhoods = [
         build_neighborhood(
             marker,
             buttons,
             signs,
             mechanisms,
+            plates,
             horizontal_radius,
             vertical_radius,
         )
@@ -280,6 +344,8 @@ def render_report(
     with_buttons = sum(bool(item.buttons) for item in neighborhoods)
     with_actions = sum(bool(item.actions) for item in neighborhoods)
     with_mechanisms = sum(bool(item.mechanisms) for item in neighborhoods)
+    with_anchor_plates = sum(bool(item.anchor_plates) for item in neighborhoods)
+    unique_anchor_plates = sum(len(item.anchor_plates) == 1 for item in neighborhoods)
 
     lines = [
         "# DeathRun Classic26 stage-control evidence",
@@ -292,10 +358,14 @@ def render_report(
             f"previous_markers={previous_count} markers_with_buttons={with_buttons} "
             f"markers_with_actions={with_actions} "
             f"markers_with_mechanisms={with_mechanisms} "
+            f"markers_with_anchor_plates={with_anchor_plates} "
+            f"markers_with_unique_anchor_plate={unique_anchor_plates} "
             f"horizontal_radius={horizontal_radius:g} "
             f"vertical_radius={vertical_radius:g}"
         ),
         "# STAGE_MARKER_NEIGHBORHOOD is spatial evidence only; no gameplay role is inferred.",
+        "# STAGE_ANCHOR_PLATE means a pressure plate is directly beneath/adjacent to the named stage marker.",
+        "# It strengthens physical stage-control geometry but does not define stage numbering or player spawn.",
         "",
     ]
 
@@ -307,8 +377,13 @@ def render_report(
             f"name={marker.name}\t"
             f"pos={marker.x:.3f},{marker.y:.3f},{marker.z:.3f}\t"
             f"buttons={len(item.buttons)}\tactions={len(item.actions)}\t"
-            f"mechanisms={len(item.mechanisms)}"
+            f"mechanisms={len(item.mechanisms)}\t"
+            f"anchor_plates={len(item.anchor_plates)}"
         )
+        for plate in item.anchor_plates:
+            lines.append(
+                f"STAGE_ANCHOR_PLATE\tmarker={index:03d}\t{_plate_text(plate)}"
+            )
         for button in item.buttons:
             lines.append(
                 f"STAGE_BUTTON\tmarker={index:03d}\t{_button_text(button)}"
@@ -334,6 +409,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--horizontal-radius", type=float, default=12.0)
     parser.add_argument("--vertical-radius", type=float, default=10.0)
     parser.add_argument("--min-stage-markers", type=int, default=0)
+    parser.add_argument("--min-stage-anchor-plates", type=int, default=0)
     args = parser.parse_args(argv)
 
     if args.horizontal_radius <= 0 or args.vertical_radius < 0:
@@ -360,6 +436,31 @@ def main(argv: Sequence[str] | None = None) -> int:
             file=sys.stderr,
         )
         return 2
+
+    buttons, signs = parse_probe_report(args.probe_report)
+    mechanisms = parse_mechanisms(args.block_entity_evidence_report)
+    plates = parse_pressure_plates(args.probe_report)
+    neighborhoods = [
+        build_neighborhood(
+            marker,
+            buttons,
+            signs,
+            mechanisms,
+            plates,
+            args.horizontal_radius,
+            args.vertical_radius,
+        )
+        for marker in markers
+    ]
+    anchored = sum(bool(item.anchor_plates) for item in neighborhoods)
+    if anchored < args.min_stage_anchor_plates:
+        print(
+            "anvil_stage_evidence: expected at least "
+            f"{args.min_stage_anchor_plates} stage markers with an anchor "
+            f"pressure plate, got {anchored}",
+            file=sys.stderr,
+        )
+        return 3
     return 0
 
 

@@ -248,7 +248,8 @@ The archive preserves exactly two named, invisible marker ArmorStands:
 `tools/anvil_stage_evidence.py` correlates these markers with nearby control
 geometry without assigning a stage number or Death spawn.
 
-The `Next Stage` marker is surrounded by:
+The `Next Stage` marker has a **light weighted pressure plate directly beneath it**
+at `24,44,13`, and is surrounded by:
 
 - **40** nearby stone buttons
 - **3** nearby directional action signs:
@@ -256,16 +257,19 @@ The `Next Stage` marker is surrounded by:
   - `Drop TNT` at `29,44,9`
   - `Flood the floor` at `27,44,21`
 
-The `Previous Stage` marker is surrounded by:
+The `Previous Stage` marker has a **light weighted pressure plate directly beneath it**
+at `27,29,-12`, and is surrounded by:
 
 - **5** nearby oak buttons
 - **2** nearby directional action signs:
   - `Make the floor fall` at `28,29,-17`
   - `Summon a random wall` at `23,29,-19`
 
-This is strong evidence that the archived world retains a physical Death
-stage-control layer. It does **not** establish the original stage numbering,
-Death spawn position, or exact button-to-action mapping.
+Run #258 / the current stage-evidence gate requires both named markers to retain
+their direct pressure-plate anchors. This is stronger evidence that the archived
+world retains a physical Death stage-control/navigation layer. It does **not**
+establish the original stage numbering, Death spawn position, or exact
+button-to-action mapping.
 
 ## BlockEntity and container evidence
 
@@ -320,9 +324,21 @@ current conservative rule.
 CI now requires all **3 Fire Arrows** candidates to retain facing-consistent
 dispenser evidence. This protects the evidence pipeline from silent regression.
 
-These mechanism results materially narrow target geometry for Fire Arrows, but
-they still do **not** authorize inventing an exact Classic26 target cuboid,
-duration, projectile payload, or reset behavior.
+Run #257 / commit `cfbccbba35b28292936af8f1f2526386d2047617`
+also groups the preserved Minecraft dispenser BlockStates into facing banks.
+All **3/3** Fire Arrows candidates have at least one dispenser bank and **2/3**
+have explicit opposing banks:
+
+- warning `-19,25,20`: north/south banks overlap across
+  `x=-25..-22` at `y=26`
+- warning `6,25,72`: west/east banks overlap across
+  `z=66..70` at `y=25..26`
+- warning `-41,18,-34`: one south-facing bank of six dispensers remains,
+  without an opposing bank inside the conservative review radius
+
+These bank overlaps materially narrow in-game lane geometry, but they still do
+**not** authorize inventing an exact Classic26 target cuboid, projectile path,
+duration, payload, or reset behavior.
 
 ## Import procedure
 
@@ -333,9 +349,9 @@ duration, projectile payload, or reset behavior.
    definitions.
 5. Use button-facing evidence only to reduce candidates; do not guess remaining
    button bindings.
-6. Use dispenser facing as target-lane corroboration for Fire Arrows and other
-   mechanism-backed candidates; do not turn it into an exact cuboid without
-   independent geometry/behavior evidence.
+6. Use dispenser facing/bank geometry as target-lane corroboration for Fire
+   Arrows and other mechanism-backed candidates; do not turn it into an exact
+   cuboid without independent geometry/behavior evidence.
 7. Establish all **9 checkpoint** trigger regions from independent evidence.
 8. Establish Runner/Death spawns, start barrier and finish region independently.
 9. For every trap selected for implementation, confirm:
