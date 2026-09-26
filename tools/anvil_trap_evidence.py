@@ -55,6 +55,14 @@ class RankedAction:
     shared_tokens: tuple[str, ...]
 
 
+@dataclass(frozen=True)
+class PairCandidate:
+    warning: Sign
+    action: ActionEvidence
+    distance: float
+    shared_tokens: tuple[str, ...]
+
+
 def clean_label(text: str) -> str:
     cleaned = text.replace("<<<", " ").replace(">>>", " ").replace("|", " ")
     cleaned = cleaned.replace("~", " ")
@@ -112,6 +120,81 @@ def rank_warning(warning: Sign, actions: Sequence[ActionEvidence]) -> list[Ranke
     return ranked
 
 
+def build_pair_candidates(
+    warnings: Sequence[Sign],
+    actions: Sequence[ActionEvidence],
+    max_distance: float,
+) -> tuple[list[PairCandidate], list[Sign], list[ActionEvidence]]:
+    """Build a deterministic one-to-one evidence candidate set.
+
+    Edges require at least one shared normalized token and must be within
+    max_distance. More shared tokens are preferred, then shorter distance.
+    The result is explicitly a review candidate set, not confirmed gameplay.
+    """
+    edges: list[tuple[int, float, int, int, tuple[str, ...]]] = []
+    for warning_index, warning in enumerate(warnings):
+        warning_tokens = evidence_tokens(warning.text)
+        for action_index, action in enumerate(actions):
+            shared = tuple(sorted(warning_tokens & action.tokens))
+            if not shared:
+                continue
+            distance = sign_distance(warning, action.sign)
+            if distance > max_distance:
+                continue
+            edges.append(
+                (-len(shared), distance, warning_index, action_index, shared)
+            )
+
+    edges.sort(
+        key=lambda item: (
+            item[0],
+            item[1],
+            warnings[item[2]].x,
+            warnings[item[2]].y,
+            warnings[item[2]].z,
+            actions[item[3]].sign.x,
+            actions[item[3]].sign.y,
+            actions[item[3]].sign.z,
+            actions[item[3]].label.lower(),
+        )
+    )
+
+    used_warnings: set[int] = set()
+    used_actions: set[int] = set()
+    pairs: list[PairCandidate] = []
+    for _negative_shared_count, distance, warning_index, action_index, shared in edges:
+        if warning_index in used_warnings or action_index in used_actions:
+            continue
+        used_warnings.add(warning_index)
+        used_actions.add(action_index)
+        pairs.append(
+            PairCandidate(
+                warning=warnings[warning_index],
+                action=actions[action_index],
+                distance=distance,
+                shared_tokens=shared,
+            )
+        )
+
+    pairs.sort(
+        key=lambda item: (
+            item.warning.x,
+            item.warning.y,
+            item.warning.z,
+            item.action.sign.x,
+            item.action.sign.y,
+            item.action.sign.z,
+        )
+    )
+    unmatched_warnings = [
+        warning for index, warning in enumerate(warnings) if index not in used_warnings
+    ]
+    unmatched_actions = [
+        action for index, action in enumerate(actions) if index not in used_actions
+    ]
+    return pairs, unmatched_warnings, unmatched_actions
+
+
 def _pos(sign: Sign) -> str:
     return f"{sign.x},{sign.y},{sign.z}"
 
@@ -135,6 +218,9 @@ def render_report(
 
     warnings_with_overlap = 0
     warnings_with_nearby = 0
+    pairs, unmatched_warnings, unmatched_actions = build_pair_candidates(
+        warnings, actions, nearby_distance
+    )
     lines = [
         "# DeathRun Classic26 archived trap evidence catalog",
         f"source={source.name}",
@@ -198,6 +284,9 @@ def render_report(
         f"directional_actions={len(actions)} unique_action_labels={len(by_label)} "
         f"warnings={len(warnings)} warnings_with_text_overlap={warnings_with_overlap} "
         f"warnings_with_nearest_action_within_{nearby_distance:g}={warnings_with_nearby} "
+        f"pair_candidates={len(pairs)} "
+        f"unmatched_warnings={len(unmatched_warnings)} "
+        f"unmatched_actions={len(unmatched_actions)} "
         f"top_candidates={top_candidates}"
     )
     lines.extend(
@@ -205,10 +294,38 @@ def render_report(
             summary,
             "# ACTION_CATALOG groups only equivalent cleaned surviving sign text.",
             "# WARNING_EVIDENCE shows independent nearest and lexical rankings; neither is confirmation.",
+            "# PAIR_CANDIDATE is a greedy one-to-one lexical+distance review set, not confirmation.",
             "",
             *catalog_lines,
             "",
             *warning_lines,
+            "",
+            *[
+                (
+                    "PAIR_CANDIDATE\t"
+                    f"id={index:03d}\twarning_pos={_pos(pair.warning)}\t"
+                    f"action_pos={_pos(pair.action.sign)}\t"
+                    f"label={pair.action.label}\t"
+                    f"shared={','.join(pair.shared_tokens)}\t"
+                    f"distance={pair.distance:.2f}\twarning={pair.warning.text}"
+                )
+                for index, pair in enumerate(pairs, 1)
+            ],
+            *[
+                (
+                    "UNMATCHED_WARNING\t"
+                    f"pos={_pos(warning)}\ttext={warning.text}"
+                )
+                for warning in unmatched_warnings
+            ],
+            *[
+                (
+                    "UNMATCHED_ACTION\t"
+                    f"pos={_pos(action.sign)}\tlabel={action.label}\t"
+                    f"text={action.sign.text}"
+                )
+                for action in unmatched_actions
+            ],
         ]
     )
     return "\n".join(lines) + "\n"

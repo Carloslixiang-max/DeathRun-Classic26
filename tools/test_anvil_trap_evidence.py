@@ -7,6 +7,7 @@ from pathlib import Path
 from anvil_sign_links import parse_probe_report
 from anvil_trap_evidence import (
     build_actions,
+    build_pair_candidates,
     clean_label,
     evidence_tokens,
     rank_warning,
@@ -25,6 +26,30 @@ class AnvilTrapEvidenceTest(unittest.TestCase):
             frozenset({"release", "fire", "snake"}),
             evidence_tokens(">>> | Release fire | snake | >>>"),
         )
+
+    def test_one_to_one_pair_candidates_leave_extra_action_unmatched(self):
+        fixture = """SIGN\tminecraft:sign\t10\t64\t10\tregion=r.0.0.mca\tchunk=0,0\ttext=>>> | Explode the | minefield | >>>
+SIGN\tminecraft:sign\t30\t64\t30\tregion=r.0.0.mca\tchunk=1,1\ttext=<<< | Summon a | random wall | <<<
+SIGN\tminecraft:sign\t50\t64\t50\tregion=r.0.0.mca\tchunk=3,3\ttext=>>> | Drop TNT | >>>
+SIGN\tminecraft:sign\t12\t64\t10\tregion=r.0.0.mca\tchunk=0,0\ttext=Caution! | Deadly | Minefield!
+SIGN\tminecraft:sign\t29\t64\t30\tregion=r.0.0.mca\tchunk=1,1\ttext=Warning! | Random wall | may appear!
+"""
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "probe.txt"
+            path.write_text(fixture, encoding="utf-8")
+            _buttons, signs = parse_probe_report(path)
+            actions = build_actions(signs)
+            warnings = [
+                sign for sign in signs
+                if "Warning" in sign.text or "Caution" in sign.text
+            ]
+            pairs, unmatched_warnings, unmatched_actions = build_pair_candidates(
+                warnings, actions, 30.0
+            )
+            self.assertEqual(2, len(pairs))
+            self.assertEqual(0, len(unmatched_warnings))
+            self.assertEqual(1, len(unmatched_actions))
+            self.assertEqual("Drop TNT", unmatched_actions[0].label)
 
     def test_warning_ranking_keeps_distance_and_text_signals_separate(self):
         fixture = """SIGN\tminecraft:sign\t10\t64\t10\tregion=r.0.0.mca\tchunk=0,0\ttext=>>> | Explode the | minefield | >>>
@@ -51,6 +76,9 @@ SIGN\tminecraft:sign\t29\t64\t30\tregion=r.0.0.mca\tchunk=1,1\ttext=Warning! | R
             self.assertIn("warnings=2", report)
             self.assertIn("ACTION_CATALOG", report)
             self.assertIn("WARNING_EVIDENCE", report)
+            self.assertIn("pair_candidates=2", report)
+            self.assertIn("unmatched_actions=0", report)
+            self.assertIn("PAIR_CANDIDATE", report)
             self.assertNotIn("trap_type=", report)
 
 
