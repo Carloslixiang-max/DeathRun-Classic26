@@ -49,14 +49,35 @@ jobs:
           set -euo pipefail
           python3 tools/test_anvil_probe.py
 
-          mkdir -p /tmp/deathrun-archive-probe
-          ARCHIVE_REGION='https://raw.githubusercontent.com/Mqzn/HiveMCMaps/main/death-run/toxic-factory/region/r.-1.0.mca'
-          curl -fsSL --retry 3 --retry-delay 2 "$ARCHIVE_REGION"             -o /tmp/deathrun-archive-probe/r.-1.0.mca
+          ROOT='/tmp/deathrun-archive-probe'
+          rm -rf "$ROOT"
+          mkdir -p "$ROOT/toxic-factory" "$ROOT/to-bee-or-not-to-bee"
 
-          python3 tools/anvil_probe.py             --world-name toxic-factory             --output /tmp/deathrun-archive-probe/toxic-factory-probe.txt             --min-chunks 1             /tmp/deathrun-archive-probe/r.-1.0.mca
+          # Public HiveMC archive fixtures are downloaded only into the ephemeral
+          # Actions workspace. The third-party world binaries are never committed
+          # or uploaded as artifacts by this repository.
+          TOXIC_COMMIT='1960b554e5e643d3cedffeee006025381f88c322'
+          TO_BEE_COMMIT='9a5b49593be61716ff3419aff24ce313567df14f'
 
-          grep -Eq '^summary regions=1 chunks=[1-9][0-9]* '             /tmp/deathrun-archive-probe/toxic-factory-probe.txt
-          grep '^summary ' /tmp/deathrun-archive-probe/toxic-factory-probe.txt
+          TOXIC_BASE="https://raw.githubusercontent.com/Mqzn/HiveMCMaps/$TOXIC_COMMIT/death-run/toxic-factory/region"
+          for region in 'r.-1.-1.mca' 'r.-1.0.mca' 'r.0.0.mca'; do
+            curl -fsSL --retry 3 --retry-delay 2 "$TOXIC_BASE/$region" -o "$ROOT/toxic-factory/$region"
+          done
+
+          TO_BEE_BASE="https://raw.githubusercontent.com/Mqzn/HiveMCMaps/$TO_BEE_COMMIT/death-run/to-bee-or-not-to-bee/region"
+          for region in 'r.-1.-1.mca' 'r.-1.0.mca' 'r.0.-1.mca' 'r.0.0.mca'; do
+            curl -fsSL --retry 3 --retry-delay 2 "$TO_BEE_BASE/$region" -o "$ROOT/to-bee-or-not-to-bee/$region"
+          done
+
+          python3 tools/anvil_probe.py --world-name toxic-factory             --output "$ROOT/toxic-factory-probe.txt"             --min-chunks 1 --min-candidates 1             "$ROOT/toxic-factory"
+
+          python3 tools/anvil_probe.py --world-name to-bee-or-not-to-bee             --output "$ROOT/to-bee-or-not-to-bee-probe.txt"             --min-chunks 1 --min-candidates 1             "$ROOT/to-bee-or-not-to-bee"
+
+          for report in "$ROOT/toxic-factory-probe.txt" "$ROOT/to-bee-or-not-to-bee-probe.txt"; do
+            grep -Eq '^summary regions=[1-9][0-9]* chunks=[1-9][0-9]* .*candidate_blocks=[1-9][0-9]*' "$report"
+            grep '^summary ' "$report"
+            awk -F '\t' '$1 == "BLOCK" { count[$2]++ } END { for (key in count) print "category " key "=" count[key] }' "$report" | sort
+          done
 
       - name: Install Java 25
         uses: actions/setup-java@v6
