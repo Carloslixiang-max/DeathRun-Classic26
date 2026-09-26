@@ -7,6 +7,7 @@ from pathlib import Path
 from anvil_cluster import (
     Candidate,
     build_clusters,
+    local_groups,
     parse_probe_report,
     render_report,
     spatial_groups,
@@ -25,6 +26,19 @@ class AnvilClusterTest(unittest.TestCase):
         groups = spatial_groups(points, horizontal_radius=3.1, vertical_radius=1.0)
         self.assertEqual([3, 1], [len(group) for group in groups])
 
+    def test_local_groups_do_not_chain_across_a_corridor(self):
+        points = [
+            Candidate("BUTTON", "minecraft:stone_button", 0, 64, 0, "fixture"),
+            Candidate("BUTTON", "minecraft:stone_button", 3, 64, 0, "fixture"),
+            Candidate("BUTTON", "minecraft:stone_button", 6, 64, 0, "fixture"),
+            Candidate("BUTTON", "minecraft:stone_button", 9, 64, 0, "fixture"),
+        ]
+        connected = spatial_groups(points, horizontal_radius=3.1, vertical_radius=1.0)
+        local = local_groups(points, horizontal_radius=3.1, vertical_radius=1.0)
+
+        self.assertEqual([4], [len(group) for group in connected])
+        self.assertEqual([3, 1], [len(group) for group in local])
+
     def test_parse_cluster_and_priority(self):
         report = """# fixture
 summary regions=1 chunks=1 failed_chunks=0 external_chunks=0 candidate_blocks=5 command_entities=1
@@ -39,7 +53,7 @@ COMMAND\tminecraft:command_block\t31\t70\t30\tregion=r.0.0.mca\tchunk=1,1\tcmd=s
             path = Path(tmp) / "probe.txt"
             path.write_text(report, encoding="utf-8")
             points, portals = parse_probe_report(path)
-            clusters = build_clusters(points, portals, 4.0, 3.0)
+            clusters = build_clusters(points, portals, 4.0, 3.0, mode="local")
 
             self.assertEqual(4, len(points))
             self.assertEqual(1, len(portals))
@@ -49,8 +63,13 @@ COMMAND\tminecraft:command_block\t31\t70\t30\tregion=r.0.0.mca\tchunk=1,1\tcmd=s
             self.assertTrue(any("mixed-inputs" in c.reasons for c in clusters))
             self.assertTrue(any("command-evidence" in c.reasons for c in clusters))
 
-            rendered = render_report(path, points, portals, clusters, 4.0, 3.0, 2)
-            self.assertIn("interactive_points=4 portals=1 clusters=2", rendered)
+            rendered = render_report(
+                path, points, portals, clusters, 4.0, 3.0, 2, mode="local"
+            )
+            self.assertIn(
+                "interactive_points=4 portals=1 mode=local clusters=2",
+                rendered,
+            )
             self.assertIn("BUTTON=2", rendered)
             self.assertIn("COMMAND_ENTITY=1", rendered)
             self.assertIn("PRESSURE_PLATE=1", rendered)

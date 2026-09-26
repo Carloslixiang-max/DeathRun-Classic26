@@ -77,7 +77,7 @@ jobs:
           python3 tools/anvil_cluster.py \
             "$ROOT/to-bee-or-not-to-bee-probe.txt" \
             --output "$ROOT/to-bee-or-not-to-bee-clusters.txt" \
-            --radius 4 --vertical-radius 3 --members-limit 4 \
+            --radius 4 --vertical-radius 3 --mode local --members-limit 4 \
             --min-points 1 --min-clusters 1
 
           grep '^summary ' "$ROOT/to-bee-or-not-to-bee-clusters.txt"

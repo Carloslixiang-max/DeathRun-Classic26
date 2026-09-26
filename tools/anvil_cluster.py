@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
 """Cluster DeathRun Anvil probe candidates into reviewable spatial evidence groups.
 
-This is deliberately a research aid, not a trap classifier. It groups nearby
-interactive candidates and assigns a review priority from structural evidence
-only. It never labels a cluster as a specific DeathRun trap type.
+This is a research aid, not a trap classifier. Nearby interaction evidence is
+grouped for human review without assigning a DeathRun trap type.
 """
 
 from __future__ import annotations
@@ -131,31 +130,37 @@ class UnionFind:
             self.rank[root_left] += 1
 
 
-def spatial_groups(
-    points: Sequence[Candidate],
-    horizontal_radius: float,
-    vertical_radius: float,
-) -> list[tuple[Candidate, ...]]:
-    if not points:
-        return []
+def _validate_radii(horizontal_radius: float, vertical_radius: float) -> None:
     if horizontal_radius <= 0 or vertical_radius < 0:
         raise ValueError("radii must be positive (vertical may be zero)")
 
-    union = UnionFind(len(points))
+
+def _bucket_key(point: Candidate, cell_xz: float, cell_y: float) -> tuple[int, int, int]:
+    return (
+        math.floor(point.x / cell_xz),
+        math.floor(point.y / cell_y),
+        math.floor(point.z / cell_xz),
+    )
+
+
+def _neighbor_indexes(
+    points: Sequence[Candidate],
+    horizontal_radius: float,
+    vertical_radius: float,
+) -> list[set[int]]:
+    _validate_radii(horizontal_radius, vertical_radius)
     cell_xz = max(1.0, horizontal_radius)
     cell_y = max(1.0, vertical_radius if vertical_radius > 0 else 1.0)
     buckets: dict[tuple[int, int, int], list[int]] = {}
 
-    def key(point: Candidate) -> tuple[int, int, int]:
-        return (
-            math.floor(point.x / cell_xz),
-            math.floor(point.y / cell_y),
-            math.floor(point.z / cell_xz),
-        )
+    for index, point in enumerate(points):
+        buckets.setdefault(_bucket_key(point, cell_xz, cell_y), []).append(index)
 
     horizontal_sq = horizontal_radius * horizontal_radius
+    result: list[set[int]] = []
     for index, point in enumerate(points):
-        bx, by, bz = key(point)
+        bx, by, bz = _bucket_key(point, cell_xz, cell_y)
+        nearby: set[int] = {index}
         for dx in (-1, 0, 1):
             for dy in (-1, 0, 1):
                 for dz in (-1, 0, 1):
@@ -164,8 +169,25 @@ def spatial_groups(
                         if abs(point.y - other.y) > vertical_radius:
                             continue
                         if (point.x - other.x) ** 2 + (point.z - other.z) ** 2 <= horizontal_sq:
-                            union.union(index, other_index)
-        buckets.setdefault((bx, by, bz), []).append(index)
+                            nearby.add(other_index)
+        result.append(nearby)
+    return result
+
+
+def spatial_groups(
+    points: Sequence[Candidate],
+    horizontal_radius: float,
+    vertical_radius: float,
+) -> list[tuple[Candidate, ...]]:
+    """Connected-component grouping; useful for topology but may chain-grow."""
+    if not points:
+        return []
+
+    neighbors = _neighbor_indexes(points, horizontal_radius, vertical_radius)
+    union = UnionFind(len(points))
+    for index, nearby in enumerate(neighbors):
+        for other_index in nearby:
+            union.union(index, other_index)
 
     grouped: dict[int, list[Candidate]] = {}
     for index, point in enumerate(points):
@@ -175,6 +197,57 @@ def spatial_groups(
         tuple(sorted(members, key=lambda item: (item.x, item.y, item.z, item.category, item.name)))
         for members in grouped.values()
     ]
+    groups.sort(
+        key=lambda members: (
+            min(item.x for item in members),
+            min(item.z for item in members),
+            min(item.y for item in members),
+            -len(members),
+        )
+    )
+    return groups
+
+
+def local_groups(
+    points: Sequence[Candidate],
+    horizontal_radius: float,
+    vertical_radius: float,
+) -> list[tuple[Candidate, ...]]:
+    """Bounded local neighborhoods that avoid single-linkage chain growth.
+
+    Every group is formed from one seed and only points directly within that
+    seed's configured radius. A-near-B-near-C therefore cannot create an
+    arbitrarily long group when A is far from C.
+    """
+    if not points:
+        return []
+
+    neighbors = _neighbor_indexes(points, horizontal_radius, vertical_radius)
+    remaining = set(range(len(points)))
+    groups: list[tuple[Candidate, ...]] = []
+
+    while remaining:
+        seed = min(
+            remaining,
+            key=lambda index: (
+                -len(neighbors[index] & remaining),
+                points[index].x,
+                points[index].z,
+                points[index].y,
+                points[index].category,
+                points[index].name,
+            ),
+        )
+        member_indexes = neighbors[seed] & remaining
+        members = tuple(
+            sorted(
+                (points[index] for index in member_indexes),
+                key=lambda item: (item.x, item.y, item.z, item.category, item.name),
+            )
+        )
+        groups.append(members)
+        remaining.difference_update(member_indexes)
+
     groups.sort(
         key=lambda members: (
             min(item.x for item in members),
@@ -249,9 +322,17 @@ def build_clusters(
     portals: Sequence[Candidate],
     horizontal_radius: float,
     vertical_radius: float,
+    mode: str = "local",
 ) -> list[EvidenceCluster]:
+    if mode == "connected":
+        groups = spatial_groups(points, horizontal_radius, vertical_radius)
+    elif mode == "local":
+        groups = local_groups(points, horizontal_radius, vertical_radius)
+    else:
+        raise ValueError(f"unsupported grouping mode: {mode}")
+
     clusters: list[EvidenceCluster] = []
-    for members in spatial_groups(points, horizontal_radius, vertical_radius):
+    for members in groups:
         priority, score, reasons = review_priority(members)
         clusters.append(
             EvidenceCluster(
@@ -289,6 +370,7 @@ def render_report(
     horizontal_radius: float,
     vertical_radius: float,
     members_limit: int,
+    mode: str = "local",
 ) -> str:
     priorities = Counter(cluster.priority for cluster in clusters)
     categories = Counter(point.category for point in points)
@@ -300,7 +382,7 @@ def render_report(
         (
             "summary "
             f"interactive_points={len(points)} portals={len(portals)} "
-            f"clusters={len(clusters)} high={priorities['HIGH']} "
+            f"mode={mode} clusters={len(clusters)} high={priorities['HIGH']} "
             f"medium={priorities['MEDIUM']} low={priorities['LOW']} "
             f"largest={largest} horizontal_radius={horizontal_radius:g} "
             f"vertical_radius={vertical_radius:g}"
@@ -346,13 +428,25 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--output", type=Path)
     parser.add_argument("--radius", type=float, default=4.0)
     parser.add_argument("--vertical-radius", type=float, default=3.0)
+    parser.add_argument(
+        "--mode",
+        choices=("connected", "local"),
+        default="local",
+        help="connected preserves topology; local prevents chain-grown review groups",
+    )
     parser.add_argument("--members-limit", type=int, default=0)
     parser.add_argument("--min-points", type=int, default=0)
     parser.add_argument("--min-clusters", type=int, default=0)
     args = parser.parse_args(argv)
 
     points, portals = parse_probe_report(args.probe_report)
-    clusters = build_clusters(points, portals, args.radius, args.vertical_radius)
+    clusters = build_clusters(
+        points,
+        portals,
+        args.radius,
+        args.vertical_radius,
+        mode=args.mode,
+    )
     report = render_report(
         args.probe_report,
         points,
@@ -361,6 +455,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         args.radius,
         args.vertical_radius,
         max(0, args.members_limit),
+        mode=args.mode,
     )
 
     if args.output:
