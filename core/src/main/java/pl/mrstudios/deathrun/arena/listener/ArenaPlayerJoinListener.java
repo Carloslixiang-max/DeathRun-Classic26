@@ -6,6 +6,7 @@ import org.bukkit.event.player.PlayerJoinEvent;
 import org.jetbrains.annotations.NotNull;
 import pl.mrstudios.commons.inject.annotation.Inject;
 import pl.mrstudios.deathrun.arena.ArenaManager;
+import pl.mrstudios.deathrun.classic.playtest.PlaytestTraceService;
 
 import static org.bukkit.event.EventPriority.MONITOR;
 
@@ -13,22 +14,44 @@ import static org.bukkit.event.EventPriority.MONITOR;
 public class ArenaPlayerJoinListener implements Listener {
 
     private final ArenaManager arenaManager;
+    private final PlaytestTraceService trace;
 
     @Inject
-    public ArenaPlayerJoinListener(@NotNull ArenaManager arenaManager) {
+    public ArenaPlayerJoinListener(
+            @NotNull ArenaManager arenaManager,
+            @NotNull PlaytestTraceService trace
+    ) {
         this.arenaManager = arenaManager;
+        this.trace = trace;
     }
 
     @EventHandler(priority = MONITOR)
     public void onPlayerJoin(@NotNull PlayerJoinEvent event) {
-        if (this.arenaManager.hasPendingSnapshot(event.getPlayer())) {
-            if (this.arenaManager.restorePendingSnapshot(event.getPlayer()))
+        String traceMap = this.trace.consumeDisconnectedMap(event.getPlayer().getUniqueId());
+        boolean pendingBefore = this.arenaManager.hasPendingSnapshot(event.getPlayer());
+
+        if (pendingBefore) {
+            boolean recovered = this.arenaManager.restorePendingSnapshot(event.getPlayer());
+            if (recovered)
                 event.getPlayer().sendMessage(org.bukkit.ChatColor.GREEN + "[DeathRun] Your saved pre-game state was recovered.");
             else
                 event.getPlayer().sendMessage(org.bukkit.ChatColor.RED + "[DeathRun] Recovery is still pending. Use /dr recover after the saved world is available.");
+
+            if (traceMap != null)
+                this.trace.record(traceMap, "RECONNECT_RECOVERY",
+                        "player=" + event.getPlayer().getName()
+                                + " pendingBefore=true"
+                                + " pendingAfter=" + this.arenaManager.hasPendingSnapshot(event.getPlayer())
+                                + " recovered=" + recovered);
             return;
         }
 
         this.arenaManager.recoverPlayerToHubIfNeeded(event.getPlayer(), true);
+        if (traceMap != null)
+            this.trace.record(traceMap, "RECONNECT_RECOVERY",
+                    "player=" + event.getPlayer().getName()
+                            + " pendingBefore=false"
+                            + " pendingAfter=" + this.arenaManager.hasPendingSnapshot(event.getPlayer())
+                            + " recovered=" + !this.arenaManager.hasPendingSnapshot(event.getPlayer()));
     }
 }
