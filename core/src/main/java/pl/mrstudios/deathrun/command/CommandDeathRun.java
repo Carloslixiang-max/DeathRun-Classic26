@@ -3216,7 +3216,12 @@ public class CommandDeathRun {
     ) throws Exception {
         List<org.bukkit.Chunk> pinnedChunks = this.pinBackupChunks(map, world);
         try {
-            this.flushWorldPreservingAutosave(world);
+            if (!this.plugin.getServer().dispatchCommand(
+                    this.plugin.getServer().getConsoleSender(),
+                    "save-all flush"
+            )) {
+                throw new IllegalStateException("Paper rejected save-all flush before DeathRun backup.");
+            }
 
             String worldName = world.getName();
             Path path = get(this.plugin.getDataFolder().toString(), "backup/", worldName + ".zip");
