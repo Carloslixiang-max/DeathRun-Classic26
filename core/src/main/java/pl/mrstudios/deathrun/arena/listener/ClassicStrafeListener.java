@@ -11,6 +11,7 @@ import pl.mrstudios.commons.inject.annotation.Inject;
 import pl.mrstudios.deathrun.api.arena.user.IUser;
 import pl.mrstudios.deathrun.arena.ArenaManager;
 import pl.mrstudios.deathrun.classic.strafe.ClassicStrafeService;
+import pl.mrstudios.deathrun.classic.playtest.PlaytestTraceService;
 
 import static pl.mrstudios.deathrun.api.arena.enums.GameState.PLAYING;
 import static pl.mrstudios.deathrun.api.arena.user.enums.Role.RUNNER;
@@ -19,11 +20,13 @@ public final class ClassicStrafeListener implements Listener {
 
     private final ArenaManager arenaManager;
     private final ClassicStrafeService strafeService;
+    private final PlaytestTraceService trace;
 
     @Inject
-    public ClassicStrafeListener(@NotNull ArenaManager arenaManager, @NotNull Plugin plugin) {
+    public ClassicStrafeListener(@NotNull ArenaManager arenaManager, @NotNull Plugin plugin, @NotNull PlaytestTraceService trace) {
         this.arenaManager = arenaManager;
         this.strafeService = new ClassicStrafeService(plugin);
+        this.trace = trace;
     }
 
     @EventHandler
@@ -43,6 +46,7 @@ public final class ClassicStrafeListener implements Listener {
         event.setCancelled(true);
         boolean activated = this.strafeService.activate(player, direction);
         if (activated) {
+            this.trace.record(runtime.mapId(), "STRAFE", "player=" + player.getName() + " direction=" + direction.name() + " cooldown=60");
             player.sendActionBar(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize(
                     "<aqua>" + direction.label() + "</aqua> <gray>used · <white>60s</white>"
             ));

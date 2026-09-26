@@ -188,6 +188,10 @@ During setup:
 /dr map manifest <id>
 
 /dr map session <id>
+/dr map trace start <id>
+/dr map trace status <id>
+/dr map trace stop <id>
+/dr map trace clear <id>
 ```
 
 `/dr map manifest <id>` is the full authoring audit. It prints map metadata, waiting lobby,

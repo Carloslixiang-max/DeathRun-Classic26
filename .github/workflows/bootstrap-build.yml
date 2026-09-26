@@ -358,6 +358,34 @@ jobs:
           done
           test "$SESSION_OK" -eq 1
 
+          printf 'dr map trace start classic26-playtest\n' >&3
+          TRACE_REPORT='plugins/DeathRun/research/classic26-playtest-playtest-trace.log'
+          TRACE_START_OK=0
+          for _ in $(seq 1 30); do
+            if [ -s "$TRACE_REPORT" ] && grep -q 'TRACE_START' "$TRACE_REPORT"; then
+              TRACE_START_OK=1
+              break
+            fi
+            sleep 1
+          done
+          test "$TRACE_START_OK" -eq 1
+          grep -q 'SESSION_SNAPSHOT.*state=WAITING.*users=0.*queued=0' "$TRACE_REPORT"
+
+          printf 'dr map trace status classic26-playtest\n' >&3
+          sleep 1
+          grep -q 'Trace classic26-playtest.*enabled=true' server.log
+
+          printf 'dr map trace stop classic26-playtest\n' >&3
+          TRACE_STOP_OK=0
+          for _ in $(seq 1 30); do
+            if grep -q 'TRACE_STOP' "$TRACE_REPORT"; then
+              TRACE_STOP_OK=1
+              break
+            fi
+            sleep 1
+          done
+          test "$TRACE_STOP_OK" -eq 1
+
           printf 'stop\n' >&3 || true
           exec 3>&-
           stop_server_process "$PID"

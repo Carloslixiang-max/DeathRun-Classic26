@@ -45,6 +45,7 @@ import pl.mrstudios.deathrun.player.PlayerStatisticsService;
 import pl.mrstudios.deathrun.reward.RewardService;
 import pl.mrstudios.deathrun.classic.trap.TrapActivationService;
 import pl.mrstudios.deathrun.classic.vote.ClassicVoteService;
+import pl.mrstudios.deathrun.classic.playtest.PlaytestTraceService;
 import org.bukkit.map.MapPalette;
 import org.jetbrains.annotations.Nullable;
 
@@ -72,6 +73,7 @@ public class Entrypoint extends JavaPlugin {
     private PlayerStatisticsService playerStatisticsService;
     private RewardService rewardService;
     private ClassicVoteService classicVoteService;
+    private PlaytestTraceService playtestTraceService;
     private volatile BufferedImage winParchmentImage;
     private volatile BufferedImage loseParchmentImage;
 
@@ -116,6 +118,7 @@ public class Entrypoint extends JavaPlugin {
         /* Arena Manager */
         this.arenaManager = new ArenaManager(this, this.getServer(), this.configuration, this.winMapManager, this.rewardService);
         this.classicVoteService = new ClassicVoteService(this, this.configuration, this.arenaManager);
+        this.playtestTraceService = new PlaytestTraceService(this, this.arenaManager);
         this.signManager = new SignManager(this, this.arenaManager);
         this.arenaManager.setSignManager(this.signManager);
 
@@ -141,6 +144,7 @@ public class Entrypoint extends JavaPlugin {
                 .register(PlayerStatisticsService.class, this.playerStatisticsService)
                 .register(MapSelectorService.class, new MapSelectorService(this, this.configuration, this.arenaManager))
                 .register(ClassicVoteService.class, this.classicVoteService)
+                .register(PlaytestTraceService.class, this.playtestTraceService)
                 .register(Configuration.class, this.configuration);
 
         this.arenaManager.initialize();
@@ -271,6 +275,9 @@ public class Entrypoint extends JavaPlugin {
 
         if (this.classicVoteService != null)
             this.classicVoteService.shutdown();
+
+        if (this.playtestTraceService != null)
+            this.playtestTraceService.shutdown();
 
         if (this.arenaManager != null) {
             this.arenaManager.restoreActivePlayersOnDisable();

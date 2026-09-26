@@ -37,6 +37,7 @@ import pl.mrstudios.deathrun.arena.trap.TrapRegistry;
 import pl.mrstudios.deathrun.config.Configuration;
 import pl.mrstudios.deathrun.config.impl.MapConfiguration;
 import pl.mrstudios.deathrun.classic.playtest.ClassicPlaytestService;
+import pl.mrstudios.deathrun.classic.playtest.PlaytestTraceService;
 import pl.mrstudios.deathrun.classic.vote.ClassicVoteService;
 
 import java.nio.file.Path;
@@ -83,6 +84,7 @@ public class CommandDeathRun {
     private final ArenaManager arenaManager;
     private final MapSelectorService mapSelectorService;
     private final ClassicVoteService classicVoteService;
+    private final PlaytestTraceService playtestTraceService;
     private final SignManager signManager;
     private final Configuration configuration;
     private final Map<UUID, String> setupMapSelection = new HashMap<>();
@@ -98,6 +100,7 @@ public class CommandDeathRun {
             @NotNull ArenaManager arenaManager,
             @NotNull MapSelectorService mapSelectorService,
             @NotNull ClassicVoteService classicVoteService,
+            @NotNull PlaytestTraceService playtestTraceService,
                 @NotNull SignManager signManager,
             @NotNull Configuration configuration
     ) {
@@ -107,6 +110,7 @@ public class CommandDeathRun {
         this.arenaManager = arenaManager;
         this.mapSelectorService = mapSelectorService;
         this.classicVoteService = classicVoteService;
+        this.playtestTraceService = playtestTraceService;
         this.signManager = signManager;
         this.configuration = configuration;
     }
@@ -1152,6 +1156,101 @@ public class CommandDeathRun {
         } catch (Exception exception) {
             this.message(sender, PREFIX + "<red>Legacy datapack scan failed: <white>"
                     + this.legacyScanText(exception.getMessage()));
+        }
+    }
+
+    @Execute(name = "map trace start")
+    @Permission("mrstudios.command.deathrun.setup")
+    public void setupMapTraceStart(
+            @Context CommandSender sender,
+            @Arg("id") String id
+    ) {
+        MapConfiguration.MapDefinition map = this.configuration.map().getMapById(id);
+        if (map == null) {
+            this.message(sender, this.configuration.language().commandMessageSetupMapMissing.replace("<map>", id));
+            return;
+        }
+
+        String mapId = this.configuration.map().normalizedMapId(map.id);
+        try {
+            Path path = this.playtestTraceService.start(mapId);
+            ArenaManager.ArenaRuntime runtime = this.arenaManager.runtimeByMapId(mapId);
+            if (runtime != null) {
+                this.playtestTraceService.record(
+                        mapId,
+                        "SESSION_SNAPSHOT",
+                        "state=" + runtime.arena().getGameState()
+                                + " users=" + runtime.arena().getUsers().size()
+                                + " queued=" + this.arenaManager.queuedPlayersForMap(mapId)
+                                + " elapsed=" + runtime.arena().getElapsedTime()
+                                + " remaining=" + runtime.arena().getRemainingTime()
+                );
+            }
+            this.message(sender, PREFIX + "<green>Trace started for <white>" + mapId
+                    + "<green>. Report: <white>" + path);
+        } catch (Exception exception) {
+            this.message(sender, PREFIX + "<red>Unable to start trace: <white>" + this.safe(exception.getMessage()));
+        }
+    }
+
+    @Execute(name = "map trace stop")
+    @Permission("mrstudios.command.deathrun.setup")
+    public void setupMapTraceStop(
+            @Context CommandSender sender,
+            @Arg("id") String id
+    ) {
+        MapConfiguration.MapDefinition map = this.configuration.map().getMapById(id);
+        if (map == null) {
+            this.message(sender, this.configuration.language().commandMessageSetupMapMissing.replace("<map>", id));
+            return;
+        }
+
+        String mapId = this.configuration.map().normalizedMapId(map.id);
+        PlaytestTraceService.TraceStatus status = this.playtestTraceService.stop(mapId);
+        this.message(sender, PREFIX + "<green>Trace stopped for <white>" + mapId
+                + "<green>. lines=<white>" + status.lines()
+                + "<green> report=<white>" + status.path());
+    }
+
+    @Execute(name = "map trace status")
+    @Permission("mrstudios.command.deathrun.setup")
+    public void setupMapTraceStatus(
+            @Context CommandSender sender,
+            @Arg("id") String id
+    ) {
+        MapConfiguration.MapDefinition map = this.configuration.map().getMapById(id);
+        if (map == null) {
+            this.message(sender, this.configuration.language().commandMessageSetupMapMissing.replace("<map>", id));
+            return;
+        }
+
+        String mapId = this.configuration.map().normalizedMapId(map.id);
+        PlaytestTraceService.TraceStatus status = this.playtestTraceService.status(mapId);
+        this.message(sender, PREFIX + "<gold>Trace <white>" + mapId
+                + " <gray>| enabled=<white>" + status.enabled()
+                + " <gray>| lines=<white>" + status.lines()
+                + " <gray>| report=<white>" + status.path());
+    }
+
+    @Execute(name = "map trace clear")
+    @Permission("mrstudios.command.deathrun.setup")
+    public void setupMapTraceClear(
+            @Context CommandSender sender,
+            @Arg("id") String id
+    ) {
+        MapConfiguration.MapDefinition map = this.configuration.map().getMapById(id);
+        if (map == null) {
+            this.message(sender, this.configuration.language().commandMessageSetupMapMissing.replace("<map>", id));
+            return;
+        }
+
+        String mapId = this.configuration.map().normalizedMapId(map.id);
+        try {
+            PlaytestTraceService.TraceStatus status = this.playtestTraceService.clear(mapId);
+            this.message(sender, PREFIX + "<green>Trace cleared for <white>" + mapId
+                    + "<green>. report=<white>" + status.path());
+        } catch (Exception exception) {
+            this.message(sender, PREFIX + "<red>Unable to clear trace: <white>" + this.safe(exception.getMessage()));
         }
     }
 
