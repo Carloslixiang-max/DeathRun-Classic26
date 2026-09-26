@@ -31,6 +31,7 @@ public final class PlaytestTraceService {
     private final Path researchDirectory;
     private final Set<String> enabledMaps = new HashSet<>();
     private final Map<String, Integer> lineCounts = new HashMap<>();
+    private final Map<java.util.UUID, String> disconnectedMaps = new HashMap<>();
 
     public PlaytestTraceService(
             @NotNull Plugin plugin,
@@ -51,6 +52,7 @@ public final class PlaytestTraceService {
                 + "# started=" + Instant.now() + System.lineSeparator();
         writeString(path, header, StandardCharsets.UTF_8, CREATE, TRUNCATE_EXISTING);
 
+        this.disconnectedMaps.entrySet().removeIf(entry -> entry.getValue().equals(normalized));
         this.enabledMaps.add(normalized);
         this.lineCounts.put(normalized, 3);
         this.record(normalized, "TRACE_START", "enabled=true");
@@ -69,6 +71,7 @@ public final class PlaytestTraceService {
         String normalized = this.normalize(mapId);
         this.enabledMaps.remove(normalized);
         this.lineCounts.remove(normalized);
+        this.disconnectedMaps.entrySet().removeIf(entry -> entry.getValue().equals(normalized));
         deleteIfExists(this.reportPath(normalized));
         return this.status(normalized);
     }
@@ -111,6 +114,33 @@ public final class PlaytestTraceService {
                             + normalized + ": " + exception.getMessage()
             );
         }
+    }
+
+    public synchronized void rememberDisconnect(
+            @NotNull java.util.UUID playerId,
+            @NotNull String mapId
+    ) {
+        String normalized = this.normalize(mapId);
+        if (this.enabledMaps.contains(normalized))
+            this.disconnectedMaps.put(playerId, normalized);
+    }
+
+    public synchronized @Nullable String consumeDisconnectedMap(
+            @NotNull java.util.UUID playerId
+    ) {
+        return this.disconnectedMaps.remove(playerId);
+    }
+
+    public synchronized @NotNull PlaytestAcceptanceAnalyzer.Result acceptance(
+            @NotNull String mapId,
+            @NotNull List<Integer> expectedCheckpointIds,
+            int expectedTrapCount
+    ) throws IOException {
+        Path path = this.reportPath(mapId);
+        List<String> lines = java.nio.file.Files.exists(path)
+                ? java.nio.file.Files.readAllLines(path, StandardCharsets.UTF_8)
+                : List.of();
+        return PlaytestAcceptanceAnalyzer.analyze(lines, expectedCheckpointIds, expectedTrapCount);
     }
 
     public void recordArena(
