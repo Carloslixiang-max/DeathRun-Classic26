@@ -3441,6 +3441,21 @@ public class CommandDeathRun {
                 issues.add("barrier-location-wrong-world");
         }
 
+        if (!map.arenaStartBarrierBlocks.isEmpty()) {
+            long validBarrierBlocks = map.arenaStartBarrierBlocks.stream()
+                    .filter(Objects::nonNull)
+                    .filter(location -> location.getWorld() != null)
+                    .count();
+            long distinctBarrierBlocks = map.arenaStartBarrierBlocks.stream()
+                    .filter(Objects::nonNull)
+                    .filter(location -> location.getWorld() != null)
+                    .map(this::locationBlockKey)
+                    .distinct()
+                    .count();
+            if (distinctBarrierBlocks < validBarrierBlocks)
+                issues.add("duplicate-barrier-blocks");
+        }
+
         if (!map.arenaStartBarrierBlocks.isEmpty() && map.arenaStartBarrierRestoreMaterials.size() != map.arenaStartBarrierBlocks.size())
             issues.add("barrier-restore-size-mismatch");
 
@@ -3572,6 +3587,7 @@ public class CommandDeathRun {
                              "missing-start-barrier",
                              "barrier-location-invalid",
                              "barrier-location-wrong-world",
+                             "duplicate-barrier-blocks",
                              "barrier-restore-size-mismatch",
                              "barrier-restore-material-invalid",
                              "teleport-pad-location-invalid",
