@@ -58,6 +58,7 @@ jobs:
           python3 tools/test_anvil_block_entity_evidence.py
           python3 tools/test_anvil_stage_evidence.py
           python3 tools/test_anvil_mechanism_evidence.py
+          python3 tools/test_anvil_redstone_evidence.py
 
           ROOT='/tmp/deathrun-archive-probe'
           rm -rf "$ROOT"
@@ -87,6 +88,19 @@ jobs:
           python3 tools/anvil_probe.py --world-name toxic-factory             --output "$ROOT/toxic-factory-probe.txt"             --min-chunks 1 --min-candidates 1             "$ROOT/toxic-factory"
 
           python3 tools/anvil_probe.py --world-name to-bee-or-not-to-bee             --output "$ROOT/to-bee-or-not-to-bee-probe.txt"             --min-chunks 1 --min-candidates 1             "$ROOT/to-bee-or-not-to-bee"
+
+          python3 tools/anvil_redstone_evidence.py \
+            "$ROOT/to-bee-or-not-to-bee-probe.txt" \
+            --output "$ROOT/to-bee-or-not-to-bee-redstone-evidence.txt" \
+            --anchor-radius 2 --max-components 80
+          python3 tools/anvil_redstone_evidence.py \
+            "$ROOT/toxic-factory-probe.txt" \
+            --output "$ROOT/toxic-factory-redstone-evidence.txt" \
+            --anchor-radius 2 --max-components 80
+          echo '--- To Bee archived redstone/control-chain evidence ---'
+          cat "$ROOT/to-bee-or-not-to-bee-redstone-evidence.txt"
+          echo '--- Toxic Factory redstone/control-chain summary ---'
+          grep '^redstone_evidence_summary ' "$ROOT/toxic-factory-redstone-evidence.txt"
 
           echo '--- To Bee archived sign evidence (first 100) ---'
           awk 'BEGIN { n=0 } /^SIGN/ { print; n++; if (n >= 100) exit 0 }' "$ROOT/to-bee-or-not-to-bee-probe.txt"

@@ -52,6 +52,35 @@ class AnvilProbeTest(unittest.TestCase):
         self.assertEqual("BUTTON", candidate.category)
         self.assertEqual((32, 64, -48), (candidate.x, candidate.y, candidate.z))
 
+    def test_scan_modern_redstone_wire_preserves_state(self):
+        indices = [0] * 4096
+        indices[0] = 1
+        section = {
+            "Y": 3,
+            "Palette": [
+                {"Name": "minecraft:air"},
+                {
+                    "Name": "minecraft:redstone_wire",
+                    "Properties": {
+                        "power": "11",
+                        "north": "side",
+                        "east": "none",
+                        "south": "up",
+                        "west": "none",
+                    },
+                },
+            ],
+            "BlockStates": pack_padded(indices, 2),
+        }
+
+        candidates = scan_modern_section(section, -1, 2, "r.-1.0.mca")
+        self.assertEqual(1, len(candidates))
+        candidate = candidates[0]
+        self.assertEqual("REDSTONE", candidate.category)
+        self.assertEqual("minecraft:redstone_wire", candidate.name)
+        self.assertEqual((-16, 48, 32), (candidate.x, candidate.y, candidate.z))
+        self.assertIn(("power", "11"), candidate.properties)
+
     def test_scan_modern_dispenser_preserves_mechanism_state(self):
         indices = [0] * 4096
         indices[0] = 1
@@ -80,6 +109,20 @@ class AnvilProbeTest(unittest.TestCase):
             (("facing", "north"), ("triggered", "false")),
             candidate.properties,
         )
+
+    def test_scan_legacy_redstone_wire(self):
+        blocks = bytearray(4096)
+        blocks[0] = 55
+        section = {
+            "Y": 5,
+            "Blocks": bytes(blocks),
+            "Data": bytes(2048),
+        }
+
+        candidates = scan_legacy_section(section, 0, 0, "r.0.0.mca")
+        self.assertEqual(1, len(candidates))
+        self.assertEqual("REDSTONE", candidates[0].category)
+        self.assertEqual("minecraft:redstone_wire", candidates[0].name)
 
     def test_scan_legacy_command_block(self):
         blocks = bytearray(4096)

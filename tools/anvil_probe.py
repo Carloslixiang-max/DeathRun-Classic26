@@ -31,21 +31,39 @@ REGION_RE = re.compile(r"^r\.(-?\d+)\.(-?\d+)\.mca$", re.IGNORECASE)
 
 LEGACY_CANDIDATES = {
     23: ("MECHANISM", "minecraft:dispenser"),
+    29: ("REDSTONE", "minecraft:sticky_piston"),
+    33: ("REDSTONE", "minecraft:piston"),
+    34: ("REDSTONE", "minecraft:piston_head"),
+    55: ("REDSTONE", "minecraft:redstone_wire"),
+    69: ("REDSTONE", "minecraft:lever"),
     70: ("PRESSURE_PLATE", "minecraft:stone_pressure_plate"),
     72: ("PRESSURE_PLATE", "minecraft:oak_pressure_plate"),
+    75: ("REDSTONE", "minecraft:redstone_torch"),
+    76: ("REDSTONE", "minecraft:redstone_torch"),
     77: ("BUTTON", "minecraft:stone_button"),
+    93: ("REDSTONE", "minecraft:repeater"),
+    94: ("REDSTONE", "minecraft:repeater"),
     90: ("PORTAL", "minecraft:nether_portal"),
     119: ("PORTAL", "minecraft:end_portal"),
     120: ("PORTAL", "minecraft:end_portal_frame"),
+    123: ("REDSTONE", "minecraft:redstone_lamp"),
+    124: ("REDSTONE", "minecraft:redstone_lamp"),
+    131: ("REDSTONE", "minecraft:tripwire_hook"),
+    132: ("REDSTONE", "minecraft:tripwire"),
     137: ("COMMAND_BLOCK", "minecraft:command_block"),
     143: ("BUTTON", "minecraft:oak_button"),
     147: ("PRESSURE_PLATE", "minecraft:light_weighted_pressure_plate"),
     148: ("PRESSURE_PLATE", "minecraft:heavy_weighted_pressure_plate"),
+    149: ("REDSTONE", "minecraft:comparator"),
+    150: ("REDSTONE", "minecraft:comparator"),
+    152: ("REDSTONE", "minecraft:redstone_block"),
     154: ("MECHANISM", "minecraft:hopper"),
     158: ("MECHANISM", "minecraft:dropper"),
+    178: ("REDSTONE", "minecraft:daylight_detector"),
     209: ("PORTAL", "minecraft:end_gateway"),
     210: ("COMMAND_BLOCK", "minecraft:repeating_command_block"),
     211: ("COMMAND_BLOCK", "minecraft:chain_command_block"),
+    218: ("REDSTONE", "minecraft:observer"),
 }
 
 COMMAND_ENTITY_IDS = {
@@ -202,6 +220,25 @@ def candidate_category(name: str) -> str | None:
         return "PRESSURE_PLATE"
     if normalized.endswith("_wall_sign") or normalized.endswith("_sign"):
         return "SIGN_BLOCK"
+    if normalized in {
+        "minecraft:redstone_wire",
+        "minecraft:repeater",
+        "minecraft:comparator",
+        "minecraft:lever",
+        "minecraft:redstone_torch",
+        "minecraft:redstone_wall_torch",
+        "minecraft:redstone_block",
+        "minecraft:redstone_lamp",
+        "minecraft:piston",
+        "minecraft:sticky_piston",
+        "minecraft:piston_head",
+        "minecraft:observer",
+        "minecraft:tripwire",
+        "minecraft:tripwire_hook",
+        "minecraft:target",
+        "minecraft:daylight_detector",
+    }:
+        return "REDSTONE"
     if normalized in {
         "minecraft:dispenser",
         "minecraft:dropper",
