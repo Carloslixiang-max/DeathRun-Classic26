@@ -55,6 +55,7 @@ After the test:
 
 ```text
 /dr map trace stop classic26-playtest
+/dr map trace acceptance classic26-playtest
 ```
 
 The private report is written to:
@@ -66,3 +67,23 @@ plugins/DeathRun/research/classic26-playtest-playtest-trace.log
 This file is intentionally not committed to the public repository. It is the preferred artifact to
 attach when a real-player acceptance step fails because it preserves the internal state transitions
 without requiring screenshots for every event.
+
+
+### Acceptance verdict
+
+`/dr map trace acceptance classic26-playtest` analyzes the trace instead of requiring manual log review.
+The strict engineering-fixture verdict requires evidence for:
+
+- at least two joined players and both Runner/Death role assignment
+- PLAYING, ENDING and post-round WAITING transitions
+- successful Left, Back and Right Classic strafes
+- Death Navigator Previous/Next, successful Trap Jumper and hotbar Activate
+- at least one successful physical trap-button activation
+- every configured checkpoint and every configured trap index
+- one non-eliminating death and one zero-lives elimination
+- a first-place finish followed by a remaining-time clamp of at most 60 seconds
+- successful player snapshot restoration
+- an active-session disconnect followed by reconnect/recovery with no pending snapshot
+
+The trace can span multiple rounds, so the finish path and zero-lives elimination path do not have to
+be forced onto the same Runner in one two-player round.
