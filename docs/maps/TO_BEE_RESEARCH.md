@@ -96,6 +96,15 @@ portal blocks. Real archive results:
 This is strong negative evidence against treating either surviving pressure
 plates or portal components as a direct 9-checkpoint encoding.
 
+A separate portal-to-warning geometry pass uses a conservative 20-block 3D
+radius around each of the 7 physical Nether Portal components. It is intended
+only to identify route-structure candidates, not to relabel portals as
+checkpoints. The current archive has **6/7** portal components near at least one
+Runner warning sign and **1/7** portal component with no warning inside that
+radius. The warning-free component therefore becomes a useful visual/video
+review target for possible route-transition, start/finish, or decorative
+geometry, but no gameplay role is assigned from proximity alone.
+
 ## Archived redstone/control-chain evidence
 
 Run #255 / commit `19f330d3a0998c7af887865e0e420c1d50f3d168`
