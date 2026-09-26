@@ -56,6 +56,7 @@ jobs:
           python3 tools/test_anvil_route_evidence.py
           python3 tools/test_anvil_entity_evidence.py
           python3 tools/test_anvil_block_entity_evidence.py
+          python3 tools/test_anvil_stage_evidence.py
 
           ROOT='/tmp/deathrun-archive-probe'
           rm -rf "$ROOT"
@@ -150,6 +151,21 @@ jobs:
           cat "$ROOT/to-bee-or-not-to-bee-block-entity-evidence.txt"
           grep '^block_entity_summary ' "$ROOT/toxic-factory-block-entity-evidence.txt"
           grep '^BLOCK_ENTITY_EVIDENCE' "$ROOT/toxic-factory-block-entity-evidence.txt" | head -n 100 || true
+
+          python3 tools/anvil_stage_evidence.py \
+            "$ROOT/to-bee-or-not-to-bee-probe.txt" \
+            "$ROOT/to-bee-or-not-to-bee-entity-evidence.txt" \
+            "$ROOT/to-bee-or-not-to-bee-block-entity-evidence.txt" \
+            --output "$ROOT/to-bee-or-not-to-bee-stage-evidence.txt" \
+            --horizontal-radius 12 --vertical-radius 10 --min-stage-markers 2
+          python3 tools/anvil_stage_evidence.py \
+            "$ROOT/toxic-factory-probe.txt" \
+            "$ROOT/toxic-factory-entity-evidence.txt" \
+            "$ROOT/toxic-factory-block-entity-evidence.txt" \
+            --output "$ROOT/toxic-factory-stage-evidence.txt" \
+            --horizontal-radius 12 --vertical-radius 10 --min-stage-markers 0
+          cat "$ROOT/to-bee-or-not-to-bee-stage-evidence.txt"
+          grep '^stage_evidence_summary ' "$ROOT/toxic-factory-stage-evidence.txt"
 
           python3 tools/leveldat_probe.py --require-spawn "$ROOT/toxic-factory-level.dat" --output "$ROOT/toxic-factory-leveldat.txt"
           python3 tools/leveldat_probe.py --require-spawn "$ROOT/to-bee-or-not-to-bee-level.dat" --output "$ROOT/to-bee-or-not-to-bee-leveldat.txt"

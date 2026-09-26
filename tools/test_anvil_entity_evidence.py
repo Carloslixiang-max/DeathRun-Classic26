@@ -7,6 +7,23 @@ from anvil_entity_evidence import entity_records_from_level, render_report
 
 class AnvilEntityEvidenceTest(unittest.TestCase):
 
+    def test_stage_name_is_preserved_as_route_word(self):
+        level = {
+            "Entities": [
+                {
+                    "id": "minecraft:armor_stand",
+                    "Pos": [24.5, 45.25, 13.5],
+                    "CustomName": '{"text":"Next Stage"}',
+                    "Invisible": 1,
+                    "Marker": 1,
+                }
+            ]
+        }
+        evidence, _types, _total = entity_records_from_level(
+            level, "r.0.0.mca", 1, 0
+        )
+        self.assertEqual(("stage",), evidence[0].route_words)
+
     def test_extracts_named_tagged_armor_stand_and_passenger(self):
         level = {
             "Entities": [

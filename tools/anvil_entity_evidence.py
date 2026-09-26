@@ -38,6 +38,7 @@ ROUTE_WORDS = {
     "runner",
     "runners",
     "death",
+    "stage",
 }
 WORD_RE = re.compile(r"[a-z0-9]+")
 INTERESTING_ENTITY_IDS = {
