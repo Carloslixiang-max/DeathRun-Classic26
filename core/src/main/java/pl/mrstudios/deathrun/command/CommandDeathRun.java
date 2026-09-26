@@ -3378,6 +3378,19 @@ public class CommandDeathRun {
                                 .anyMatch(location -> location.getWorld() != null && !this.sameWorld(location, mapWorld)))))
             issues.add("checkpoint-location-wrong-world");
 
+        List<Set<String>> checkpointRegions = map.arenaCheckpoints.stream()
+                .filter(Objects::nonNull)
+                .map(Checkpoint::locations)
+                .filter(Objects::nonNull)
+                .filter(locations -> !locations.isEmpty())
+                .filter(locations -> locations.stream().allMatch(location -> location != null && location.getWorld() != null))
+                .map(locations -> locations.stream()
+                        .map(this::locationBlockKey)
+                        .collect(Collectors.toSet()))
+                .toList();
+        if (checkpointRegions.stream().distinct().count() < checkpointRegions.size())
+            issues.add("duplicate-checkpoint-regions");
+
         if (map.arenaTraps.isEmpty()) {
             issues.add("missing-traps");
         } else {
@@ -3388,6 +3401,13 @@ public class CommandDeathRun {
                     .filter(Objects::nonNull)
                     .anyMatch(trap -> trap.getButton() == null || trap.getButton().getWorld() == null))
                 issues.add("trap-button-invalid");
+            if (map.arenaTraps.stream()
+                    .filter(Objects::nonNull)
+                    .map(ITrap::getButton)
+                    .filter(Objects::nonNull)
+                    .filter(location -> location.getWorld() != null)
+                    .anyMatch(location -> !this.isSupportedTrapButton(location.getBlock())))
+                issues.add("trap-button-not-button");
             if (map.arenaTraps.stream()
                     .filter(Objects::nonNull)
                     .anyMatch(trap -> trap.getLocations() == null || trap.getLocations().isEmpty()
@@ -3478,6 +3498,14 @@ public class CommandDeathRun {
                     .count();
             if (distinctTeleportSources < validTeleportSources)
                 issues.add("duplicate-teleport-pad-sources");
+
+            if (map.teleportPads.stream()
+                    .filter(Objects::nonNull)
+                    .filter(pad -> pad.padLocation() != null && pad.padLocation().getWorld() != null)
+                    .filter(pad -> pad.teleportLocation() != null && pad.teleportLocation().getWorld() != null)
+                    .anyMatch(pad -> this.locationBlockKey(pad.padLocation())
+                            .equals(this.locationBlockKey(pad.teleportLocation()))))
+                issues.add("teleport-pad-noop");
         }
 
         if (map.arenaSetupEnabled)
@@ -3544,9 +3572,11 @@ public class CommandDeathRun {
                              "checkpoint-points-invalid",
                              "checkpoint-location-invalid",
                              "checkpoint-location-wrong-world",
+                             "duplicate-checkpoint-regions",
                              "missing-traps",
                              "trap-entry-invalid",
                              "trap-button-invalid",
+                             "trap-button-not-button",
                              "trap-region-invalid",
                              "trap-location-wrong-world",
                              "duplicate-trap-buttons",
@@ -3558,7 +3588,8 @@ public class CommandDeathRun {
                              "teleport-pad-location-invalid",
                              "teleport-pad-wrong-world",
                              "teleport-pad-source-not-pressure-plate",
-                             "duplicate-teleport-pad-sources" -> true;
+                             "duplicate-teleport-pad-sources",
+                             "teleport-pad-noop" -> true;
                         case "missing-backup" -> requireBackup;
                         default -> false;
                     };
