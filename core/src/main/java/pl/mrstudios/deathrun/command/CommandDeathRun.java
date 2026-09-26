@@ -3252,13 +3252,17 @@ public class CommandDeathRun {
             if (map.arenaRunnerSpawnLocations.size() < requiredRunnerSpawns)
                 issues.add("insufficient-runner-spawns(" + map.arenaRunnerSpawnLocations.size() + "/" + requiredRunnerSpawns + ")");
 
+            long validRunnerSpawns = map.arenaRunnerSpawnLocations.stream()
+                    .filter(Objects::nonNull)
+                    .filter(location -> location.getWorld() != null)
+                    .count();
             long distinctRunnerSpawns = map.arenaRunnerSpawnLocations.stream()
                     .filter(Objects::nonNull)
                     .filter(location -> location.getWorld() != null)
                     .map(this::locationBlockKey)
                     .distinct()
                     .count();
-            if (distinctRunnerSpawns < map.arenaRunnerSpawnLocations.size())
+            if (distinctRunnerSpawns < validRunnerSpawns)
                 issues.add("duplicate-runner-spawns");
         }
 
@@ -3276,13 +3280,17 @@ public class CommandDeathRun {
             if (map.arenaDeathSpawnLocations.size() < requiredDeathSpawns)
                 issues.add("insufficient-death-spawns(" + map.arenaDeathSpawnLocations.size() + "/" + requiredDeathSpawns + ")");
 
+            long validDeathSpawns = map.arenaDeathSpawnLocations.stream()
+                    .filter(Objects::nonNull)
+                    .filter(location -> location.getWorld() != null)
+                    .count();
             long distinctDeathSpawns = map.arenaDeathSpawnLocations.stream()
                     .filter(Objects::nonNull)
                     .filter(location -> location.getWorld() != null)
                     .map(this::locationBlockKey)
                     .distinct()
                     .count();
-            if (distinctDeathSpawns < map.arenaDeathSpawnLocations.size())
+            if (distinctDeathSpawns < validDeathSpawns)
                 issues.add("duplicate-death-spawns");
         }
 
@@ -3309,14 +3317,36 @@ public class CommandDeathRun {
         if (map.arenaCheckpoints.isEmpty())
             issues.add("missing-checkpoints");
 
+        boolean invalidCheckpointEntry = map.arenaCheckpoints.stream().anyMatch(Objects::isNull);
+        if (invalidCheckpointEntry)
+            issues.add("checkpoint-entry-invalid");
+
+        boolean invalidCheckpointId = map.arenaCheckpoints.stream()
+                .filter(Objects::nonNull)
+                .anyMatch(checkpoint -> checkpoint.id() == null || checkpoint.id() <= 0);
+        if (invalidCheckpointId)
+            issues.add("checkpoint-id-invalid");
+
+        List<Integer> validCheckpointIds = map.arenaCheckpoints.stream()
+                .filter(Objects::nonNull)
+                .map(Checkpoint::id)
+                .filter(Objects::nonNull)
+                .toList();
+        if (validCheckpointIds.stream().distinct().count() < validCheckpointIds.size())
+            issues.add("duplicate-checkpoint-ids");
+
         if (map.arenaCheckpoints.isEmpty()) {
             issues.add("finish-checkpoint-not-set");
         } else if (map.arenaFinishCheckpointId == null) {
             issues.add("finish-checkpoint-not-set");
-        } else if (map.arenaCheckpoints.stream().noneMatch((checkpoint) -> checkpoint.id().equals(map.arenaFinishCheckpointId))) {
+        } else if (map.arenaCheckpoints.stream()
+                .filter(Objects::nonNull)
+                .noneMatch(checkpoint -> Objects.equals(checkpoint.id(), map.arenaFinishCheckpointId))) {
             issues.add("finish-checkpoint-invalid");
-        } else if (!map.arenaCheckpoints.get(map.arenaCheckpoints.size() - 1).id().equals(map.arenaFinishCheckpointId)) {
-            issues.add("finish-checkpoint-not-last");
+        } else {
+            Checkpoint lastCheckpoint = map.arenaCheckpoints.get(map.arenaCheckpoints.size() - 1);
+            if (lastCheckpoint == null || !Objects.equals(lastCheckpoint.id(), map.arenaFinishCheckpointId))
+                issues.add("finish-checkpoint-not-last");
         }
 
         if (!map.arenaCheckpoints.isEmpty() && map.arenaCheckpointPoints.isEmpty())
@@ -3329,37 +3359,48 @@ public class CommandDeathRun {
                 && map.arenaCheckpointPoints.stream().anyMatch(points -> points == null || points < 0))
             issues.add("checkpoint-points-invalid");
 
-        if (!map.arenaCheckpoints.isEmpty() && map.arenaCheckpoints.stream().anyMatch(checkpoint ->
-                checkpoint == null
-                        || checkpoint.spawn() == null
-                        || checkpoint.spawn().getWorld() == null
-                        || checkpoint.locations().isEmpty()
-                        || checkpoint.locations().stream().anyMatch(location -> location == null || location.getWorld() == null)))
+        if (!map.arenaCheckpoints.isEmpty() && map.arenaCheckpoints.stream()
+                .filter(Objects::nonNull)
+                .anyMatch(checkpoint ->
+                        checkpoint.spawn() == null
+                                || checkpoint.spawn().getWorld() == null
+                                || checkpoint.locations() == null
+                                || checkpoint.locations().isEmpty()
+                                || checkpoint.locations().stream().anyMatch(location -> location == null || location.getWorld() == null)))
             issues.add("checkpoint-location-invalid");
 
         if (mapWorld != null && map.arenaCheckpoints.stream()
                 .filter(Objects::nonNull)
                 .anyMatch(checkpoint ->
                         (checkpoint.spawn() != null && checkpoint.spawn().getWorld() != null && !this.sameWorld(checkpoint.spawn(), mapWorld))
-                                || checkpoint.locations().stream()
+                                || (checkpoint.locations() != null && checkpoint.locations().stream()
                                 .filter(Objects::nonNull)
-                                .anyMatch(location -> location.getWorld() != null && !this.sameWorld(location, mapWorld))))
+                                .anyMatch(location -> location.getWorld() != null && !this.sameWorld(location, mapWorld)))))
             issues.add("checkpoint-location-wrong-world");
 
         if (map.arenaTraps.isEmpty()) {
             issues.add("missing-traps");
         } else {
-            if (map.arenaTraps.stream().anyMatch(trap -> trap.getButton() == null || trap.getButton().getWorld() == null))
+            if (map.arenaTraps.stream().anyMatch(Objects::isNull))
+                issues.add("trap-entry-invalid");
+
+            if (map.arenaTraps.stream()
+                    .filter(Objects::nonNull)
+                    .anyMatch(trap -> trap.getButton() == null || trap.getButton().getWorld() == null))
                 issues.add("trap-button-invalid");
-            if (map.arenaTraps.stream().anyMatch(trap -> trap.getLocations() == null || trap.getLocations().isEmpty()
-                    || trap.getLocations().stream().anyMatch(location -> location == null || location.getWorld() == null)))
+            if (map.arenaTraps.stream()
+                    .filter(Objects::nonNull)
+                    .anyMatch(trap -> trap.getLocations() == null || trap.getLocations().isEmpty()
+                            || trap.getLocations().stream().anyMatch(location -> location == null || location.getWorld() == null)))
                 issues.add("trap-region-invalid");
 
-            if (mapWorld != null && map.arenaTraps.stream().anyMatch(trap ->
-                    (trap.getButton() != null && trap.getButton().getWorld() != null && !this.sameWorld(trap.getButton(), mapWorld))
-                            || (trap.getLocations() != null && trap.getLocations().stream()
-                            .filter(Objects::nonNull)
-                            .anyMatch(location -> location.getWorld() != null && !this.sameWorld(location, mapWorld)))))
+            if (mapWorld != null && map.arenaTraps.stream()
+                    .filter(Objects::nonNull)
+                    .anyMatch(trap ->
+                            (trap.getButton() != null && trap.getButton().getWorld() != null && !this.sameWorld(trap.getButton(), mapWorld))
+                                    || (trap.getLocations() != null && trap.getLocations().stream()
+                                    .filter(Objects::nonNull)
+                                    .anyMatch(location -> location.getWorld() != null && !this.sameWorld(location, mapWorld)))))
                 issues.add("trap-location-wrong-world");
 
             long distinctTrapButtons = map.arenaTraps.stream()
@@ -3393,6 +3434,10 @@ public class CommandDeathRun {
 
         if (!map.arenaStartBarrierBlocks.isEmpty() && map.arenaStartBarrierRestoreMaterials.size() != map.arenaStartBarrierBlocks.size())
             issues.add("barrier-restore-size-mismatch");
+
+        if (!map.arenaStartBarrierRestoreMaterials.isEmpty()
+                && map.arenaStartBarrierRestoreMaterials.stream().anyMatch(Objects::isNull))
+            issues.add("barrier-restore-material-invalid");
 
         if (map.teleportPads != null && map.teleportPads.stream().anyMatch(pad ->
                 pad == null
@@ -3491,12 +3536,16 @@ public class CommandDeathRun {
                              "finish-checkpoint-not-set",
                              "finish-checkpoint-invalid",
                              "finish-checkpoint-not-last",
+                             "checkpoint-entry-invalid",
+                             "checkpoint-id-invalid",
+                             "duplicate-checkpoint-ids",
                              "missing-checkpoint-points",
                              "checkpoint-points-size-mismatch",
                              "checkpoint-points-invalid",
                              "checkpoint-location-invalid",
                              "checkpoint-location-wrong-world",
                              "missing-traps",
+                             "trap-entry-invalid",
                              "trap-button-invalid",
                              "trap-region-invalid",
                              "trap-location-wrong-world",
@@ -3505,6 +3554,7 @@ public class CommandDeathRun {
                              "barrier-location-invalid",
                              "barrier-location-wrong-world",
                              "barrier-restore-size-mismatch",
+                             "barrier-restore-material-invalid",
                              "teleport-pad-location-invalid",
                              "teleport-pad-wrong-world",
                              "teleport-pad-source-not-pressure-plate",
