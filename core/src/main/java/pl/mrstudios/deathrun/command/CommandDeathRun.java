@@ -1240,7 +1240,7 @@ public class CommandDeathRun {
         }
 
         try {
-            this.refreshWorldBackup(worldName, world);
+            this.refreshWorldBackup(map, world);
             this.message(sender, this.configuration.language().commandMessageSetupMapBackupSuccess
                     .replace("<map>", this.safe(map.id))
                     .replace("<world>", worldName));
@@ -3146,25 +3146,96 @@ public class CommandDeathRun {
     }
 
     private void refreshWorldBackup(
-            @NotNull String worldName,
+            @NotNull MapConfiguration.MapDefinition map,
             @NotNull World world
     ) throws Exception {
-        this.flushWorldPreservingAutosave(world);
-
-        Path path = get(this.plugin.getDataFolder().toString(), "backup/", worldName + ".zip");
-        Path tempPath = get(this.plugin.getDataFolder().toString(), "backup/", worldName + ".zip.tmp");
-        createDirectories(path.getParent());
-        deleteIfExists(tempPath);
-
-        try (ZipFile zipFile = new ZipFile(tempPath.toString())) {
-            zipFile.addFolder(world.getWorldFolder());
-        }
-
+        List<org.bukkit.Chunk> pinnedChunks = this.pinBackupChunks(map, world);
         try {
-            java.nio.file.Files.move(tempPath, path, REPLACE_EXISTING, ATOMIC_MOVE);
-        } catch (java.nio.file.AtomicMoveNotSupportedException ignored) {
-            java.nio.file.Files.move(tempPath, path, REPLACE_EXISTING);
+            this.flushWorldPreservingAutosave(world);
+
+            String worldName = world.getName();
+            Path path = get(this.plugin.getDataFolder().toString(), "backup/", worldName + ".zip");
+            Path tempPath = get(this.plugin.getDataFolder().toString(), "backup/", worldName + ".zip.tmp");
+            createDirectories(path.getParent());
+            deleteIfExists(tempPath);
+
+            try (ZipFile zipFile = new ZipFile(tempPath.toString())) {
+                zipFile.addFolder(world.getWorldFolder());
+            }
+
+            try {
+                java.nio.file.Files.move(tempPath, path, REPLACE_EXISTING, ATOMIC_MOVE);
+            } catch (java.nio.file.AtomicMoveNotSupportedException ignored) {
+                java.nio.file.Files.move(tempPath, path, REPLACE_EXISTING);
+            }
+        } finally {
+            pinnedChunks.forEach(chunk -> chunk.removePluginChunkTicket(this.plugin));
         }
+    }
+
+    private @NotNull List<org.bukkit.Chunk> pinBackupChunks(
+            @NotNull MapConfiguration.MapDefinition map,
+            @NotNull World world
+    ) {
+        Map<Long, org.bukkit.Chunk> chunks = new HashMap<>();
+
+        for (org.bukkit.Chunk chunk : world.getLoadedChunks())
+            chunks.put(this.chunkKey(chunk.getX(), chunk.getZ()), chunk);
+
+        List<Location> anchors = new ArrayList<>();
+        anchors.add(map.arenaWaitingLobbyLocation);
+        anchors.addAll(map.arenaRunnerSpawnLocations);
+        anchors.addAll(map.arenaDeathSpawnLocations);
+        anchors.addAll(map.arenaStartBarrierBlocks);
+
+        for (Checkpoint checkpoint : map.arenaCheckpoints) {
+            if (checkpoint == null)
+                continue;
+            anchors.add(checkpoint.spawn());
+            if (checkpoint.locations() != null)
+                anchors.addAll(checkpoint.locations());
+        }
+
+        for (ITrap trap : map.arenaTraps) {
+            if (trap == null)
+                continue;
+            anchors.add(trap.getButton());
+            if (trap.getLocations() != null)
+                anchors.addAll(trap.getLocations());
+        }
+
+        if (map.teleportPads != null) {
+            for (TeleportPad pad : map.teleportPads) {
+                if (pad == null)
+                    continue;
+                anchors.add(pad.padLocation());
+                anchors.add(pad.teleportLocation());
+            }
+        }
+
+        for (Location location : anchors) {
+            if (location == null
+                    || location.getWorld() == null
+                    || !location.getWorld().getUID().equals(world.getUID()))
+                continue;
+
+            int chunkX = location.getBlockX() >> 4;
+            int chunkZ = location.getBlockZ() >> 4;
+            long key = this.chunkKey(chunkX, chunkZ);
+            chunks.computeIfAbsent(key, ignored -> world.getChunkAt(chunkX, chunkZ));
+        }
+
+        List<org.bukkit.Chunk> pinned = new ArrayList<>();
+        for (org.bukkit.Chunk chunk : chunks.values()) {
+            if (chunk.addPluginChunkTicket(this.plugin))
+                pinned.add(chunk);
+        }
+
+        return pinned;
+    }
+
+    private long chunkKey(int x, int z) {
+        return ((long) x << 32) ^ (z & 0xffffffffL);
     }
 
     private void saveMapWorldNow(
