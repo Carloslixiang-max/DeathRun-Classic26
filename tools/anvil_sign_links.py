@@ -49,6 +49,7 @@ class LinkedAction:
     nearest_distance: float | None
     nearby_buttons: tuple[Button, ...]
     panel_buttons: tuple[Button, ...]
+    axis_buttons: tuple[Button, ...]
     target_arrow: str | None
     sign_front: tuple[float, float] | None
 
@@ -227,11 +228,33 @@ def _facing_dot(
     return sign_front[0] * button_front[0] + sign_front[1] * button_front[1]
 
 
+def _axis_offsets(
+    sign: Sign,
+    button: Button,
+    sign_front: tuple[float, float] | None,
+) -> tuple[float, float, float] | None:
+    """Return lateral, vertical and longitudinal sign/button offsets.
+
+    This is deliberately only a geometric control-axis test. Matching the axis
+    does not prove that a button activates the sign's trap.
+    """
+    if sign_front is None:
+        return None
+    dx = button.x - sign.x
+    dz = button.z - sign.z
+    lateral = abs(dx * (-sign_front[1]) + dz * sign_front[0])
+    vertical = abs(button.y - sign.y)
+    longitudinal = dx * sign_front[0] + dz * sign_front[1]
+    return lateral, vertical, longitudinal
+
+
 def link_action(
     sign: Sign,
     buttons: Sequence[Button],
     nearby_radius: float,
     facing_min_dot: float = 0.70,
+    axis_max_lateral: float = 1.25,
+    axis_max_vertical: float = 2.0,
 ) -> LinkedAction:
     ordered = sorted(
         ((distance(sign, button), button) for button in buttons),
@@ -265,12 +288,34 @@ def link_action(
         )
     )
 
+    axis_ranked: list[tuple[float, float, float, Button]] = []
+    for _neg_dot, _distance, button in panel_ranked:
+        offsets = _axis_offsets(sign, button, sign_front)
+        if offsets is None:
+            continue
+        lateral, vertical, longitudinal = offsets
+        if lateral > axis_max_lateral or vertical > axis_max_vertical:
+            continue
+        axis_ranked.append((lateral, vertical, abs(longitudinal), button))
+    axis_ranked.sort(
+        key=lambda item: (
+            item[0],
+            item[1],
+            item[2],
+            item[3].x,
+            item[3].y,
+            item[3].z,
+            item[3].name,
+        )
+    )
+
     return LinkedAction(
         sign=sign,
         nearest_button=nearest_button,
         nearest_distance=nearest_distance,
         nearby_buttons=nearby,
         panel_buttons=tuple(item[2] for item in panel_ranked),
+        axis_buttons=tuple(item[3] for item in axis_ranked),
         target_arrow=target_arrow(sign),
         sign_front=sign_front,
     )
@@ -281,16 +326,40 @@ def _button_text(button: Button) -> str:
     return f"{button.x},{button.y},{button.z}:{button.name}[{props or 'no-props'}]"
 
 
+def _axis_button_text(
+    sign: Sign,
+    button: Button,
+    sign_front: tuple[float, float] | None,
+) -> str:
+    offsets = _axis_offsets(sign, button, sign_front)
+    if offsets is None:
+        return _button_text(button)
+    lateral, vertical, longitudinal = offsets
+    return (
+        f"{_button_text(button)}"
+        f"{{lateral={lateral:.2f},vertical={vertical:.2f},longitudinal={longitudinal:.2f}}}"
+    )
+
+
 def render_report(
     source: Path,
     buttons: Sequence[Button],
     signs: Sequence[Sign],
     nearby_radius: float,
     facing_min_dot: float = 0.70,
+    axis_max_lateral: float = 1.25,
+    axis_max_vertical: float = 2.0,
 ) -> str:
     kinds = Counter(sign_kind(sign) for sign in signs)
     actions = [
-        link_action(sign, buttons, nearby_radius, facing_min_dot)
+        link_action(
+            sign,
+            buttons,
+            nearby_radius,
+            facing_min_dot,
+            axis_max_lateral,
+            axis_max_vertical,
+        )
         for sign in signs
         if sign_kind(sign) == "DIRECTIONAL_ACTION"
     ]
@@ -305,6 +374,13 @@ def render_report(
         for action in actions
         if action.sign_front is not None and not action.panel_buttons
     ]
+    axis_unique = [action for action in actions if len(action.axis_buttons) == 1]
+    axis_ambiguous = [action for action in actions if len(action.axis_buttons) > 1]
+    axis_unresolved = [
+        action
+        for action in actions
+        if action.panel_buttons and not action.axis_buttons
+    ]
     unique_panel_buttons = {
         (
             action.panel_buttons[0].x,
@@ -313,6 +389,15 @@ def render_report(
             action.panel_buttons[0].name,
         )
         for action in panel_unique
+    }
+    unique_axis_buttons = {
+        (
+            action.axis_buttons[0].x,
+            action.axis_buttons[0].y,
+            action.axis_buttons[0].z,
+            action.axis_buttons[0].name,
+        )
+        for action in axis_unique
     }
 
     lines = [
@@ -328,13 +413,21 @@ def render_report(
             f"panel_ambiguous_links={len(panel_ambiguous)} "
             f"panel_unresolved={len(panel_unresolved)} "
             f"unique_panel_buttons={len(unique_panel_buttons)} "
+            f"axis_unique_links={len(axis_unique)} "
+            f"axis_ambiguous_links={len(axis_ambiguous)} "
+            f"axis_unresolved={len(axis_unresolved)} "
+            f"unique_axis_buttons={len(unique_axis_buttons)} "
             f"warnings={kinds['WARNING']} numeric_pairs={kinds['NUMERIC_PAIR']} "
             f"titles={kinds['TITLE']} credits={kinds['CREDIT']} "
             f"other={kinds['OTHER']} empty={kinds['EMPTY']} "
-            f"nearby_radius={nearby_radius:g} facing_min_dot={facing_min_dot:g}"
+            f"nearby_radius={nearby_radius:g} facing_min_dot={facing_min_dot:g} "
+            f"axis_max_lateral={axis_max_lateral:g} "
+            f"axis_max_vertical={axis_max_vertical:g}"
         ),
         "# <<< / >>> is preserved as target-direction evidence only.",
         "# PANEL candidates require nearby wall-button facing compatible with the sign.",
+        "# AXIS candidates additionally require close lateral/vertical alignment to the sign's facing axis.",
+        "# Axis alignment narrows control-panel geometry only; it is not proof of activation binding.",
         "# Evidence status is not a Classic26 trap classification.",
         "",
     ]
@@ -352,7 +445,11 @@ def render_report(
             else "none"
         )
 
-        if len(action.panel_buttons) == 1:
+        if len(action.axis_buttons) == 1:
+            status = "AXIS_UNIQUE"
+        elif len(action.axis_buttons) > 1:
+            status = "AXIS_AMBIGUOUS"
+        elif len(action.panel_buttons) == 1:
             status = "PANEL_UNIQUE"
         elif len(action.panel_buttons) > 1:
             status = "PANEL_AMBIGUOUS"
@@ -368,6 +465,10 @@ def render_report(
         )
         nearby_text = ";".join(_button_text(button) for button in action.nearby_buttons) or "none"
         panel_text = ";".join(_button_text(button) for button in action.panel_buttons) or "none"
+        axis_text = ";".join(
+            _axis_button_text(sign, button, action.sign_front)
+            for button in action.axis_buttons
+        ) or "none"
 
         lines.append(
             "ACTION_SIGN\t"
@@ -377,6 +478,8 @@ def render_report(
             f"nearest_button={nearest}\tdistance={distance_text}\t"
             f"nearby_buttons={len(action.nearby_buttons)}\t"
             f"panel_buttons={len(action.panel_buttons)}\t"
+            f"axis_buttons={len(action.axis_buttons)}\t"
+            f"axis_candidates={axis_text}\t"
             f"panel_candidates={panel_text}\tnearby={nearby_text}\ttext={sign.text}"
         )
 
@@ -397,6 +500,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--output", type=Path)
     parser.add_argument("--nearby-radius", type=float, default=9.0)
     parser.add_argument("--facing-min-dot", type=float, default=0.70)
+    parser.add_argument("--axis-max-lateral", type=float, default=1.25)
+    parser.add_argument("--axis-max-vertical", type=float, default=2.0)
     parser.add_argument("--min-actions", type=int, default=0)
     args = parser.parse_args(argv)
 
@@ -404,6 +509,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         parser.error("--nearby-radius must be positive")
     if not -1.0 <= args.facing_min_dot <= 1.0:
         parser.error("--facing-min-dot must be between -1 and 1")
+    if args.axis_max_lateral < 0 or args.axis_max_vertical < 0:
+        parser.error("axis tolerances must be non-negative")
 
     buttons, signs = parse_probe_report(args.probe_report)
     report = render_report(
@@ -412,6 +519,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         signs,
         args.nearby_radius,
         args.facing_min_dot,
+        args.axis_max_lateral,
+        args.axis_max_vertical,
     )
 
     if args.output:

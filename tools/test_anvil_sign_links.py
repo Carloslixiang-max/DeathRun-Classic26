@@ -17,8 +17,9 @@ class AnvilSignLinksTest(unittest.TestCase):
 
     def test_panel_facing_reduces_nearby_buttons(self):
         fixture = """# fixture
-BLOCK\tBUTTON\tminecraft:stone_button\t-4\t70\t0\tregion=r.-1.0.mca\tchunk=-1,0\tprops=face:wall,facing:north,powered:false
-BLOCK\tBUTTON\tminecraft:stone_button\t4\t70\t0\tregion=r.0.0.mca\tchunk=0,0\tprops=face:wall,facing:south,powered:false
+BLOCK\tBUTTON\tminecraft:stone_button\t0\t65\t-4\tregion=r.0.-1.mca\tchunk=0,-1\tprops=face:wall,facing:north,powered:false
+BLOCK\tBUTTON\tminecraft:stone_button\t4\t65\t-3\tregion=r.0.-1.mca\tchunk=0,-1\tprops=face:wall,facing:north,powered:false
+BLOCK\tBUTTON\tminecraft:stone_button\t0\t65\t4\tregion=r.0.0.mca\tchunk=0,0\tprops=face:wall,facing:south,powered:false
 BLOCK\tSIGN_BLOCK\tminecraft:oak_wall_sign\t0\t64\t0\tregion=r.0.0.mca\tchunk=0,0\tprops=facing:north,waterlogged:false
 SIGN\tminecraft:sign\t0\t64\t0\tregion=r.0.0.mca\tchunk=0,0\ttext=>>> | Release fire | snake | >>>
 """
@@ -30,12 +31,20 @@ SIGN\tminecraft:sign\t0\t64\t0\tregion=r.0.0.mca\tchunk=0,0\ttext=>>> | Release 
             self.assertEqual((0.0, -1.0), button_front_vector(buttons[0]))
 
             action = link_action(signs[0], buttons, 9.0, 0.70)
-            self.assertEqual(2, len(action.nearby_buttons))
-            self.assertEqual(1, len(action.panel_buttons))
-            self.assertEqual(-4, action.panel_buttons[0].x)
+            self.assertEqual(3, len(action.nearby_buttons))
+            self.assertEqual(2, len(action.panel_buttons))
+            self.assertEqual(1, len(action.axis_buttons))
+            self.assertEqual(
+                (0, 65, -4),
+                (
+                    action.axis_buttons[0].x,
+                    action.axis_buttons[0].y,
+                    action.axis_buttons[0].z,
+                ),
+            )
 
     def test_renders_panel_summary_without_trap_classification(self):
-        fixture = """BLOCK\tBUTTON\tminecraft:stone_button\t-4\t70\t0\tregion=r.-1.0.mca\tchunk=-1,0\tprops=face:wall,facing:north
+        fixture = """BLOCK\tBUTTON\tminecraft:stone_button\t0\t64\t-4\tregion=r.0.-1.mca\tchunk=0,-1\tprops=face:wall,facing:north
 BLOCK\tSIGN_BLOCK\tminecraft:oak_wall_sign\t0\t64\t0\tregion=r.0.0.mca\tchunk=0,0\tprops=facing:north
 SIGN\tminecraft:sign\t0\t64\t0\tregion=r.0.0.mca\tchunk=0,0\ttext=>>> | Flood the | floor | >>>
 SIGN\tminecraft:sign\t5\t64\t0\tregion=r.0.0.mca\tchunk=0,0\ttext=To Bee or not | to Bee
@@ -49,7 +58,11 @@ SIGN\tminecraft:sign\t5\t64\t0\tregion=r.0.0.mca\tchunk=0,0\ttext=To Bee or not 
             self.assertIn("button_facing_known=1", report)
             self.assertIn("panel_unique_links=1", report)
             self.assertIn("unique_panel_buttons=1", report)
-            self.assertIn("link=PANEL_UNIQUE", report)
+            self.assertIn("axis_unique_links=1", report)
+            self.assertIn("unique_axis_buttons=1", report)
+            self.assertIn("link=AXIS_UNIQUE", report)
+            self.assertIn("axis_buttons=1", report)
+            self.assertIn("lateral=0.00", report)
             self.assertIn("target_arrow=RIGHT", report)
             self.assertIn("TITLE_SIGN", report)
             self.assertNotIn("trap_type=", report)
