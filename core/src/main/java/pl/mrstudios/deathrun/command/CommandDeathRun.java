@@ -891,6 +891,14 @@ public class CommandDeathRun {
             int portalCount = 0;
             final int detailLimit = 128;
             List<String> details = new ArrayList<>();
+            List<String> reportLines = new ArrayList<>();
+            reportLines.add("DeathRun Classic26 legacy map scan");
+            reportLines.add("map=" + this.safe(map.id));
+            reportLines.add("world=" + player.getWorld().getName());
+            reportLines.add("volume=" + volume);
+            reportLines.add("min=" + region.getMinimumPoint());
+            reportLines.add("max=" + region.getMaximumPoint());
+            reportLines.add("");
 
             for (com.sk89q.worldedit.math.BlockVector3 vector : region) {
                 Block block = player.getWorld().getBlockAt(vector.x(), vector.y(), vector.z());
@@ -898,25 +906,32 @@ public class CommandDeathRun {
 
                 if (this.isSupportedTrapButton(block)) {
                     buttonCount++;
+                    String line = "BUTTON " + this.blockSummary(block);
+                    reportLines.add(line);
                     if (details.size() < detailLimit)
-                        details.add("BUTTON " + this.blockSummary(block));
+                        details.add(line);
                 }
 
                 if (material.name().endsWith("_PRESSURE_PLATE")) {
                     pressurePlateCount++;
+                    String line = "PRESSURE_PLATE " + this.blockSummary(block);
+                    reportLines.add(line);
                     if (details.size() < detailLimit)
-                        details.add("PRESSURE_PLATE " + this.blockSummary(block));
+                        details.add(line);
                 }
 
                 if (material == COMMAND_BLOCK
                         || material == CHAIN_COMMAND_BLOCK
                         || material == REPEATING_COMMAND_BLOCK) {
                     commandBlockCount++;
-                    if (details.size() < detailLimit) {
-                        String rawCommand = "";
-                        if (block.getState() instanceof CommandBlock commandBlock)
-                            rawCommand = commandBlock.getCommand();
+                    String rawCommand = "";
+                    if (block.getState() instanceof CommandBlock commandBlock)
+                        rawCommand = commandBlock.getCommand();
 
+                    String reportLine = "COMMAND_BLOCK " + this.blockSummary(block)
+                            + " cmd=" + this.legacyReportText(rawCommand);
+                    reportLines.add(reportLine);
+                    if (details.size() < detailLimit) {
                         details.add("COMMAND_BLOCK " + this.blockSummary(block)
                                 + " cmd=" + this.legacyScanText(rawCommand));
                     }
@@ -927,10 +942,25 @@ public class CommandDeathRun {
                         || material == END_PORTAL_FRAME
                         || material == END_GATEWAY) {
                     portalCount++;
+                    String line = "PORTAL " + this.blockSummary(block);
+                    reportLines.add(line);
                     if (details.size() < detailLimit)
-                        details.add("PORTAL " + this.blockSummary(block));
+                        details.add(line);
                 }
             }
+
+            reportLines.add("");
+            reportLines.add("summary buttons=" + buttonCount
+                    + " pressurePlates=" + pressurePlateCount
+                    + " commandBlocks=" + commandBlockCount
+                    + " portals=" + portalCount);
+
+            Path researchDirectory = get(this.plugin.getDataFolder().toString(), "research");
+            createDirectories(researchDirectory);
+            String reportFileName = this.configuration.map().normalizedMapId(this.safe(map.id))
+                    + "-legacy-scan.txt";
+            Path reportPath = researchDirectory.resolve(reportFileName);
+            java.nio.file.Files.writeString(reportPath, String.join(System.lineSeparator(), reportLines));
 
             this.message(player, PREFIX + "<gold>Legacy scan <white>" + this.safe(map.id)
                     + " <gray>| volume=<white>" + volume
@@ -949,7 +979,9 @@ public class CommandDeathRun {
                         + (totalCandidates - details.size()) + "<yellow> more candidates were counted.");
             }
 
-            this.message(player, PREFIX + "<green>Legacy scan complete. Use these as candidate coordinates only; verify each against the original/recreated route before authoring the production map.");
+            this.message(player, PREFIX + "<green>Legacy scan complete. Full report: <white>"
+                    + reportPath.toString()
+                    + "<green>. Use candidates only after verifying them against the original/recreated route.");
         } catch (Exception exception) {
             this.message(player, PREFIX + "<red>Legacy scan failed: <white>"
                     + this.legacyScanText(exception.getMessage()));
@@ -2449,6 +2481,18 @@ public class CommandDeathRun {
                 + "," + block.getY()
                 + "," + block.getZ()
                 + " type=" + block.getType().name();
+    }
+
+    private @NotNull String legacyReportText(
+            @Nullable String value
+    ) {
+        if (value == null || value.isBlank())
+            return "-";
+
+        return value
+                .replace("\r", " ")
+                .replace("\n", " ")
+                .trim();
     }
 
     private @NotNull String legacyScanText(
