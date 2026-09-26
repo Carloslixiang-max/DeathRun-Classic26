@@ -52,6 +52,35 @@ class AnvilProbeTest(unittest.TestCase):
         self.assertEqual("BUTTON", candidate.category)
         self.assertEqual((32, 64, -48), (candidate.x, candidate.y, candidate.z))
 
+    def test_scan_modern_dispenser_preserves_mechanism_state(self):
+        indices = [0] * 4096
+        indices[0] = 1
+        section = {
+            "Y": 4,
+            "Palette": [
+                {"Name": "minecraft:air"},
+                {
+                    "Name": "minecraft:dispenser",
+                    "Properties": {
+                        "facing": "north",
+                        "triggered": "false",
+                    },
+                },
+            ],
+            "BlockStates": pack_padded(indices, 2),
+        }
+
+        candidates = scan_modern_section(section, 1, 2, "r.0.0.mca")
+        self.assertEqual(1, len(candidates))
+        candidate = candidates[0]
+        self.assertEqual("MECHANISM", candidate.category)
+        self.assertEqual("minecraft:dispenser", candidate.name)
+        self.assertEqual((16, 64, 32), (candidate.x, candidate.y, candidate.z))
+        self.assertEqual(
+            (("facing", "north"), ("triggered", "false")),
+            candidate.properties,
+        )
+
     def test_scan_legacy_command_block(self):
         blocks = bytearray(4096)
         blocks[0] = 137

@@ -30,6 +30,7 @@ from typing import Any, Iterable, Iterator, Sequence
 REGION_RE = re.compile(r"^r\.(-?\d+)\.(-?\d+)\.mca$", re.IGNORECASE)
 
 LEGACY_CANDIDATES = {
+    23: ("MECHANISM", "minecraft:dispenser"),
     70: ("PRESSURE_PLATE", "minecraft:stone_pressure_plate"),
     72: ("PRESSURE_PLATE", "minecraft:oak_pressure_plate"),
     77: ("BUTTON", "minecraft:stone_button"),
@@ -40,6 +41,8 @@ LEGACY_CANDIDATES = {
     143: ("BUTTON", "minecraft:oak_button"),
     147: ("PRESSURE_PLATE", "minecraft:light_weighted_pressure_plate"),
     148: ("PRESSURE_PLATE", "minecraft:heavy_weighted_pressure_plate"),
+    154: ("MECHANISM", "minecraft:hopper"),
+    158: ("MECHANISM", "minecraft:dropper"),
     209: ("PORTAL", "minecraft:end_gateway"),
     210: ("COMMAND_BLOCK", "minecraft:repeating_command_block"),
     211: ("COMMAND_BLOCK", "minecraft:chain_command_block"),
@@ -199,6 +202,12 @@ def candidate_category(name: str) -> str | None:
         return "PRESSURE_PLATE"
     if normalized.endswith("_wall_sign") or normalized.endswith("_sign"):
         return "SIGN_BLOCK"
+    if normalized in {
+        "minecraft:dispenser",
+        "minecraft:dropper",
+        "minecraft:hopper",
+    }:
+        return "MECHANISM"
     if normalized in {
         "minecraft:command_block",
         "minecraft:chain_command_block",
