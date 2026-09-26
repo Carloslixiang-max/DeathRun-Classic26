@@ -23,9 +23,9 @@ SIGN\tminecraft:sign\t3\t64\t0\tregion=r.0.0.mca\tchunk=0,0\ttext=Warning! | Tes
             path.write_text(fixture, encoding="utf-8")
             _buttons, signs = parse_sign_probe(path)
             portals = [
-                Candidate("PORTAL", "minecraft:nether_portal", 0, 64, 0),
-                Candidate("PORTAL", "minecraft:nether_portal", 0, 65, 0),
-                Candidate("PORTAL", "minecraft:nether_portal", 40, 64, 0),
+                Candidate("PORTAL", "minecraft:nether_portal", 0, 64, 0, "fixture"),
+                Candidate("PORTAL", "minecraft:nether_portal", 0, 65, 0, "fixture"),
+                Candidate("PORTAL", "minecraft:nether_portal", 40, 64, 0, "fixture"),
             ]
             components = portal_components(portals)
             links = build_links(
