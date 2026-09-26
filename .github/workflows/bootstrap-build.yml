@@ -386,6 +386,17 @@ jobs:
           done
           test "$TRACE_STOP_OK" -eq 1
 
+          printf 'dr map trace acceptance classic26-playtest\n' >&3
+          ACCEPTANCE_CMD_OK=0
+          for _ in $(seq 1 30); do
+            if grep -q 'Acceptance classic26-playtest: INCOMPLETE' server.log; then
+              ACCEPTANCE_CMD_OK=1
+              break
+            fi
+            sleep 1
+          done
+          test "$ACCEPTANCE_CMD_OK" -eq 1
+
           printf 'stop\n' >&3 || true
           exec 3>&-
           stop_server_process "$PID"
