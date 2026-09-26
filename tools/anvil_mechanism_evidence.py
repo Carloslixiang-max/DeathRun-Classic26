@@ -257,6 +257,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--mechanism-radius", type=float, default=14.0)
     parser.add_argument("--min-pairs-with-dispensers", type=int, default=0)
     parser.add_argument("--min-facing-consistent", type=int, default=0)
+    parser.add_argument("--min-fire-arrow-consistent", type=int, default=0)
     args = parser.parse_args(argv)
 
     if args.pair_distance <= 0 or args.mechanism_radius <= 0:
@@ -294,6 +295,15 @@ def main(argv: Sequence[str] | None = None) -> int:
             file=sys.stderr,
         )
         return 3
+    if stats["fire_arrow_consistent"] < args.min_fire_arrow_consistent:
+        print(
+            "anvil_mechanism_evidence: expected at least "
+            f"{args.min_fire_arrow_consistent} Fire Arrows pairs with "
+            "facing-consistent dispensers, "
+            f"got {stats['fire_arrow_consistent']}",
+            file=sys.stderr,
+        )
+        return 4
     return 0
 
 

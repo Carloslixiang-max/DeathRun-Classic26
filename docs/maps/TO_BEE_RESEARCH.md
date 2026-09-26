@@ -39,12 +39,14 @@ The pinned archive currently produces:
 - 202 parsed chunks
 - 0 failed chunks
 - 0 external chunks
-- 855 original candidate blocks before sign-block expansion
+- 855 original button/pressure-plate/portal candidates
+- 1,089 enriched probe candidates after sign-block and mechanism expansion
 - 0 command-block entities
 - 409 buttons
 - 80 pressure plates
 - 366 Nether Portal blocks
-- 154 sign TileEntities
+- 154 sign TileEntities / sign blocks
+- 80 mechanism blocks: 48 dispensers + 32 hoppers
 
 The bounded local review pass (`radius=4`, `vertical-radius=3`) turns the
 489 button/pressure-plate interaction candidates into:
@@ -197,6 +199,92 @@ Current unique control-button candidate:
 Even this remains a **candidate** until visual or behavioral evidence confirms
 it. Three other signs reduce to small multi-button panel sets; most do not.
 
+## Death stage-control evidence
+
+The archive preserves exactly two named, invisible marker ArmorStands:
+
+- `Next Stage` at `24.500,45.250,13.500`
+- `Previous Stage` at `27.500,30.250,-11.500`
+
+`tools/anvil_stage_evidence.py` correlates these markers with nearby control
+geometry without assigning a stage number or Death spawn.
+
+The `Next Stage` marker is surrounded by:
+
+- **40** nearby stone buttons
+- **3** nearby directional action signs:
+  - `Set the coals on fire` at `30,44,15`
+  - `Drop TNT` at `29,44,9`
+  - `Flood the floor` at `27,44,21`
+
+The `Previous Stage` marker is surrounded by:
+
+- **5** nearby oak buttons
+- **2** nearby directional action signs:
+  - `Make the floor fall` at `28,29,-17`
+  - `Summon a random wall` at `23,29,-19`
+
+This is strong evidence that the archived world retains a physical Death
+stage-control layer. It does **not** establish the original stage numbering,
+Death spawn position, or exact button-to-action mapping.
+
+## BlockEntity and container evidence
+
+The To Bee archive contains **460** BlockEntities:
+
+- 226 skulls
+- 154 signs
+- 48 dispensers
+- 32 hoppers
+
+The 306 non-sign BlockEntities contain no route-keyword metadata. The original
+container inventories are also absent: **0 inventory entities / 0 inventory
+stacks** survive in the archive. Therefore dispenser/hopper contents cannot be
+used to reconstruct the original trap payloads.
+
+The block geometry itself is still useful because modern BlockState preserves
+mechanism direction. All 48 dispensers retain a `facing` property, and all
+32 hoppers retain `facing=down` plus `enabled=true`.
+
+## Warning/action/mechanism facing corroboration
+
+Run #252 / commit `413b706f0e1a6f75826daecea04f4fb6d74f37a7`
+passed the research suite, Java 25 build and full Paper 26.2 smoke with
+`tools/anvil_mechanism_evidence.py`.
+
+Using the same 20 warning/action candidates and a 14-block mechanism review
+radius:
+
+- **11/20** pairs have at least one nearby mechanism
+- **10/20** have at least one nearby dispenser
+- **6/20** have at least one dispenser whose preserved facing points
+  approximately toward the Runner warning-sign area
+- critically, **3/3 Fire Arrows candidates** have facing-consistent dispenser
+  evidence
+
+The three Fire Arrows instances are now independently corroborated by four
+surviving evidence layers: Runner warning text, Death action text, dispenser
+geometry, and dispenser facing.
+
+| Warning coordinate | Action coordinate | Nearby dispensers | Facing-consistent dispensers | Structural evidence |
+| --- | --- | ---: | ---: | --- |
+| `-41,18,-34` | `-35,29,-19` | 6 | 3 | south-facing array points toward warning area |
+| `-19,25,20` | `-23,29,10` | 7 | 3 | north-facing row points toward warning area |
+| `6,25,72` | `10,27,67` | 10 | 7 | opposing east/west arrays converge on warning area |
+
+Other mechanism-correlated candidates include both `Flood the floor` instances
+and the first `Release fire snake` instance, but a nearby/facing mechanism is
+not by itself proof of the original effect. For example, the minefield area has
+a dense dispenser row whose facing does not point at the warning sign under the
+current conservative rule.
+
+CI now requires all **3 Fire Arrows** candidates to retain facing-consistent
+dispenser evidence. This protects the evidence pipeline from silent regression.
+
+These mechanism results materially narrow target geometry for Fire Arrows, but
+they still do **not** authorize inventing an exact Classic26 target cuboid,
+duration, projectile payload, or reset behavior.
+
 ## Import procedure
 
 1. Keep the pinned archive immutable and use it only as source evidence.
@@ -206,15 +294,18 @@ it. Three other signs reduce to small multi-button panel sets; most do not.
    definitions.
 5. Use button-facing evidence only to reduce candidates; do not guess remaining
    button bindings.
-6. Establish all **9 checkpoint** trigger regions from independent evidence.
-7. Establish Runner/Death spawns, start barrier and finish region independently.
-8. For every trap selected for implementation, confirm:
+6. Use dispenser facing as target-lane corroboration for Fire Arrows and other
+   mechanism-backed candidates; do not turn it into an exact cuboid without
+   independent geometry/behavior evidence.
+7. Establish all **9 checkpoint** trigger regions from independent evidence.
+8. Establish Runner/Death spawns, start barrier and finish region independently.
+9. For every trap selected for implementation, confirm:
    - control button
    - target cuboid/geometry
    - activation behavior
    - active duration
    - restoration/reset behavior
-9. Run `/dr map check`, `/dr map manifest`, backup/restore verification and
+10. Run `/dr map check`, `/dr map manifest`, backup/restore verification and
    the human acceptance trace before considering the imported map playable.
 
 ## Still unknown / blockers
@@ -225,8 +316,9 @@ it. Three other signs reduce to small multi-button panel sets; most do not.
 - Checkpoint point values
 - Exact finish trigger
 - Exact control button for 22/23 action-sign instances
-- Exact target region/cuboid for each trap
-- Trap active durations and reset state
+- Exact target region/cuboid for each trap (Fire Arrows target lanes are now
+  structurally narrowed by dispenser facing, but not exact)
+- Trap active durations, projectile payloads and reset state
 - Whether any original server-side control logic was stripped before archive
 
 The archive is now strong enough to recover the **trap concept catalog and a
