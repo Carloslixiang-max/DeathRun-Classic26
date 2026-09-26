@@ -57,6 +57,7 @@ jobs:
           python3 tools/test_anvil_entity_evidence.py
           python3 tools/test_anvil_block_entity_evidence.py
           python3 tools/test_anvil_stage_evidence.py
+          python3 tools/test_anvil_mechanism_evidence.py
 
           ROOT='/tmp/deathrun-archive-probe'
           rm -rf "$ROOT"
@@ -115,6 +116,13 @@ jobs:
             --min-actions 0 --min-warnings 1
           cat "$ROOT/to-bee-or-not-to-bee-trap-evidence.txt"
           grep '^trap_evidence_summary ' "$ROOT/toxic-factory-trap-evidence.txt"
+
+          python3 tools/anvil_mechanism_evidence.py \
+            "$ROOT/to-bee-or-not-to-bee-probe.txt" \
+            --output "$ROOT/to-bee-or-not-to-bee-mechanism-evidence.txt" \
+            --pair-distance 30 --mechanism-radius 14 \
+            --min-pairs-with-dispensers 1 --min-facing-consistent 1
+          cat "$ROOT/to-bee-or-not-to-bee-mechanism-evidence.txt"
 
           python3 tools/anvil_route_evidence.py \
             "$ROOT/to-bee-or-not-to-bee-probe.txt" \
