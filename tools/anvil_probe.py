@@ -15,6 +15,7 @@ from __future__ import annotations
 import argparse
 import gzip
 import io
+import json
 import math
 import os
 import re
@@ -157,6 +158,18 @@ class CommandEntity:
     chunk_z: int
 
 
+@dataclass(frozen=True)
+class SignEntity:
+    entity_id: str
+    x: int
+    y: int
+    z: int
+    text: str
+    region: str
+    chunk_x: int
+    chunk_z: int
+
+
 @dataclass
 class ProbeStats:
     regions: int = 0
@@ -165,6 +178,7 @@ class ProbeStats:
     external_chunks: int = 0
     candidate_blocks: int = 0
     command_entities: int = 0
+    sign_entities: int = 0
 
 
 @dataclass
@@ -172,6 +186,7 @@ class ProbeResult:
     stats: ProbeStats
     blocks: list[BlockCandidate]
     commands: list[CommandEntity]
+    signs: list[SignEntity]
     errors: list[str]
 
 
@@ -424,6 +439,101 @@ def command_entities_from_chunk(
     return result
 
 
+def _flatten_text_component(value: Any) -> str:
+    """Return readable text from legacy/modern JSON text components."""
+    if value is None:
+        return ""
+    if isinstance(value, list):
+        return "".join(_flatten_text_component(item) for item in value)
+    if isinstance(value, dict):
+        parts: list[str] = []
+        text_value = value.get("text")
+        if isinstance(text_value, str):
+            parts.append(text_value)
+        translate = value.get("translate")
+        if not parts and isinstance(translate, str):
+            parts.append(translate)
+        extra = value.get("extra")
+        if isinstance(extra, list):
+            parts.extend(_flatten_text_component(item) for item in extra)
+        return "".join(parts)
+    if isinstance(value, str):
+        stripped = value.strip()
+        if stripped.startswith(("{", "[", '"')):
+            try:
+                parsed = json.loads(value)
+                if parsed != value:
+                    return _flatten_text_component(parsed)
+            except (json.JSONDecodeError, TypeError):
+                pass
+        return value
+    return str(value)
+
+
+def _clean_sign_line(value: Any) -> str:
+    return " ".join(
+        _flatten_text_component(value)
+        .replace("\\r", " ")
+        .replace("\\n", " ")
+        .replace("\\t", " ")
+        .split()
+    )
+
+
+def _is_sign_entity_id(entity_id: str) -> bool:
+    normalized = entity_id.lower()
+    bare = normalized.removeprefix("minecraft:")
+    return bare == "sign" or bare.endswith("_sign") or bare.endswith("_hanging_sign")
+
+
+def _sign_lines(entry: dict[str, Any]) -> list[str]:
+    legacy = [_clean_sign_line(entry.get(f"Text{index}", "")) for index in range(1, 5)]
+    if any(legacy):
+        return legacy
+
+    front_text = entry.get("front_text")
+    if isinstance(front_text, dict):
+        messages = front_text.get("messages")
+        if isinstance(messages, list):
+            return [_clean_sign_line(message) for message in messages]
+
+    return legacy
+
+
+def sign_entities_from_chunk(
+    level: dict[str, Any],
+    region: str,
+    chunk_x: int,
+    chunk_z: int,
+) -> list[SignEntity]:
+    result: list[SignEntity] = []
+    for entry in block_entities(level):
+        entity_id = entry.get("id", entry.get("Id", ""))
+        if not isinstance(entity_id, str) or not _is_sign_entity_id(entity_id):
+            continue
+
+        x = entry.get("x")
+        y = entry.get("y")
+        z = entry.get("z")
+        if not all(isinstance(value, int) for value in (x, y, z)):
+            continue
+
+        lines = [line for line in _sign_lines(entry) if line]
+        result.append(
+            SignEntity(
+                entity_id=entity_id,
+                x=int(x),
+                y=int(y),
+                z=int(z),
+                text=" | ".join(lines),
+                region=region,
+                chunk_x=chunk_x,
+                chunk_z=chunk_z,
+            )
+        )
+    return result
+
+
 def decompress_chunk(compression: int, payload: bytes) -> bytes:
     kind = compression & 0x7F
     if kind == 1:
@@ -449,6 +559,7 @@ def scan_region(path: Path) -> ProbeResult:
     stats = ProbeStats(regions=1)
     blocks: list[BlockCandidate] = []
     commands: list[CommandEntity] = []
+    signs: list[SignEntity] = []
     errors: list[str] = []
 
     for slot in range(1024):
@@ -504,6 +615,9 @@ def scan_region(path: Path) -> ProbeResult:
             commands.extend(
                 command_entities_from_chunk(level, path.name, chunk_x, chunk_z)
             )
+            signs.extend(
+                sign_entities_from_chunk(level, path.name, chunk_x, chunk_z)
+            )
             stats.chunks += 1
         except Exception as exc:  # keep scanning the rest of the archive
             stats.failed_chunks += 1
@@ -513,13 +627,21 @@ def scan_region(path: Path) -> ProbeResult:
 
     stats.candidate_blocks = len(blocks)
     stats.command_entities = len(commands)
-    return ProbeResult(stats=stats, blocks=blocks, commands=commands, errors=errors)
+    stats.sign_entities = len(signs)
+    return ProbeResult(
+        stats=stats,
+        blocks=blocks,
+        commands=commands,
+        signs=signs,
+        errors=errors,
+    )
 
 
 def merge_results(results: Sequence[ProbeResult]) -> ProbeResult:
     stats = ProbeStats()
     blocks: list[BlockCandidate] = []
     commands: list[CommandEntity] = []
+    signs: list[SignEntity] = []
     errors: list[str] = []
 
     for result in results:
@@ -529,13 +651,22 @@ def merge_results(results: Sequence[ProbeResult]) -> ProbeResult:
         stats.external_chunks += result.stats.external_chunks
         stats.candidate_blocks += result.stats.candidate_blocks
         stats.command_entities += result.stats.command_entities
+        stats.sign_entities += result.stats.sign_entities
         blocks.extend(result.blocks)
         commands.extend(result.commands)
+        signs.extend(result.signs)
         errors.extend(result.errors)
 
     blocks.sort(key=lambda item: (item.x, item.y, item.z, item.category, item.name))
     commands.sort(key=lambda item: (item.x, item.y, item.z, item.entity_id))
-    return ProbeResult(stats=stats, blocks=blocks, commands=commands, errors=errors)
+    signs.sort(key=lambda item: (item.x, item.y, item.z, item.entity_id, item.text))
+    return ProbeResult(
+        stats=stats,
+        blocks=blocks,
+        commands=commands,
+        signs=signs,
+        errors=errors,
+    )
 
 
 def region_paths(inputs: Iterable[str]) -> list[Path]:
@@ -564,7 +695,8 @@ def render_report(result: ProbeResult, world_name: str) -> str:
             f"failed_chunks={result.stats.failed_chunks} "
             f"external_chunks={result.stats.external_chunks} "
             f"candidate_blocks={result.stats.candidate_blocks} "
-            f"command_entities={result.stats.command_entities}"
+            f"command_entities={result.stats.command_entities} "
+            f"sign_entities={result.stats.sign_entities}"
         ),
         "",
     ]
@@ -583,6 +715,14 @@ def render_report(result: ProbeResult, world_name: str) -> str:
             f"{command.entity_id}\t{command.x}\t{command.y}\t{command.z}\t"
             f"region={command.region}\tchunk={command.chunk_x},{command.chunk_z}\t"
             f"cmd={command.command}"
+        )
+
+    for sign in result.signs:
+        lines.append(
+            "SIGN\t"
+            f"{sign.entity_id}\t{sign.x}\t{sign.y}\t{sign.z}\t"
+            f"region={sign.region}\tchunk={sign.chunk_x},{sign.chunk_z}\t"
+            f"text={sign.text}"
         )
 
     if result.errors:

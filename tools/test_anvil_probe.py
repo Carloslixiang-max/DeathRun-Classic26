@@ -9,6 +9,7 @@ from anvil_probe import (
     decode_palette_index,
     scan_legacy_section,
     scan_modern_section,
+    sign_entities_from_chunk,
 )
 
 
@@ -65,6 +66,49 @@ class AnvilProbeTest(unittest.TestCase):
         candidate = candidates[0]
         self.assertEqual("COMMAND_BLOCK", candidate.category)
         self.assertEqual((-32, 80, 48), (candidate.x, candidate.y, candidate.z))
+
+
+    def test_extracts_legacy_sign_text_components(self):
+        level = {
+            "TileEntities": [
+                {
+                    "id": "minecraft:sign",
+                    "x": 12,
+                    "y": 65,
+                    "z": -4,
+                    "Text1": '{"text":"Trap"}',
+                    "Text2": '{"text":"Fire","extra":[{"text":" Arrows"}]}',
+                    "Text3": '{"text":""}',
+                    "Text4": "Plain line",
+                }
+            ]
+        }
+
+        signs = sign_entities_from_chunk(level, "r.0.-1.mca", 0, -1)
+        self.assertEqual(1, len(signs))
+        sign = signs[0]
+        self.assertEqual((12, 65, -4), (sign.x, sign.y, sign.z))
+        self.assertEqual("Trap | Fire Arrows | Plain line", sign.text)
+
+    def test_extracts_modern_front_sign_text(self):
+        level = {
+            "block_entities": [
+                {
+                    "id": "minecraft:oak_sign",
+                    "x": 3,
+                    "y": 70,
+                    "z": 8,
+                    "front_text": {
+                        "messages": [
+                            '{"text":"Checkpoint"}',
+                            '{"text":"Nine"}',
+                        ]
+                    },
+                }
+            ]
+        }
+        signs = sign_entities_from_chunk(level, "r.0.0.mca", 0, 0)
+        self.assertEqual("Checkpoint | Nine", signs[0].text)
 
     def test_minimal_nbt_root(self):
         # root compound named "" with one TAG_Int DataVersion=1234
