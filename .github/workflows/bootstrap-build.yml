@@ -90,11 +90,15 @@ jobs:
           python3 tools/anvil_sign_links.py \
             "$ROOT/to-bee-or-not-to-bee-probe.txt" \
             --output "$ROOT/to-bee-or-not-to-bee-sign-links.txt" \
-            --nearby-radius 9 --min-actions 1
+            --nearby-radius 9 \
+            --arrow-horizontal-radius 16 --arrow-vertical-radius 10 \
+            --corridor-half-width 4 --min-actions 1
           python3 tools/anvil_sign_links.py \
             "$ROOT/toxic-factory-probe.txt" \
             --output "$ROOT/toxic-factory-sign-links.txt" \
-            --nearby-radius 9 --min-actions 0
+            --nearby-radius 9 \
+            --arrow-horizontal-radius 16 --arrow-vertical-radius 10 \
+            --corridor-half-width 4 --min-actions 0
           cat "$ROOT/to-bee-or-not-to-bee-sign-links.txt"
           grep '^sign_link_summary ' "$ROOT/toxic-factory-sign-links.txt"
 

@@ -110,6 +110,26 @@ class AnvilProbeTest(unittest.TestCase):
         signs = sign_entities_from_chunk(level, "r.0.0.mca", 0, 0)
         self.assertEqual("Checkpoint | Nine", signs[0].text)
 
+    def test_modern_sign_block_preserves_facing_property(self):
+        palette = [
+            {"Name": "minecraft:air"},
+            {
+                "Name": "minecraft:oak_wall_sign",
+                "Properties": {"facing": "north", "waterlogged": "false"},
+            },
+        ]
+        data = [0] * 256
+        # First block in section uses palette index 1.
+        data[0] = 1
+        section = {"Y": 4, "Palette": palette, "BlockStates": data}
+        blocks = scan_modern_section(section, 0, 0, "r.0.0.mca")
+        signs = [block for block in blocks if block.category == "SIGN_BLOCK"]
+        self.assertEqual(1, len(signs))
+        self.assertEqual(
+            (("facing", "north"), ("waterlogged", "false")),
+            signs[0].properties,
+        )
+
     def test_minimal_nbt_root(self):
         # root compound named "" with one TAG_Int DataVersion=1234
         raw = (

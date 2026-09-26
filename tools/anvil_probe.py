@@ -144,6 +144,7 @@ class BlockCandidate:
     region: str
     chunk_x: int
     chunk_z: int
+    properties: tuple[tuple[str, str], ...] = ()
 
 
 @dataclass(frozen=True)
@@ -196,6 +197,8 @@ def candidate_category(name: str) -> str | None:
         return "BUTTON"
     if normalized.endswith("_pressure_plate"):
         return "PRESSURE_PLATE"
+    if normalized.endswith("_wall_sign") or normalized.endswith("_sign"):
+        return "SIGN_BLOCK"
     if normalized in {
         "minecraft:command_block",
         "minecraft:chain_command_block",
@@ -219,6 +222,21 @@ def palette_name(entry: Any) -> str | None:
         return None
     value = entry.get("Name", entry.get("name"))
     return value if isinstance(value, str) else None
+
+
+def palette_properties(entry: Any) -> tuple[tuple[str, str], ...]:
+    if not isinstance(entry, dict):
+        return ()
+    raw = entry.get("Properties", entry.get("properties"))
+    if not isinstance(raw, dict):
+        return ()
+    return tuple(
+        sorted(
+            (str(key), str(value))
+            for key, value in raw.items()
+            if isinstance(key, str)
+        )
+    )
 
 
 def _unsigned_long(value: int) -> int:
@@ -306,7 +324,7 @@ def scan_modern_section(
 
     names = [palette_name(entry) for entry in palette]
     interesting = {
-        index: (candidate_category(name), name)
+        index: (candidate_category(name), name, palette_properties(palette[index]))
         for index, name in enumerate(names)
         if isinstance(name, str) and candidate_category(name) is not None
     }
@@ -320,7 +338,7 @@ def scan_modern_section(
         if candidate is None:
             continue
 
-        category, name = candidate
+        category, name, properties = candidate
         local_x = index & 15
         local_z = (index >> 4) & 15
         local_y = (index >> 8) & 15
@@ -334,6 +352,7 @@ def scan_modern_section(
                 region=region,
                 chunk_x=chunk_x,
                 chunk_z=chunk_z,
+                properties=properties,
             )
         )
 
@@ -702,11 +721,14 @@ def render_report(result: ProbeResult, world_name: str) -> str:
     ]
 
     for block in result.blocks:
+        properties = ",".join(f"{key}:{value}" for key, value in block.properties)
+        suffix = f"\tprops={properties}" if properties else ""
         lines.append(
             "BLOCK\t"
             f"{block.category}\t{block.name}\t"
             f"{block.x}\t{block.y}\t{block.z}\t"
             f"region={block.region}\tchunk={block.chunk_x},{block.chunk_z}"
+            f"{suffix}"
         )
 
     for command in result.commands:
