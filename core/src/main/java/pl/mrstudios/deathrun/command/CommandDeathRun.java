@@ -1212,6 +1212,47 @@ public class CommandDeathRun {
                 + "<green> report=<white>" + status.path());
     }
 
+    @Execute(name = "map trace acceptance")
+    @Permission("mrstudios.command.deathrun.setup")
+    public void setupMapTraceAcceptance(
+            @Context CommandSender sender,
+            @Arg("id") String id
+    ) {
+        MapConfiguration.MapDefinition map = this.configuration.map().getMapById(id);
+        if (map == null) {
+            this.message(sender, this.configuration.language().commandMessageSetupMapMissing.replace("<map>", id));
+            return;
+        }
+
+        String mapId = this.configuration.map().normalizedMapId(map.id);
+        List<Integer> expectedCheckpointIds = map.arenaCheckpoints.stream()
+                .filter(Objects::nonNull)
+                .map(Checkpoint::id)
+                .filter(Objects::nonNull)
+                .toList();
+
+        try {
+            var result = this.playtestTraceService.acceptance(
+                    mapId,
+                    expectedCheckpointIds,
+                    map.arenaTraps.size()
+            );
+            this.message(sender, PREFIX + (result.complete() ? "<green>" : "<yellow>")
+                    + "Acceptance <white>" + mapId
+                    + (result.complete() ? "<green>: PASS" : "<yellow>: INCOMPLETE"));
+
+            for (var check : result.checks()) {
+                this.message(sender, PREFIX
+                        + (check.passed() ? "<green>PASS" : "<red>MISS")
+                        + " <white>" + this.safe(check.key())
+                        + " <gray>· " + this.safe(check.detail()));
+            }
+        } catch (Exception exception) {
+            this.message(sender, PREFIX + "<red>Unable to analyze trace: <white>"
+                    + this.safe(exception.getMessage()));
+        }
+    }
+
     @Execute(name = "map trace status")
     @Permission("mrstudios.command.deathrun.setup")
     public void setupMapTraceStatus(
