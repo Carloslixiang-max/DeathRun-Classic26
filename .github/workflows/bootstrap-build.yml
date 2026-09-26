@@ -52,6 +52,7 @@ jobs:
           python3 tools/test_leveldat_probe.py
           python3 tools/test_anvil_topology.py
           python3 tools/test_anvil_sign_links.py
+          python3 tools/test_anvil_trap_evidence.py
 
           ROOT='/tmp/deathrun-archive-probe'
           rm -rf "$ROOT"
@@ -97,6 +98,19 @@ jobs:
             --nearby-radius 9 --facing-min-dot 0.70 --min-actions 0
           cat "$ROOT/to-bee-or-not-to-bee-sign-links.txt"
           grep '^sign_link_summary ' "$ROOT/toxic-factory-sign-links.txt"
+
+          python3 tools/anvil_trap_evidence.py \
+            "$ROOT/to-bee-or-not-to-bee-probe.txt" \
+            --output "$ROOT/to-bee-or-not-to-bee-trap-evidence.txt" \
+            --top-candidates 3 --nearby-distance 30 \
+            --min-actions 1 --min-warnings 1
+          python3 tools/anvil_trap_evidence.py \
+            "$ROOT/toxic-factory-probe.txt" \
+            --output "$ROOT/toxic-factory-trap-evidence.txt" \
+            --top-candidates 3 --nearby-distance 30 \
+            --min-actions 0 --min-warnings 1
+          cat "$ROOT/to-bee-or-not-to-bee-trap-evidence.txt"
+          grep '^trap_evidence_summary ' "$ROOT/toxic-factory-trap-evidence.txt"
 
           python3 tools/leveldat_probe.py --require-spawn "$ROOT/toxic-factory-level.dat" --output "$ROOT/toxic-factory-leveldat.txt"
           python3 tools/leveldat_probe.py --require-spawn "$ROOT/to-bee-or-not-to-bee-level.dat" --output "$ROOT/to-bee-or-not-to-bee-leveldat.txt"
