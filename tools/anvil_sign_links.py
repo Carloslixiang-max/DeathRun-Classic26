@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Link archived DeathRun action signs to nearby button evidence.
+"""Link archived DeathRun action signs to likely control-panel buttons.
 
-Directional action signs are correlated with surviving buttons. When the sign
-block's facing/rotation state survives, <<< / >>> is projected into world-space
-and used to reduce button ambiguity. This is evidence correlation only, never
-automatic Classic26 trap classification.
+This correlates preserved world evidence only. Directional sign arrows are
+reported as target-direction evidence but are NOT used to choose a control
+button. Button candidates are reduced using distance plus compatible sign/button
+facing where both BlockStates survive.
 """
 
 from __future__ import annotations
@@ -28,6 +28,7 @@ class Button:
     x: int
     y: int
     z: int
+    properties: tuple[tuple[str, str], ...] = ()
 
 
 @dataclass(frozen=True)
@@ -47,9 +48,9 @@ class LinkedAction:
     nearest_button: Button | None
     nearest_distance: float | None
     nearby_buttons: tuple[Button, ...]
-    arrow_buttons: tuple[Button, ...]
-    arrow_direction: str | None
-    front_vector: tuple[float, float] | None
+    panel_buttons: tuple[Button, ...]
+    target_arrow: str | None
+    sign_front: tuple[float, float] | None
 
 
 def _parse_properties(fields: Sequence[str]) -> tuple[tuple[str, str], ...]:
@@ -76,7 +77,13 @@ def parse_probe_report(path: Path) -> tuple[list[Button], list[Sign]]:
                 continue
             try:
                 buttons.append(
-                    Button(fields[2], int(fields[3]), int(fields[4]), int(fields[5]))
+                    Button(
+                        name=fields[2],
+                        x=int(fields[3]),
+                        y=int(fields[4]),
+                        z=int(fields[5]),
+                        properties=_parse_properties(fields[6:]),
+                    )
                 )
             except ValueError:
                 continue
@@ -157,7 +164,7 @@ def sign_kind(sign: Sign) -> str:
     return "OTHER"
 
 
-def arrow_direction(sign: Sign) -> str | None:
+def target_arrow(sign: Sign) -> str | None:
     has_left = "<<<" in sign.text
     has_right = ">>>" in sign.text
     if has_left and not has_right:
@@ -167,27 +174,39 @@ def arrow_direction(sign: Sign) -> str | None:
     return None
 
 
-def front_vector(sign: Sign) -> tuple[float, float] | None:
-    props = dict(sign.properties)
-    facing = props.get("facing")
-    cardinal = {
+def _cardinal_vector(value: str | None) -> tuple[float, float] | None:
+    return {
         "north": (0.0, -1.0),
         "south": (0.0, 1.0),
         "west": (-1.0, 0.0),
         "east": (1.0, 0.0),
-    }
-    if facing in cardinal:
-        return cardinal[facing]
+    }.get(value or "")
+
+
+def sign_front_vector(sign: Sign) -> tuple[float, float] | None:
+    props = dict(sign.properties)
+    facing = _cardinal_vector(props.get("facing"))
+    if facing is not None:
+        return facing
 
     rotation = props.get("rotation")
-    if rotation is not None:
-        try:
-            value = int(rotation) % 16
-        except ValueError:
-            return None
-        theta = math.radians(value * 22.5)
-        return (-math.sin(theta), math.cos(theta))
-    return None
+    if rotation is None:
+        return None
+    try:
+        value = int(rotation) % 16
+    except ValueError:
+        return None
+
+    # Java standing signs: 0=south, 4=west, 8=north, 12=east.
+    theta = math.radians(value * 22.5)
+    return (-math.sin(theta), math.cos(theta))
+
+
+def button_front_vector(button: Button) -> tuple[float, float] | None:
+    props = dict(button.properties)
+    if props.get("face") != "wall":
+        return None
+    return _cardinal_vector(props.get("facing"))
 
 
 def distance(left: Sign, right: Button) -> float:
@@ -198,73 +217,21 @@ def distance(left: Sign, right: Button) -> float:
     )
 
 
-def horizontal_distance(left: Sign, right: Button) -> float:
-    return math.hypot(left.x - right.x, left.z - right.z)
-
-
-def _arrow_world_vector(
-    front: tuple[float, float],
-    direction: str,
-) -> tuple[float, float]:
-    dx, dz = front
-    # The viewer stands on the sign's front side and looks opposite the front
-    # normal. Screen-right therefore maps to (dz, -dx).
-    right = (dz, -dx)
-    return (-right[0], -right[1]) if direction == "LEFT" else right
-
-
-def _arrow_candidates(
-    sign: Sign,
-    buttons: Sequence[Button],
-    direction: str | None,
-    front: tuple[float, float] | None,
-    horizontal_radius: float,
-    vertical_radius: float,
-    corridor_half_width: float,
-) -> tuple[Button, ...]:
-    if direction is None or front is None:
-        return ()
-
-    ax, az = _arrow_world_vector(front, direction)
-    ranked: list[tuple[float, float, float, Button]] = []
-    for button in buttons:
-        dy = abs(button.y - sign.y)
-        if dy > vertical_radius:
-            continue
-        vx = button.x - sign.x
-        vz = button.z - sign.z
-        horizontal = math.hypot(vx, vz)
-        if horizontal > horizontal_radius:
-            continue
-        along = vx * ax + vz * az
-        if along <= 0:
-            continue
-        perpendicular = abs(vx * az - vz * ax)
-        if perpendicular > corridor_half_width:
-            continue
-        ranked.append((perpendicular, along, dy, button))
-
-    ranked.sort(
-        key=lambda item: (
-            item[0],
-            item[1],
-            item[2],
-            item[3].x,
-            item[3].y,
-            item[3].z,
-            item[3].name,
-        )
-    )
-    return tuple(item[3] for item in ranked)
+def _facing_dot(
+    sign_front: tuple[float, float] | None,
+    button: Button,
+) -> float | None:
+    button_front = button_front_vector(button)
+    if sign_front is None or button_front is None:
+        return None
+    return sign_front[0] * button_front[0] + sign_front[1] * button_front[1]
 
 
 def link_action(
     sign: Sign,
     buttons: Sequence[Button],
     nearby_radius: float,
-    arrow_horizontal_radius: float = 16.0,
-    arrow_vertical_radius: float = 10.0,
-    corridor_half_width: float = 4.0,
+    facing_min_dot: float = 0.70,
 ) -> LinkedAction:
     ordered = sorted(
         ((distance(sign, button), button) for button in buttons),
@@ -279,26 +246,39 @@ def link_action(
     nearest_distance = ordered[0][0] if ordered else None
     nearest_button = ordered[0][1] if ordered else None
     nearby = tuple(button for dist, button in ordered if dist <= nearby_radius)
-    direction = arrow_direction(sign)
-    front = front_vector(sign)
-    arrow_buttons = _arrow_candidates(
-        sign,
-        buttons,
-        direction,
-        front,
-        arrow_horizontal_radius,
-        arrow_vertical_radius,
-        corridor_half_width,
+
+    sign_front = sign_front_vector(sign)
+    panel_ranked: list[tuple[float, float, Button]] = []
+    for button in nearby:
+        dot = _facing_dot(sign_front, button)
+        if dot is None or dot < facing_min_dot:
+            continue
+        panel_ranked.append((-dot, distance(sign, button), button))
+    panel_ranked.sort(
+        key=lambda item: (
+            item[0],
+            item[1],
+            item[2].x,
+            item[2].y,
+            item[2].z,
+            item[2].name,
+        )
     )
+
     return LinkedAction(
         sign=sign,
         nearest_button=nearest_button,
         nearest_distance=nearest_distance,
         nearby_buttons=nearby,
-        arrow_buttons=arrow_buttons,
-        arrow_direction=direction,
-        front_vector=front,
+        panel_buttons=tuple(item[2] for item in panel_ranked),
+        target_arrow=target_arrow(sign),
+        sign_front=sign_front,
     )
+
+
+def _button_text(button: Button) -> str:
+    props = ",".join(f"{key}:{value}" for key, value in button.properties)
+    return f"{button.x},{button.y},{button.z}:{button.name}[{props or 'no-props'}]"
 
 
 def render_report(
@@ -306,41 +286,33 @@ def render_report(
     buttons: Sequence[Button],
     signs: Sequence[Sign],
     nearby_radius: float,
-    arrow_horizontal_radius: float = 16.0,
-    arrow_vertical_radius: float = 10.0,
-    corridor_half_width: float = 4.0,
+    facing_min_dot: float = 0.70,
 ) -> str:
     kinds = Counter(sign_kind(sign) for sign in signs)
     actions = [
-        link_action(
-            sign,
-            buttons,
-            nearby_radius,
-            arrow_horizontal_radius,
-            arrow_vertical_radius,
-            corridor_half_width,
-        )
+        link_action(sign, buttons, nearby_radius, facing_min_dot)
         for sign in signs
         if sign_kind(sign) == "DIRECTIONAL_ACTION"
     ]
 
     linked_actions = [action for action in actions if action.nearby_buttons]
-    arrow_known = [action for action in actions if action.front_vector is not None]
-    arrow_unique = [action for action in actions if len(action.arrow_buttons) == 1]
-    arrow_ambiguous = [action for action in actions if len(action.arrow_buttons) > 1]
-    arrow_unresolved = [
+    sign_facing_known = [action for action in actions if action.sign_front is not None]
+    buttons_with_facing = sum(button_front_vector(button) is not None for button in buttons)
+    panel_unique = [action for action in actions if len(action.panel_buttons) == 1]
+    panel_ambiguous = [action for action in actions if len(action.panel_buttons) > 1]
+    panel_unresolved = [
         action
         for action in actions
-        if action.front_vector is not None and not action.arrow_buttons
+        if action.sign_front is not None and not action.panel_buttons
     ]
-    unique_arrow_buttons = {
+    unique_panel_buttons = {
         (
-            action.arrow_buttons[0].x,
-            action.arrow_buttons[0].y,
-            action.arrow_buttons[0].z,
-            action.arrow_buttons[0].name,
+            action.panel_buttons[0].x,
+            action.panel_buttons[0].y,
+            action.panel_buttons[0].z,
+            action.panel_buttons[0].name,
         )
-        for action in arrow_unique
+        for action in panel_unique
     }
 
     lines = [
@@ -348,65 +320,64 @@ def render_report(
         f"source={source.name}",
         (
             "sign_link_summary "
-            f"buttons={len(buttons)} signs={len(signs)} "
-            f"directional_actions={kinds['DIRECTIONAL_ACTION']} "
+            f"buttons={len(buttons)} button_facing_known={buttons_with_facing} "
+            f"signs={len(signs)} directional_actions={kinds['DIRECTIONAL_ACTION']} "
             f"directional_with_button_within_radius={len(linked_actions)} "
-            f"facing_known_actions={len(arrow_known)} "
-            f"arrow_unique_links={len(arrow_unique)} "
-            f"arrow_ambiguous_links={len(arrow_ambiguous)} "
-            f"arrow_unresolved={len(arrow_unresolved)} "
-            f"unique_arrow_buttons={len(unique_arrow_buttons)} "
+            f"sign_facing_known_actions={len(sign_facing_known)} "
+            f"panel_unique_links={len(panel_unique)} "
+            f"panel_ambiguous_links={len(panel_ambiguous)} "
+            f"panel_unresolved={len(panel_unresolved)} "
+            f"unique_panel_buttons={len(unique_panel_buttons)} "
             f"warnings={kinds['WARNING']} numeric_pairs={kinds['NUMERIC_PAIR']} "
             f"titles={kinds['TITLE']} credits={kinds['CREDIT']} "
             f"other={kinds['OTHER']} empty={kinds['EMPTY']} "
-            f"nearby_radius={nearby_radius:g} "
-            f"arrow_horizontal_radius={arrow_horizontal_radius:g} "
-            f"arrow_vertical_radius={arrow_vertical_radius:g} "
-            f"corridor_half_width={corridor_half_width:g}"
+            f"nearby_radius={nearby_radius:g} facing_min_dot={facing_min_dot:g}"
         ),
-        "# Arrow filtering uses preserved sign BlockState plus <<< / >>> only.",
+        "# <<< / >>> is preserved as target-direction evidence only.",
+        "# PANEL candidates require nearby wall-button facing compatible with the sign.",
         "# Evidence status is not a Classic26 trap classification.",
         "",
     ]
 
     for index, action in enumerate(actions, 1):
         sign = action.sign
-        nearest = "none"
-        distance_text = "none"
-        if action.nearest_button is not None:
-            button = action.nearest_button
-            nearest = f"{button.x},{button.y},{button.z}:{button.name}"
-            distance_text = f"{action.nearest_distance:.2f}"
+        nearest = (
+            _button_text(action.nearest_button)
+            if action.nearest_button is not None
+            else "none"
+        )
+        distance_text = (
+            f"{action.nearest_distance:.2f}"
+            if action.nearest_distance is not None
+            else "none"
+        )
 
-        if len(action.arrow_buttons) == 1:
-            status = "ARROW_UNIQUE"
-        elif len(action.arrow_buttons) > 1:
-            status = "ARROW_AMBIGUOUS"
-        elif action.front_vector is not None:
-            status = "ARROW_UNRESOLVED"
+        if len(action.panel_buttons) == 1:
+            status = "PANEL_UNIQUE"
+        elif len(action.panel_buttons) > 1:
+            status = "PANEL_AMBIGUOUS"
         elif action.nearby_buttons:
             status = "NEARBY_ONLY"
         else:
             status = "UNLINKED"
 
-        facing_text = "unknown"
-        if action.front_vector is not None:
-            facing_text = f"{action.front_vector[0]:.3f},{action.front_vector[1]:.3f}"
-
-        arrow_text = ";".join(
-            f"{button.x},{button.y},{button.z}:{button.name}"
-            for button in action.arrow_buttons
-        ) or "none"
+        sign_front = (
+            f"{action.sign_front[0]:.3f},{action.sign_front[1]:.3f}"
+            if action.sign_front is not None
+            else "unknown"
+        )
+        nearby_text = ";".join(_button_text(button) for button in action.nearby_buttons) or "none"
+        panel_text = ";".join(_button_text(button) for button in action.panel_buttons) or "none"
 
         lines.append(
             "ACTION_SIGN\t"
             f"id={index:03d}\tlink={status}\tpos={sign.x},{sign.y},{sign.z}\t"
             f"block={sign.block_name or 'unknown'}\tprops={dict(sign.properties)}\t"
-            f"arrow={action.arrow_direction or 'unknown'}\tfront={facing_text}\t"
+            f"target_arrow={action.target_arrow or 'unknown'}\tfront={sign_front}\t"
             f"nearest_button={nearest}\tdistance={distance_text}\t"
             f"nearby_buttons={len(action.nearby_buttons)}\t"
-            f"arrow_buttons={len(action.arrow_buttons)}\t"
-            f"arrow_candidates={arrow_text}\ttext={sign.text}"
+            f"panel_buttons={len(action.panel_buttons)}\t"
+            f"panel_candidates={panel_text}\tnearby={nearby_text}\ttext={sign.text}"
         )
 
     for kind in ("TITLE", "CREDIT"):
@@ -425,20 +396,14 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("probe_report", type=Path)
     parser.add_argument("--output", type=Path)
     parser.add_argument("--nearby-radius", type=float, default=9.0)
-    parser.add_argument("--arrow-horizontal-radius", type=float, default=16.0)
-    parser.add_argument("--arrow-vertical-radius", type=float, default=10.0)
-    parser.add_argument("--corridor-half-width", type=float, default=4.0)
+    parser.add_argument("--facing-min-dot", type=float, default=0.70)
     parser.add_argument("--min-actions", type=int, default=0)
     args = parser.parse_args(argv)
 
-    for name, value in (
-        ("--nearby-radius", args.nearby_radius),
-        ("--arrow-horizontal-radius", args.arrow_horizontal_radius),
-        ("--arrow-vertical-radius", args.arrow_vertical_radius),
-        ("--corridor-half-width", args.corridor_half_width),
-    ):
-        if value <= 0:
-            parser.error(f"{name} must be positive")
+    if args.nearby_radius <= 0:
+        parser.error("--nearby-radius must be positive")
+    if not -1.0 <= args.facing_min_dot <= 1.0:
+        parser.error("--facing-min-dot must be between -1 and 1")
 
     buttons, signs = parse_probe_report(args.probe_report)
     report = render_report(
@@ -446,9 +411,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         buttons,
         signs,
         args.nearby_radius,
-        args.arrow_horizontal_radius,
-        args.arrow_vertical_radius,
-        args.corridor_half_width,
+        args.facing_min_dot,
     )
 
     if args.output:
