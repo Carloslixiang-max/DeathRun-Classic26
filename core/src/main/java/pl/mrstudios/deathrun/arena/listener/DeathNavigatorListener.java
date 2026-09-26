@@ -12,6 +12,7 @@ import pl.mrstudios.commons.inject.annotation.Inject;
 import pl.mrstudios.deathrun.api.arena.user.IUser;
 import pl.mrstudios.deathrun.arena.ArenaManager;
 import pl.mrstudios.deathrun.classic.death.DeathNavigatorService;
+import pl.mrstudios.deathrun.classic.playtest.PlaytestTraceService;
 import pl.mrstudios.deathrun.classic.trap.TrapActivationService;
 import pl.mrstudios.deathrun.config.Configuration;
 
@@ -23,17 +24,20 @@ public final class DeathNavigatorListener implements Listener {
     private final ArenaManager arenaManager;
     private final DeathNavigatorService navigator;
     private final TrapActivationService activationService;
+    private final PlaytestTraceService trace;
 
     @Inject
     public DeathNavigatorListener(
             @NotNull ArenaManager arenaManager,
             @NotNull Plugin plugin,
             @NotNull Server server,
-            @NotNull Configuration configuration
+            @NotNull Configuration configuration,
+            @NotNull PlaytestTraceService trace
     ) {
         this.arenaManager = arenaManager;
         this.navigator = new DeathNavigatorService(plugin);
         this.activationService = new TrapActivationService(plugin, server, configuration);
+        this.trace = trace;
     }
 
     @EventHandler
@@ -58,14 +62,24 @@ public final class DeathNavigatorListener implements Listener {
             case PREVIOUS -> {
                 this.navigator.previous(event.getPlayer(), runtime);
                 this.showSelection(event, runtime);
+                this.trace.record(runtime.mapId(), "DEATH_NAV",
+                        "player=" + event.getPlayer().getName()
+                                + " action=PREVIOUS selected=" + (this.navigator.selectedIndex(event.getPlayer(), runtime) + 1));
             }
             case NEXT -> {
                 this.navigator.next(event.getPlayer(), runtime);
                 this.showSelection(event, runtime);
+                this.trace.record(runtime.mapId(), "DEATH_NAV",
+                        "player=" + event.getPlayer().getName()
+                                + " action=NEXT selected=" + (this.navigator.selectedIndex(event.getPlayer(), runtime) + 1));
             }
             case JUMP -> {
                 boolean jumped = this.navigator.jump(event.getPlayer(), runtime);
                 this.showSelection(event, runtime);
+                this.trace.record(runtime.mapId(), "DEATH_NAV",
+                        "player=" + event.getPlayer().getName()
+                                + " action=JUMP success=" + jumped
+                                + " selected=" + (this.navigator.selectedIndex(event.getPlayer(), runtime) + 1));
                 if (!jumped)
                     event.getPlayer().sendActionBar(MiniMessage.miniMessage().deserialize("<red>Trap Jumper unavailable"));
             }
@@ -81,6 +95,10 @@ public final class DeathNavigatorListener implements Listener {
                         runtime,
                         index
                 );
+                this.trace.record(runtime.mapId(), "DEATH_NAV",
+                        "player=" + event.getPlayer().getName()
+                                + " action=ACTIVATE result=" + result
+                                + " selected=" + (index + 1));
 
                 switch (result) {
                     case ACTIVATED -> event.getPlayer().sendActionBar(MiniMessage.miniMessage().deserialize(
