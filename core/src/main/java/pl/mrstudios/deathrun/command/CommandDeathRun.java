@@ -2335,18 +2335,7 @@ public class CommandDeathRun {
     private boolean isSupportedTrapButton(
             @NotNull Block target
     ) {
-        return of(
-                STONE_BUTTON,
-                OAK_BUTTON,
-                ACACIA_BUTTON,
-                BIRCH_BUTTON,
-                CRIMSON_BUTTON,
-                JUNGLE_BUTTON,
-                SPRUCE_BUTTON,
-                WARPED_BUTTON,
-                POLISHED_BLACKSTONE_BUTTON,
-                DARK_OAK_BUTTON
-        ).anyMatch(button -> target.getType().equals(button));
+        return target.getType().name().endsWith("_BUTTON");
     }
 
     @Execute(name = "edit create")

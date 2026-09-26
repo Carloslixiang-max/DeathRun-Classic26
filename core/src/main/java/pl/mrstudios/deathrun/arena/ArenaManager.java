@@ -780,10 +780,13 @@ public class ArenaManager {
                 || map.arenaDeathSpawnLocations.isEmpty()
                 || map.arenaCheckpoints == null
                 || map.arenaCheckpoints.isEmpty()
+                || map.arenaCheckpointPoints == null
+                || map.arenaCheckpointPoints.isEmpty()
                 || map.arenaTraps == null
                 || map.arenaTraps.isEmpty()
                 || map.arenaStartBarrierBlocks == null
-                || map.arenaStartBarrierBlocks.isEmpty())
+                || map.arenaStartBarrierBlocks.isEmpty()
+                || map.arenaStartBarrierRestoreMaterials == null)
             return false;
 
         World mapWorld = this.server.getWorld(map.world);
@@ -801,22 +804,50 @@ public class ArenaManager {
                 || map.arenaDeathSpawnLocations.stream().anyMatch(location -> !this.locationBelongsToWorld(location, mapWorld)))
             return false;
 
+        Set<String> runnerSpawnKeys = map.arenaRunnerSpawnLocations.stream()
+                .map(this::locationBlockKey)
+                .collect(java.util.stream.Collectors.toSet());
+        if (runnerSpawnKeys.size() != map.arenaRunnerSpawnLocations.size())
+            return false;
+
+        Set<String> deathSpawnKeys = map.arenaDeathSpawnLocations.stream()
+                .map(this::locationBlockKey)
+                .collect(java.util.stream.Collectors.toSet());
+        if (deathSpawnKeys.size() != map.arenaDeathSpawnLocations.size()
+                || deathSpawnKeys.stream().anyMatch(runnerSpawnKeys::contains))
+            return false;
+
         if (map.arenaCheckpoints.stream().anyMatch(checkpoint ->
                 checkpoint == null
+                        || checkpoint.id() == null
+                        || checkpoint.id() <= 0
                         || !this.locationBelongsToWorld(checkpoint.spawn(), mapWorld)
                         || checkpoint.locations() == null
                         || checkpoint.locations().isEmpty()
                         || checkpoint.locations().stream().anyMatch(location -> !this.locationBelongsToWorld(location, mapWorld))))
             return false;
 
-        Integer finishId = map.arenaFinishCheckpointId;
-        if (finishId == null
-                || !map.arenaCheckpoints.get(map.arenaCheckpoints.size() - 1).id().equals(finishId))
+        List<Integer> checkpointIds = map.arenaCheckpoints.stream()
+                .map(pl.mrstudios.deathrun.arena.checkpoint.Checkpoint::id)
+                .toList();
+        if (checkpointIds.stream().distinct().count() != checkpointIds.size())
             return false;
 
-        if (map.arenaCheckpointPoints != null
-                && !map.arenaCheckpointPoints.isEmpty()
-                && map.arenaCheckpointPoints.size() != map.arenaCheckpoints.size())
+        List<Set<String>> checkpointRegions = map.arenaCheckpoints.stream()
+                .map(checkpoint -> checkpoint.locations().stream()
+                        .map(this::locationBlockKey)
+                        .collect(java.util.stream.Collectors.toSet()))
+                .toList();
+        if (checkpointRegions.stream().distinct().count() != checkpointRegions.size())
+            return false;
+
+        Integer finishId = map.arenaFinishCheckpointId;
+        var lastCheckpoint = map.arenaCheckpoints.get(map.arenaCheckpoints.size() - 1);
+        if (finishId == null || !Objects.equals(lastCheckpoint.id(), finishId))
+            return false;
+
+        if (map.arenaCheckpointPoints.size() != map.arenaCheckpoints.size()
+                || map.arenaCheckpointPoints.stream().anyMatch(points -> points == null || points < 0))
             return false;
 
         int configuredRequired = this.configuredRequiredPlayersToStart(map);
@@ -826,23 +857,57 @@ public class ArenaManager {
         if (map.arenaTraps.stream().anyMatch(trap ->
                 trap == null
                         || !this.locationBelongsToWorld(trap.getButton(), mapWorld)
+                        || !trap.getButton().getBlock().getType().name().endsWith("_BUTTON")
                         || trap.getLocations() == null
                         || trap.getLocations().isEmpty()
                         || trap.getLocations().stream().anyMatch(location -> !this.locationBelongsToWorld(location, mapWorld))))
             return false;
 
+        List<String> trapButtonKeys = map.arenaTraps.stream()
+                .map(trap -> this.locationBlockKey(trap.getButton()))
+                .toList();
+        if (trapButtonKeys.stream().distinct().count() != trapButtonKeys.size())
+            return false;
+
         if (map.arenaStartBarrierBlocks.stream().anyMatch(location -> !this.locationBelongsToWorld(location, mapWorld)))
+            return false;
+
+        List<String> barrierKeys = map.arenaStartBarrierBlocks.stream()
+                .map(this::locationBlockKey)
+                .toList();
+        if (barrierKeys.stream().distinct().count() != barrierKeys.size())
+            return false;
+
+        if (map.arenaStartBarrierRestoreMaterials.size() != map.arenaStartBarrierBlocks.size()
+                || map.arenaStartBarrierRestoreMaterials.stream().anyMatch(Objects::isNull))
             return false;
 
         if (map.teleportPads != null && map.teleportPads.stream().anyMatch(pad ->
                 pad == null
                         || !this.locationBelongsToWorld(pad.padLocation(), mapWorld)
                         || !this.locationBelongsToWorld(pad.teleportLocation(), mapWorld)
-                        || !pad.padLocation().getBlock().getType().name().endsWith("_PRESSURE_PLATE")))
+                        || !pad.padLocation().getBlock().getType().name().endsWith("_PRESSURE_PLATE")
+                        || this.locationBlockKey(pad.padLocation()).equals(this.locationBlockKey(pad.teleportLocation()))))
             return false;
 
-        return map.arenaStartBarrierRestoreMaterials != null
-                && map.arenaStartBarrierRestoreMaterials.size() == map.arenaStartBarrierBlocks.size();
+        if (map.teleportPads != null) {
+            List<String> teleportSourceKeys = map.teleportPads.stream()
+                    .map(pad -> this.locationBlockKey(pad.padLocation()))
+                    .toList();
+            if (teleportSourceKeys.stream().distinct().count() != teleportSourceKeys.size())
+                return false;
+        }
+
+        return true;
+    }
+
+    private @NotNull String locationBlockKey(
+            @NotNull Location location
+    ) {
+        return location.getWorld().getUID()
+                + ":" + location.getBlockX()
+                + ":" + location.getBlockY()
+                + ":" + location.getBlockZ();
     }
 
     private boolean locationBelongsToWorld(
