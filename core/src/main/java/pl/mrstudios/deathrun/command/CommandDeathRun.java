@@ -988,6 +988,172 @@ public class CommandDeathRun {
         }
     }
 
+    @Execute(name = "map legacyfilescan")
+    @Permission("mrstudios.command.deathrun.setup")
+    public void setupMapLegacyFileScan(
+            @Context CommandSender sender,
+            @Arg("id") String id
+    ) {
+        this.configuration.map().ensureMapsMutable();
+        MapConfiguration.MapDefinition map = this.configuration.map().getMapById(id);
+        if (map == null) {
+            this.message(sender, this.configuration.language().commandMessageSetupMapMissing.replace("<map>", id));
+            return;
+        }
+
+        World world = map.world == null || map.world.isBlank()
+                ? null
+                : this.plugin.getServer().getWorld(map.world);
+        if (world == null && map.world != null && !map.world.isBlank())
+            world = this.arenaManager.loadExistingMapWorld(map.world);
+
+        if (world == null) {
+            this.message(sender, this.configuration.language().commandMessageSetupMapWorldUnavailable
+                    .replace("<map>", this.safe(map.id))
+                    .replace("<world>", this.safe(map.world)));
+            return;
+        }
+
+        try {
+            List<Path> datapackRoots = this.legacyDatapackRoots(world);
+            if (datapackRoots.isEmpty()) {
+                this.message(sender, PREFIX + "<yellow>No datapacks directory was found for map <white>"
+                        + this.safe(map.id)
+                        + "<yellow>. The world may not include legacy datapack logic.");
+                return;
+            }
+
+            final int maxFunctionFiles = 2_000;
+            final long maxTextBytes = 8L * 1024L * 1024L;
+            int functionFiles = 0;
+            int relevantCommands = 0;
+            long textBytes = 0L;
+            boolean truncated = false;
+
+            List<String> reportLines = new ArrayList<>();
+            reportLines.add("DeathRun Classic26 legacy datapack scan");
+            reportLines.add("map=" + this.safe(map.id));
+            reportLines.add("world=" + world.getName());
+            reportLines.add("worldFolder=" + world.getWorldFolder().getAbsolutePath());
+            reportLines.add("datapackRoots=" + datapackRoots);
+            reportLines.add("");
+
+            outer:
+            for (Path datapackRoot : datapackRoots) {
+                reportLines.add("## DATAPACK_ROOT " + datapackRoot);
+                List<Path> files;
+                try (java.util.stream.Stream<Path> stream = java.nio.file.Files.walk(datapackRoot)) {
+                    files = stream
+                            .filter(java.nio.file.Files::isRegularFile)
+                            .sorted()
+                            .toList();
+                }
+
+                for (Path source : files) {
+                    String fileName = source.getFileName().toString().toLowerCase(java.util.Locale.ROOT);
+
+                    if (fileName.endsWith(".mcfunction")) {
+                        if (functionFiles >= maxFunctionFiles || textBytes >= maxTextBytes) {
+                            truncated = true;
+                            break outer;
+                        }
+
+                        byte[] bytes = java.nio.file.Files.readAllBytes(source);
+                        if (bytes.length > 1024 * 1024) {
+                            reportLines.add("SKIP_OVERSIZE " + source + " bytes=" + bytes.length);
+                            continue;
+                        }
+
+                        functionFiles++;
+                        textBytes += bytes.length;
+                        String content = new String(bytes, java.nio.charset.StandardCharsets.UTF_8);
+                        relevantCommands += this.appendLegacyFunctionCommands(
+                                reportLines,
+                                datapackRoot.relativize(source).toString(),
+                                content
+                        );
+                        continue;
+                    }
+
+                    if (!fileName.endsWith(".zip"))
+                        continue;
+
+                    try (java.util.zip.ZipFile zip = new java.util.zip.ZipFile(source.toFile())) {
+                        java.util.Enumeration<? extends java.util.zip.ZipEntry> entries = zip.entries();
+                        while (entries.hasMoreElements()) {
+                            java.util.zip.ZipEntry entry = entries.nextElement();
+                            if (entry.isDirectory()
+                                    || !entry.getName().toLowerCase(java.util.Locale.ROOT).endsWith(".mcfunction"))
+                                continue;
+
+                            if (functionFiles >= maxFunctionFiles || textBytes >= maxTextBytes) {
+                                truncated = true;
+                                break outer;
+                            }
+
+                            long declaredSize = entry.getSize();
+                            if (declaredSize > 1024 * 1024) {
+                                reportLines.add("SKIP_OVERSIZE " + source.getFileName()
+                                        + "!/" + entry.getName()
+                                        + " bytes=" + declaredSize);
+                                continue;
+                            }
+
+                            byte[] bytes;
+                            try (java.io.InputStream input = zip.getInputStream(entry)) {
+                                bytes = input.readNBytes(1024 * 1024 + 1);
+                            }
+                            if (bytes.length > 1024 * 1024) {
+                                reportLines.add("SKIP_OVERSIZE " + source.getFileName()
+                                        + "!/" + entry.getName()
+                                        + " bytes>1048576");
+                                continue;
+                            }
+
+                            functionFiles++;
+                            textBytes += bytes.length;
+                            String content = new String(bytes, java.nio.charset.StandardCharsets.UTF_8);
+                            relevantCommands += this.appendLegacyFunctionCommands(
+                                    reportLines,
+                                    datapackRoot.relativize(source).toString() + "!/" + entry.getName(),
+                                    content
+                            );
+                        }
+                    } catch (java.util.zip.ZipException exception) {
+                        reportLines.add("SKIP_BAD_ZIP " + source + " reason=" + this.legacyReportText(exception.getMessage()));
+                    }
+                }
+            }
+
+            reportLines.add("");
+            reportLines.add("summary functionFiles=" + functionFiles
+                    + " relevantCommands=" + relevantCommands
+                    + " textBytes=" + textBytes
+                    + " truncated=" + truncated);
+
+            Path researchDirectory = get(this.plugin.getDataFolder().toString(), "research");
+            createDirectories(researchDirectory);
+            String reportFileName = this.configuration.map().normalizedMapId(this.safe(map.id))
+                    + "-legacy-functions.txt";
+            Path reportPath = researchDirectory.resolve(reportFileName);
+            java.nio.file.Files.writeString(
+                    reportPath,
+                    String.join(System.lineSeparator(), reportLines),
+                    java.nio.charset.StandardCharsets.UTF_8
+            );
+
+            this.message(sender, PREFIX + "<green>Legacy datapack scan complete for <white>"
+                    + this.safe(map.id)
+                    + "<green>: functionFiles=<white>" + functionFiles
+                    + "<green>, relevantCommands=<white>" + relevantCommands
+                    + "<green>, truncated=<white>" + truncated
+                    + "<green>. Full report: <white>" + reportPath);
+        } catch (Exception exception) {
+            this.message(sender, PREFIX + "<red>Legacy datapack scan failed: <white>"
+                    + this.legacyScanText(exception.getMessage()));
+        }
+    }
+
     @Execute(name = "map status")
     @Permission("mrstudios.command.deathrun.setup")
     public void setupMapsStatus(
@@ -2471,6 +2637,73 @@ public class CommandDeathRun {
         }
 
         return pressurePlates.get(0);
+    }
+
+    private @NotNull List<Path> legacyDatapackRoots(
+            @NotNull World world
+    ) {
+        Set<Path> roots = new java.util.LinkedHashSet<>();
+        Path current = world.getWorldFolder().toPath().toAbsolutePath().normalize();
+
+        for (int depth = 0; current != null && depth < 6; depth++) {
+            Path datapacks = current.resolve("datapacks");
+            if (java.nio.file.Files.isDirectory(datapacks))
+                roots.add(datapacks.toAbsolutePath().normalize());
+
+            current = current.getParent();
+        }
+
+        return new ArrayList<>(roots);
+    }
+
+    private int appendLegacyFunctionCommands(
+            @NotNull List<String> reportLines,
+            @NotNull String source,
+            @NotNull String content
+    ) {
+        int matches = 0;
+        String[] lines = content.split("\\R", -1);
+
+        for (int index = 0; index < lines.length; index++) {
+            String trimmed = lines[index].trim();
+            if (trimmed.isEmpty() || trimmed.startsWith("#"))
+                continue;
+
+            if (!this.isLegacyRelevantCommand(trimmed))
+                continue;
+
+            matches++;
+            reportLines.add(source
+                    + ":" + (index + 1)
+                    + " | " + this.legacyReportText(trimmed));
+        }
+
+        return matches;
+    }
+
+    private boolean isLegacyRelevantCommand(
+            @NotNull String command
+    ) {
+        String normalized = command.toLowerCase(java.util.Locale.ROOT);
+        if (normalized.startsWith("/"))
+            normalized = normalized.substring(1).trim();
+
+        return normalized.startsWith("fill ")
+                || normalized.startsWith("clone ")
+                || normalized.startsWith("setblock ")
+                || normalized.startsWith("tp ")
+                || normalized.startsWith("teleport ")
+                || normalized.startsWith("execute ")
+                || normalized.startsWith("summon ")
+                || normalized.startsWith("effect ")
+                || normalized.startsWith("particle ")
+                || normalized.startsWith("playsound ")
+                || normalized.startsWith("kill ")
+                || normalized.startsWith("function ")
+                || normalized.startsWith("schedule ")
+                || normalized.startsWith("scoreboard ")
+                || normalized.startsWith("data ")
+                || normalized.startsWith("tag ");
     }
 
     private @NotNull String blockSummary(
