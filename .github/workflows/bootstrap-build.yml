@@ -48,6 +48,7 @@ jobs:
         run: |
           set -euo pipefail
           python3 tools/test_anvil_probe.py
+          python3 tools/test_anvil_cluster.py
 
           ROOT='/tmp/deathrun-archive-probe'
           rm -rf "$ROOT"
@@ -72,6 +73,16 @@ jobs:
           python3 tools/anvil_probe.py --world-name toxic-factory             --output "$ROOT/toxic-factory-probe.txt"             --min-chunks 1 --min-candidates 1             "$ROOT/toxic-factory"
 
           python3 tools/anvil_probe.py --world-name to-bee-or-not-to-bee             --output "$ROOT/to-bee-or-not-to-bee-probe.txt"             --min-chunks 1 --min-candidates 1             "$ROOT/to-bee-or-not-to-bee"
+
+          python3 tools/anvil_cluster.py \
+            "$ROOT/to-bee-or-not-to-bee-probe.txt" \
+            --output "$ROOT/to-bee-or-not-to-bee-clusters.txt" \
+            --radius 4 --vertical-radius 3 --members-limit 4 \
+            --min-points 1 --min-clusters 1
+
+          grep '^summary ' "$ROOT/to-bee-or-not-to-bee-clusters.txt"
+          grep '^categories ' "$ROOT/to-bee-or-not-to-bee-clusters.txt"
+          awk 'BEGIN { n=0 } /^CLUSTER/ { print; n++; if (n >= 20) exit 0 }' "$ROOT/to-bee-or-not-to-bee-clusters.txt"
 
           for report in "$ROOT/toxic-factory-probe.txt" "$ROOT/to-bee-or-not-to-bee-probe.txt"; do
             grep -Eq '^summary regions=[1-9][0-9]* chunks=[1-9][0-9]* .*candidate_blocks=[1-9][0-9]*' "$report"
