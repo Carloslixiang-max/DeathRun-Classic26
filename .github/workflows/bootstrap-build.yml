@@ -43,6 +43,21 @@ jobs:
 
           git push origin HEAD:main
 
+      - name: Verify Anvil archive probe
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tools/test_anvil_probe.py
+
+          mkdir -p /tmp/deathrun-archive-probe
+          ARCHIVE_REGION='https://raw.githubusercontent.com/Mqzn/HiveMCMaps/main/death-run/toxic-factory/region/r.-1.0.mca'
+          curl -fsSL --retry 3 --retry-delay 2 "$ARCHIVE_REGION"             -o /tmp/deathrun-archive-probe/r.-1.0.mca
+
+          python3 tools/anvil_probe.py             --world-name toxic-factory             --output /tmp/deathrun-archive-probe/toxic-factory-probe.txt             --min-chunks 1             /tmp/deathrun-archive-probe/r.-1.0.mca
+
+          grep -Eq '^summary regions=1 chunks=[1-9][0-9]* '             /tmp/deathrun-archive-probe/toxic-factory-probe.txt
+          grep '^summary ' /tmp/deathrun-archive-probe/toxic-factory-probe.txt
+
       - name: Install Java 25
         uses: actions/setup-java@v6
         with:
