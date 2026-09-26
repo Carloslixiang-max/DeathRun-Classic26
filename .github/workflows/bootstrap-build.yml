@@ -152,6 +152,14 @@ jobs:
           grep '^block_entity_summary ' "$ROOT/toxic-factory-block-entity-evidence.txt"
           grep '^BLOCK_ENTITY_EVIDENCE' "$ROOT/toxic-factory-block-entity-evidence.txt" | head -n 100 || true
 
+          echo '--- To Bee container inventory evidence ---'
+          grep '^block_entity_summary ' "$ROOT/to-bee-or-not-to-bee-block-entity-evidence.txt"
+          grep '^INVENTORY_ITEM_TYPE' "$ROOT/to-bee-or-not-to-bee-block-entity-evidence.txt" || true
+          grep '^BLOCK_ENTITY_INVENTORY' "$ROOT/to-bee-or-not-to-bee-block-entity-evidence.txt" | head -n 120 || true
+          echo '--- Toxic Factory container inventory evidence ---'
+          grep '^INVENTORY_ITEM_TYPE' "$ROOT/toxic-factory-block-entity-evidence.txt" || true
+          grep '^BLOCK_ENTITY_INVENTORY' "$ROOT/toxic-factory-block-entity-evidence.txt" | head -n 120 || true
+
           python3 tools/anvil_stage_evidence.py \
             "$ROOT/to-bee-or-not-to-bee-probe.txt" \
             "$ROOT/to-bee-or-not-to-bee-entity-evidence.txt" \

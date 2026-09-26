@@ -57,12 +57,20 @@ INTERESTING_KEY_PARTS = (
 
 
 @dataclass(frozen=True)
+class InventoryStack:
+    item_id: str
+    count: int
+    slot: int | None
+
+
+@dataclass(frozen=True)
 class BlockEntityEvidence:
     entity_id: str
     x: int | None
     y: int | None
     z: int | None
     metadata: tuple[tuple[str, str], ...]
+    inventory: tuple[InventoryStack, ...]
     region: str
     chunk_x: int
     chunk_z: int
@@ -87,6 +95,8 @@ class BlockEntityStats:
     non_sign_block_entities: int = 0
     evidence_entities: int = 0
     route_keyword_entities: int = 0
+    inventory_entities: int = 0
+    inventory_stacks: int = 0
 
 
 @dataclass
@@ -155,6 +165,36 @@ def _metadata(entry: dict[str, Any], max_items: int = 64) -> tuple[tuple[str, st
     return tuple(filtered)
 
 
+
+def _inventory(entry: dict[str, Any]) -> tuple[InventoryStack, ...]:
+    raw = entry.get("Items", entry.get("items", []))
+    if not isinstance(raw, list):
+        return ()
+
+    stacks: list[InventoryStack] = []
+    for item in raw[:256]:
+        if not isinstance(item, dict):
+            continue
+        raw_id = item.get("id", item.get("Id", ""))
+        if not isinstance(raw_id, str) or not raw_id:
+            continue
+
+        raw_count = item.get("Count", item.get("count", 1))
+        count = int(raw_count) if isinstance(raw_count, int) else 1
+        raw_slot = item.get("Slot", item.get("slot"))
+        slot = int(raw_slot) if isinstance(raw_slot, int) else None
+        stacks.append(InventoryStack(item_id=raw_id, count=count, slot=slot))
+
+    stacks.sort(
+        key=lambda stack: (
+            stack.slot if stack.slot is not None else 10**9,
+            stack.item_id,
+            stack.count,
+        )
+    )
+    return tuple(stacks)
+
+
 def evidence_from_level(
     level: dict[str, Any],
     region: str,
@@ -187,6 +227,7 @@ def evidence_from_level(
                 y=coords[1],
                 z=coords[2],
                 metadata=_metadata(entry),
+                inventory=_inventory(entry),
                 region=region,
                 chunk_x=chunk_x,
                 chunk_z=chunk_z,
@@ -267,6 +308,8 @@ def scan_region(path: Path) -> BlockEntityProbeResult:
 
     stats.evidence_entities = len(evidence)
     stats.route_keyword_entities = sum(bool(item.route_words) for item in evidence)
+    stats.inventory_entities = sum(bool(item.inventory) for item in evidence)
+    stats.inventory_stacks = sum(len(item.inventory) for item in evidence)
     evidence.sort(
         key=lambda item: (
             item.x if item.x is not None else 10**9,
@@ -295,6 +338,8 @@ def merge_results(
         stats.non_sign_block_entities += result.stats.non_sign_block_entities
         stats.evidence_entities += result.stats.evidence_entities
         stats.route_keyword_entities += result.stats.route_keyword_entities
+        stats.inventory_entities += result.stats.inventory_entities
+        stats.inventory_stacks += result.stats.inventory_stacks
         types.update(result.entity_types)
         evidence.extend(result.evidence)
         errors.extend(result.errors)
@@ -326,7 +371,9 @@ def render_report(result: BlockEntityProbeResult, world_name: str) -> str:
             f"all_block_entities={stats.all_block_entities} "
             f"non_sign_block_entities={stats.non_sign_block_entities} "
             f"evidence_entities={stats.evidence_entities} "
-            f"route_keyword_entities={stats.route_keyword_entities}"
+            f"route_keyword_entities={stats.route_keyword_entities} "
+            f"inventory_entities={stats.inventory_entities} "
+            f"inventory_stacks={stats.inventory_stacks}"
         ),
         "# Non-sign BlockEntities are surfaced for review; no gameplay role is inferred.",
         "",
@@ -338,17 +385,40 @@ def render_report(result: BlockEntityProbeResult, world_name: str) -> str:
     ):
         lines.append(f"BLOCK_ENTITY_TYPE\tcount={count}\tid={entity_id}")
 
+    item_types = Counter(
+        stack.item_id
+        for item in result.evidence
+        for stack in item.inventory
+    )
+    for item_id, count in sorted(
+        item_types.items(),
+        key=lambda value: (-value[1], value[0].lower()),
+    ):
+        lines.append(f"INVENTORY_ITEM_TYPE\tstacks={count}\tid={item_id}")
+
     lines.append("")
     for item in result.evidence:
         metadata = ";".join(f"{key}={value}" for key, value in item.metadata) or "none"
+        inventory = ";".join(
+            (
+                f"slot={stack.slot if stack.slot is not None else 'unknown'},"
+                f"id={stack.item_id},count={stack.count}"
+            )
+            for stack in item.inventory
+        ) or "none"
         route = ",".join(item.route_words) or "none"
         pos = ",".join(_coord(value) for value in (item.x, item.y, item.z))
         lines.append(
             "BLOCK_ENTITY_EVIDENCE\t"
             f"id={item.entity_id}\tpos={pos}\troute_words={route}\t"
-            f"metadata={metadata}\tregion={item.region}\t"
+            f"metadata={metadata}\titems={inventory}\tregion={item.region}\t"
             f"chunk={item.chunk_x},{item.chunk_z}"
         )
+        if item.inventory:
+            lines.append(
+                "BLOCK_ENTITY_INVENTORY\t"
+                f"id={item.entity_id}\tpos={pos}\titems={inventory}"
+            )
 
     if result.errors:
         lines.append("")
