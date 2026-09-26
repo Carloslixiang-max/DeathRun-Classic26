@@ -61,6 +61,8 @@ public class LanguageConfiguration extends OkaeriConfig {
             "<reset> <b>*</b> <white>/dr help (page)",
             "<reset> <b>*</b> <white>/dr leave",
             "<reset> <b>*</b> <white>/dr map list",
+            "<reset> <b>*</b> <white>/dr map manifest <id>",
+            "<reset> <b>*</b> <white>/dr map legacyscan",
             "<reset>"
     );
     public List<String> commandHelpSetupLines = asList(

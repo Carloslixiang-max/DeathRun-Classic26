@@ -193,6 +193,23 @@ every Runner/Death spawn, checkpoint order/points/finish/region bounds, trap ord
 target bounds, start barrier, teleport pads, and the final preflight result. It is intended for
 final Safari/Temple coordinate review and can be run from the server console.
 
+### Legacy map extraction helper
+
+When importing an old Safari/Temple recreation, enter edit mode, select a reasonably sized route
+section with WorldEdit, then run:
+
+```text
+/dr map legacyscan
+```
+
+The scan looks for candidate trap buttons, pressure plates, command blocks (including their command
+text), and portal blocks. It is a research/extraction helper only; it does not mutate the production
+map configuration. The selection is capped at 250,000 blocks and detailed output is capped at 128
+candidate entries so a mistaken giant selection cannot stall the server or flood chat.
+
+Use command-block coordinates and command text as evidence when recovering legacy trap/fill/teleport
+geometry, then author the measured result through the normal Classic26 checkpoint/trap/teleport tools.
+
 The current preflight catches, among other things:
 
 - missing/unloaded world

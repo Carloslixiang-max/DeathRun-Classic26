@@ -19,6 +19,7 @@ import org.bukkit.Particle;
 import org.bukkit.World;
 import org.bukkit.WorldCreator;
 import org.bukkit.block.Block;
+import org.bukkit.block.CommandBlock;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
@@ -846,6 +847,113 @@ public class CommandDeathRun {
         this.message(sender, PREFIX + "<gray>preflight=<white>"
                 + (issues.isEmpty() ? "healthy" : String.join(", ", issues)));
         this.message(sender, PREFIX + "<green>Map manifest complete: <white>" + this.safe(map.id));
+    }
+
+    @Execute(name = "map legacyscan")
+    @Permission("mrstudios.command.deathrun.setup")
+    public void setupMapLegacyScan(
+            @Context Player player
+    ) {
+        MapConfiguration.MapDefinition map = this.selectedMapForSetup(player, false);
+        if (map == null || !this.playerInConfiguredMapWorld(player, map))
+            return;
+
+        try {
+            LocalSession session = this.worldEdit.getSessionManager().findByName(player.getName());
+            if (session == null) {
+                this.message(player, PREFIX + "<red>No WorldEdit session was found. Make a selection first.");
+                return;
+            }
+
+            com.sk89q.worldedit.world.World selectionWorld = session.getSelectionWorld();
+            if (selectionWorld == null || !selectionWorld.getName().equals(player.getWorld().getName())) {
+                this.message(player, PREFIX + "<red>Your WorldEdit selection must be in the current map world.");
+                return;
+            }
+
+            Region region = session.getSelection(selectionWorld);
+            long volume = region.getVolume();
+            final long maxVolume = 250_000L;
+            if (volume <= 0L) {
+                this.message(player, PREFIX + "<red>Select a non-empty WorldEdit region first.");
+                return;
+            }
+            if (volume > maxVolume) {
+                this.message(player, PREFIX + "<red>Legacy scan selection is too large: <white>"
+                        + volume + "<red> blocks. Maximum is <white>" + maxVolume
+                        + "<red>. Scan the route in smaller sections.");
+                return;
+            }
+
+            int buttonCount = 0;
+            int pressurePlateCount = 0;
+            int commandBlockCount = 0;
+            int portalCount = 0;
+            final int detailLimit = 128;
+            List<String> details = new ArrayList<>();
+
+            for (com.sk89q.worldedit.math.BlockVector3 vector : region) {
+                Block block = player.getWorld().getBlockAt(vector.x(), vector.y(), vector.z());
+                Material material = block.getType();
+
+                if (this.isSupportedTrapButton(block)) {
+                    buttonCount++;
+                    if (details.size() < detailLimit)
+                        details.add("BUTTON " + this.blockSummary(block));
+                }
+
+                if (material.name().endsWith("_PRESSURE_PLATE")) {
+                    pressurePlateCount++;
+                    if (details.size() < detailLimit)
+                        details.add("PRESSURE_PLATE " + this.blockSummary(block));
+                }
+
+                if (material == COMMAND_BLOCK
+                        || material == CHAIN_COMMAND_BLOCK
+                        || material == REPEATING_COMMAND_BLOCK) {
+                    commandBlockCount++;
+                    if (details.size() < detailLimit) {
+                        String rawCommand = "";
+                        if (block.getState() instanceof CommandBlock commandBlock)
+                            rawCommand = commandBlock.getCommand();
+
+                        details.add("COMMAND_BLOCK " + this.blockSummary(block)
+                                + " cmd=" + this.legacyScanText(rawCommand));
+                    }
+                }
+
+                if (material == NETHER_PORTAL
+                        || material == END_PORTAL
+                        || material == END_PORTAL_FRAME
+                        || material == END_GATEWAY) {
+                    portalCount++;
+                    if (details.size() < detailLimit)
+                        details.add("PORTAL " + this.blockSummary(block));
+                }
+            }
+
+            this.message(player, PREFIX + "<gold>Legacy scan <white>" + this.safe(map.id)
+                    + " <gray>| volume=<white>" + volume
+                    + " <gray>| buttons=<white>" + buttonCount
+                    + " <gray>| plates=<white>" + pressurePlateCount
+                    + " <gray>| commandBlocks=<white>" + commandBlockCount
+                    + " <gray>| portals=<white>" + portalCount);
+
+            for (String detail : details)
+                this.message(player, PREFIX + "<gray>" + detail);
+
+            int totalCandidates = buttonCount + pressurePlateCount + commandBlockCount + portalCount;
+            if (totalCandidates > details.size()) {
+                this.message(player, PREFIX + "<yellow>Detailed output capped at <white>"
+                        + detailLimit + "<yellow> entries; <white>"
+                        + (totalCandidates - details.size()) + "<yellow> more candidates were counted.");
+            }
+
+            this.message(player, PREFIX + "<green>Legacy scan complete. Use these as candidate coordinates only; verify each against the original/recreated route before authoring the production map.");
+        } catch (Exception exception) {
+            this.message(player, PREFIX + "<red>Legacy scan failed: <white>"
+                    + this.legacyScanText(exception.getMessage()));
+        }
     }
 
     @Execute(name = "map status")
@@ -2331,6 +2439,35 @@ public class CommandDeathRun {
         }
 
         return pressurePlates.get(0);
+    }
+
+    private @NotNull String blockSummary(
+            @NotNull Block block
+    ) {
+        return block.getWorld().getName()
+                + " " + block.getX()
+                + "," + block.getY()
+                + "," + block.getZ()
+                + " type=" + block.getType().name();
+    }
+
+    private @NotNull String legacyScanText(
+            @Nullable String value
+    ) {
+        if (value == null || value.isBlank())
+            return "-";
+
+        String cleaned = value
+                .replace("\r", " ")
+                .replace("\n", " ")
+                .replace("<", "(")
+                .replace(">", ")")
+                .trim();
+
+        int maxLength = 180;
+        return cleaned.length() <= maxLength
+                ? cleaned
+                : cleaned.substring(0, maxLength) + "...";
     }
 
     private @NotNull String regionSummary(
