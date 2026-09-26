@@ -18,7 +18,15 @@ class AnvilTopologyTest(unittest.TestCase):
         ]
         groups = pressure_plate_components(points)
         self.assertEqual([2, 2], [len(group.members) for group in groups])
-        self.assertEqual(2, len(groups[0].materials))
+        materials = {
+            material
+            for group in groups
+            for material in group.materials
+        }
+        self.assertEqual(
+            {"minecraft:stone_pressure_plate", "minecraft:oak_pressure_plate"},
+            materials,
+        )
 
     def test_portals_group_face_adjacent_blocks(self):
         portals = [
