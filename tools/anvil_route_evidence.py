@@ -95,6 +95,21 @@ def numeric_markers(signs: Sequence[Sign]) -> list[NumericMarker]:
     return result
 
 
+def redstone_block_positions(path: Path) -> frozenset[tuple[int, int, int]]:
+    result: set[tuple[int, int, int]] = set()
+    for raw in path.read_text(encoding="utf-8").splitlines():
+        if not raw.startswith("BLOCK\tREDSTONE\tminecraft:redstone_block\t"):
+            continue
+        fields = raw.split("\t")
+        if len(fields) < 6:
+            continue
+        try:
+            result.add((int(fields[3]), int(fields[4]), int(fields[5])))
+        except ValueError:
+            continue
+    return frozenset(result)
+
+
 def numeric_components(markers: Sequence[NumericMarker]) -> list[NumericComponent]:
     """Group face-adjacent numeric signs into physical sign panels."""
     by_pos = {
@@ -157,10 +172,20 @@ def _pos(sign: Sign) -> str:
     return f"{sign.x},{sign.y},{sign.z}"
 
 
-def render_report(source: Path, signs: Sequence[Sign]) -> str:
+def render_report(
+    source: Path,
+    signs: Sequence[Sign],
+    redstone_blocks: frozenset[tuple[int, int, int]] = frozenset(),
+) -> str:
     numeric = numeric_markers(signs)
     components = numeric_components(numeric)
     pair_counts = Counter((item.left, item.right) for item in numeric)
+    supported = [
+        item
+        for item in numeric
+        if (item.sign.x, item.sign.y + 1, item.sign.z) in redstone_blocks
+    ]
+    supported_pair_counts = Counter((item.left, item.right) for item in supported)
     route_signs = [
         (sign, route_keywords(sign))
         for sign in signs
@@ -188,10 +213,13 @@ def render_report(source: Path, signs: Sequence[Sign]) -> str:
             f"distinct_numeric_pairs={len(pair_counts)} "
             f"numeric_components={len(components)} "
             f"multi_sign_numeric_components={multi_sign_components} "
-            f"largest_numeric_component={largest}"
+            f"largest_numeric_component={largest} "
+            f"numeric_signs_with_redstone_block_above={len(supported)} "
+            f"numeric_pairs_with_redstone_support={len(supported_pair_counts)}"
         ),
         "# ROUTE_SIGN is a direct preserved keyword hit; it is not automatically a gameplay region.",
         "# Numeric-pair panels remain unexplained metadata until independently corroborated.",
+        "# REDSTONE support means only that a preserved redstone block sits exactly one block above the sign.",
         "",
     ]
 
@@ -208,8 +236,22 @@ def render_report(source: Path, signs: Sequence[Sign]) -> str:
             for item in numeric
             if (item.left, item.right) == (left, right)
         )
+        supported_count = supported_pair_counts[(left, right)]
         lines.append(
             "NUMERIC_PAIR_CATALOG\t"
+            f"value={left}|{right}\tcount={count}\t"
+            f"redstone_block_above={supported_count}\tcoords={coords}"
+        )
+
+    lines.append("")
+    for (left, right), count in sorted(supported_pair_counts.items()):
+        coords = ";".join(
+            _pos(item.sign)
+            for item in supported
+            if (item.left, item.right) == (left, right)
+        )
+        lines.append(
+            "NUMERIC_REDSTONE_SUPPORT\t"
             f"value={left}|{right}\tcount={count}\tcoords={coords}"
         )
 
@@ -236,10 +278,12 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("probe_report", type=Path)
     parser.add_argument("--output", type=Path)
     parser.add_argument("--min-numeric", type=int, default=0)
+    parser.add_argument("--min-numeric-redstone-support", type=int, default=0)
     args = parser.parse_args(argv)
 
     _buttons, signs = parse_probe_report(args.probe_report)
-    report = render_report(args.probe_report, signs)
+    redstone_blocks = redstone_block_positions(args.probe_report)
+    report = render_report(args.probe_report, signs, redstone_blocks)
 
     if args.output:
         args.output.parent.mkdir(parents=True, exist_ok=True)
@@ -254,6 +298,19 @@ def main(argv: Sequence[str] | None = None) -> int:
             file=sys.stderr,
         )
         return 2
+
+    supported_count = sum(
+        (marker.sign.x, marker.sign.y + 1, marker.sign.z) in redstone_blocks
+        for marker in numeric_markers(signs)
+    )
+    if supported_count < args.min_numeric_redstone_support:
+        print(
+            "anvil_route_evidence: expected at least "
+            f"{args.min_numeric_redstone_support} numeric signs with a redstone "
+            f"block immediately above, got {supported_count}",
+            file=sys.stderr,
+        )
+        return 3
     return 0
 
 

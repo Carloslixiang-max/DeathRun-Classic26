@@ -40,13 +40,14 @@ The pinned archive currently produces:
 - 0 failed chunks
 - 0 external chunks
 - 855 original button/pressure-plate/portal candidates
-- 1,089 enriched probe candidates after sign-block and mechanism expansion
+- 1,138 enriched probe candidates after sign-block, mechanism and redstone expansion
 - 0 command-block entities
 - 409 buttons
 - 80 pressure plates
 - 366 Nether Portal blocks
 - 154 sign TileEntities / sign blocks
 - 80 mechanism blocks: 48 dispensers + 32 hoppers
+- 49 redstone/control blocks: 32 levers + 17 redstone blocks
 
 The bounded local review pass (`radius=4`, `vertical-radius=3`) turns the
 489 button/pressure-plate interaction candidates into:
@@ -94,6 +95,40 @@ portal blocks. Real archive results:
 
 This is strong negative evidence against treating either surviving pressure
 plates or portal components as a direct 9-checkpoint encoding.
+
+## Archived redstone/control-chain evidence
+
+Run #255 / commit `19f330d3a0998c7af887865e0e420c1d50f3d168`
+expanded the read-only probe to preserve redstone/control blocks and passed the
+research suite, Java 25 build and full Paper 26.2 restart smoke.
+
+The To Bee archive contains only **49** surviving redstone/control blocks:
+
+- **32 levers**
+- **17 redstone blocks**
+- **0** redstone wire
+- **0** repeaters
+- **0** comparators
+- **0** pistons/sticky pistons
+- **0** observers
+- **0** redstone torches
+
+The 49 blocks form 21 conservative physical-proximity components. Four
+single-lever components lie near buttons, but **0** components lie near the
+48 dispensers / 32 hoppers and **0** components bridge a button to a mechanism.
+
+This is strong negative evidence that the archive retains a traceable physical
+redstone activation network. It supports the existing conclusion that important
+trap control logic lived outside the surviving world geometry or was stripped
+before archival. It does not prove the exact form of that missing server-side
+logic.
+
+One useful positive correlation survives: all **17** redstone blocks occupy
+`bbox=-64,24,-13:-56,24,-12`, directly one block above the **17** numeric
+`6 | 3` signs at y=23. CI now checks this 17/17 relationship explicitly.
+That makes this particular numeric-sign component look like a built display or
+status panel rather than an independent checkpoint encoding. The other numeric
+components remain unexplained and are not assigned gameplay meaning.
 
 ## Surviving trap-action sign evidence
 
@@ -190,6 +225,10 @@ Important result:
   failed; those arrows are therefore retained as target-direction evidence only
 - distance + compatible sign/button facing reduces only one action to a single
   panel-button candidate
+- Run #254 / commit `5d5404c3c913af8e9e61ef06195767884eacc53b`
+  added a second conservative control-axis check (lateral + vertical alignment)
+- the axis pass still produces exactly **1** unique candidate and does not
+  manufacture unique links from the three ambiguous high-stage button sets
 
 Current unique control-button candidate:
 
@@ -319,7 +358,7 @@ duration, projectile payload, or reset behavior.
 - Exact target region/cuboid for each trap (Fire Arrows target lanes are now
   structurally narrowed by dispenser facing, but not exact)
 - Trap active durations, projectile payloads and reset state
-- Whether any original server-side control logic was stripped before archive
+- Exact form of the original server-side control logic that is absent from the archive
 
 The archive is now strong enough to recover the **trap concept catalog and a
 20-instance warning/action review set**, but not yet strong enough to claim a
