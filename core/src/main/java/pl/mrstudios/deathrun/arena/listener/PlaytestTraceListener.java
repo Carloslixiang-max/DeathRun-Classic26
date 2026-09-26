@@ -153,15 +153,24 @@ public final class PlaytestTraceListener implements Listener {
     @EventHandler(priority = EventPriority.MONITOR)
     public void onFinish(@NotNull UserArenaFinishedEvent event) {
         IUser user = event.getUser();
-        this.trace.recordUser(
-                user,
-                "FINISH",
-                "player=" + user.getName()
-                        + " position=" + event.getPosition()
-                        + " time=" + event.getTime()
-                        + " lives=" + user.getLives()
-                        + " points=" + user.getRoundPoints()
-        );
+        String mapId = this.trace.mapIdForUser(user);
+        if (mapId == null)
+            return;
+
+        this.server.getScheduler().runTask(this.plugin, () -> {
+            ArenaManager.ArenaRuntime runtime = this.arenaManager.runtimeByMapId(mapId);
+            int remaining = runtime == null ? -1 : runtime.arena().getRemainingTime();
+            this.trace.record(
+                    mapId,
+                    "FINISH",
+                    "player=" + user.getName()
+                            + " position=" + event.getPosition()
+                            + " time=" + event.getTime()
+                            + " lives=" + user.getLives()
+                            + " points=" + user.getRoundPoints()
+                            + " remaining=" + remaining
+            );
+        });
     }
 
     @EventHandler(priority = EventPriority.MONITOR)
