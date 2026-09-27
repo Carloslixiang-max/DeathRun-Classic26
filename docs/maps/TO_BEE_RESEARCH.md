@@ -1061,3 +1061,36 @@ surviving low-stage four-button group:
 
 This is explicitly a reconstruction, not proof of Hive's original binding.
 The runtime To Bee candidate profile now contains **14 implemented traps**.
+
+
+### Moving Fire Snake A reconstruction
+
+Run #312 implements the first `Release fire snake` as a real moving route
+hazard rather than a static particle effect.
+
+Archive evidence is unusually strong for this instance:
+
+- warning: `6,25,60`
+- action: `11,29,55`
+- reconstructed nearest control button: `15,35,55`
+- source: **9 preserved dispensers** at `x=-1..7,y=24,z=51`, all facing
+  south (`+z`)
+- route immediately downstream of the source is preserved as:
+  - 63 cyan-terracotta support cells, `z=52..58`
+  - 9 stone-brick-stair cells at `z=59`
+  - 44 grass route cells at `z=60..64`
+  - 9 stone-brick-stair cells at `z=65`
+  - total path: **125 exact archive cells**
+
+`TrapFireSnake` groups those cells into successive z-slices. On activation the
+front moves in the dispenser-facing direction and accelerates (4-tick steps,
+then 3, then 2). Each active slice temporarily becomes magma; slices two
+frames behind are restored, producing a moving front rather than permanently
+turning the entire corridor into a fire floor. `end()` cancels pending tasks
+and restores every backed-up BlockData.
+
+Original Hive timing is not preserved in the archive, so acceleration and
+duration remain explicit Classic26 playability reconstruction. Source
+direction and physical path are archive-backed.
+
+The To Bee candidate runtime now contains **15 implemented traps**.

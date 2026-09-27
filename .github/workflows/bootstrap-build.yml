@@ -420,6 +420,7 @@ jobs:
           jar tf "$JAR" | grep -q 'pl/mrstudios/deathrun/classic/playtest/ClassicPlaytestService.class'
           jar tf "$JAR" | grep -q 'pl/mrstudios/deathrun/classic/vote/ClassicVoteService.class'
           jar tf "$JAR" | grep -q 'pl/mrstudios/deathrun/arena/listener/ClassicTrapEffectListener.class'
+          jar tf "$JAR" | grep -q 'pl/mrstudios/deathrun/arena/trap/impl/TrapFireSnake.class'
           ! jar tf "$JAR" | grep -q 'net/kyori/adventure/platform/bukkit/BukkitAudiences.class'
           ! grep -R "BukkitAudiences" core/src/main/java
           unzip -p "$JAR" plugin.yml | grep -q 'api-version: "26.2"'

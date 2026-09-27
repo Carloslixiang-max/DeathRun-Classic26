@@ -3,12 +3,15 @@ package pl.mrstudios.deathrun.classic.tobee;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.World;
+import org.bukkit.block.BlockFace;
+import org.bukkit.block.data.Directional;
 import org.jetbrains.annotations.NotNull;
 import pl.mrstudios.deathrun.arena.ArenaManager;
 import pl.mrstudios.deathrun.arena.checkpoint.Checkpoint;
 import pl.mrstudios.deathrun.arena.trap.impl.TrapArrows;
 import pl.mrstudios.deathrun.arena.trap.impl.TrapDisappearingBlocks;
 import pl.mrstudios.deathrun.arena.trap.impl.TrapFireFloor;
+import pl.mrstudios.deathrun.arena.trap.impl.TrapFireSnake;
 import pl.mrstudios.deathrun.arena.trap.impl.TrapFlood;
 import pl.mrstudios.deathrun.arena.trap.impl.TrapMinefield;
 import pl.mrstudios.deathrun.config.Configuration;
@@ -202,6 +205,15 @@ public final class ToBeeCandidateProfileService {
             "TrapDisappearingBlocks: remove the exact 78-cell green glass floor component",
             "target geometry archive-backed; one-to-one completion of low-stage control panel reconstruction"
     );
+    private static final FireSnakeEvidence FIRE_SNAKE_A_TRAP = new FireSnakeEvidence(
+            "pair-010-fire-snake-A",
+            new BlockPos(6, 25, 60),
+            new BlockPos(11, 29, 55),
+            new BlockPos(15, 35, 55),
+            fireSnakeASourceDispensers(),
+            fireSnakeAPathCells(),
+            "source dispenser row and path geometry archive-backed; nearest-button and active timing reconstruction"
+    );
     private static final int START_BARRIER_X = 84;
     private static final int START_BARRIER_MIN_Y = 25;
     private static final int START_BARRIER_MAX_Y = 26;
@@ -297,6 +309,7 @@ public final class ToBeeCandidateProfileService {
         addCoalFireTrap(map, world);
         addFloodTrap(map, world, FLOOD_B_TRAP);
         addFireArrowTrap(map, world, FIRE_ARROW_TRAPS.get(0));
+        addFireSnakeTrap(map, world);
         addMinefieldTrap(map, world);
         addFireArrowTrap(map, world, FIRE_ARROW_TRAPS.get(1));
         addDisappearingTrap(map, world, DARK_WOOD_A_TRAP);
@@ -442,6 +455,32 @@ public final class ToBeeCandidateProfileService {
             }
         }
 
+        if (!world.getBlockAt(FIRE_SNAKE_A_TRAP.actionSign().x(), FIRE_SNAKE_A_TRAP.actionSign().y(), FIRE_SNAKE_A_TRAP.actionSign().z())
+                .getType().name().endsWith("_SIGN"))
+            issues.add("fire-snake-action-missing:" + FIRE_SNAKE_A_TRAP.actionSign().compact());
+
+        if (!world.getBlockAt(FIRE_SNAKE_A_TRAP.button().x(), FIRE_SNAKE_A_TRAP.button().y(), FIRE_SNAKE_A_TRAP.button().z())
+                .getType().name().endsWith("_BUTTON"))
+            issues.add("fire-snake-button-missing:" + FIRE_SNAKE_A_TRAP.button().compact());
+
+        for (BlockPos dispenser : FIRE_SNAKE_A_TRAP.sourceDispensers()) {
+            var block = world.getBlockAt(dispenser.x(), dispenser.y(), dispenser.z());
+            if (block.getType() != Material.DISPENSER) {
+                issues.add("fire-snake-source-missing:" + dispenser.compact());
+                continue;
+            }
+            if (!(block.getBlockData() instanceof Directional directional)
+                    || directional.getFacing() != BlockFace.SOUTH)
+                issues.add("fire-snake-source-facing:" + dispenser.compact());
+        }
+
+        for (BlockExpectation expected : FIRE_SNAKE_A_TRAP.path()) {
+            Material material = Material.matchMaterial(expected.materialName());
+            Material actual = world.getBlockAt(expected.pos().x(), expected.pos().y(), expected.pos().z()).getType();
+            if (material == null || actual != material)
+                issues.add("fire-snake-path-mismatch:" + expected.pos().compact() + ":"
+                        + actual.name() + "/" + expected.materialName());
+        }
         return issues;
     }
 
@@ -498,7 +537,7 @@ public final class ToBeeCandidateProfileService {
     }
 
     public static int implementedTrapCount() {
-        return FIRE_ARROW_TRAPS.size() + 11;
+        return FIRE_ARROW_TRAPS.size() + 12;
     }
 
     public static @NotNull MaterialTrapEvidence iceMeltEvidence() {
@@ -536,6 +575,10 @@ public final class ToBeeCandidateProfileService {
     }
 
 
+    public static @NotNull FireSnakeEvidence fireSnakeEvidence() {
+        return FIRE_SNAKE_A_TRAP;
+    }
+
     public static int expectedPortalBlockTotal() {
         return GATES.values().stream().mapToInt(GateEvidence::expectedPortalBlocks).sum();
     }
@@ -560,7 +603,7 @@ public final class ToBeeCandidateProfileService {
                 "runner-start-layout-generated-from-safe-archive-geometry-not-original",
                 "death-spawns-generated-from-first-stage-control-geometry-not-original",
                 "death-button-to-trap-bindings-partially-reconstructed-runtime-subset",
-                "trap-target-geometry-recovered-14-runtime-traps",
+                "trap-target-geometry-recovered-15-runtime-traps",
                 "remaining-trap-targets-and-original-reset-parameters-not-recovered",
                 "start-barrier-generated-outside-gate-006-not-original",
                 "original-checkpoint-score-values-not-recovered"
@@ -607,6 +650,18 @@ public final class ToBeeCandidateProfileService {
                 .toList());
         map.arenaTraps.add(trap);
     }
+    private static void addFireSnakeTrap(
+            @NotNull MapConfiguration.MapDefinition map,
+            @NotNull World world
+    ) {
+        TrapFireSnake trap = new TrapFireSnake();
+        trap.setButton(blockLocation(world, FIRE_SNAKE_A_TRAP.button()));
+        trap.setLocations(FIRE_SNAKE_A_TRAP.path().stream()
+                .map(cell -> blockLocation(world, cell.pos()))
+                .toList());
+        map.arenaTraps.add(trap);
+    }
+
     private static void addMinefieldTrap(
             @NotNull MapConfiguration.MapDefinition map,
             @NotNull World world
@@ -714,6 +769,32 @@ public final class ToBeeCandidateProfileService {
                 positions.add(new BlockPos(x, 20, z));
         return List.copyOf(positions);
     }
+    private static @NotNull List<BlockPos> fireSnakeASourceDispensers() {
+        List<BlockPos> positions = new ArrayList<>();
+        for (int x = -1; x <= 7; x++)
+            positions.add(new BlockPos(x, 24, 51));
+        return List.copyOf(positions);
+    }
+
+    private static @NotNull List<BlockExpectation> fireSnakeAPathCells() {
+        List<BlockExpectation> cells = new ArrayList<>();
+        for (int z = 52; z <= 58; z++)
+            for (int x = -1; x <= 7; x++)
+                cells.add(new BlockExpectation(new BlockPos(x, 23, z), "CYAN_TERRACOTTA"));
+        for (int x = -1; x <= 7; x++)
+            cells.add(new BlockExpectation(new BlockPos(x, 24, 59), "STONE_BRICK_STAIRS"));
+        for (int x = -1; x <= 7; x++) {
+            for (int z = 60; z <= 64; z++) {
+                if (x == 6 && z == 60)
+                    continue;
+                cells.add(new BlockExpectation(new BlockPos(x, 24, z), "GRASS_BLOCK"));
+            }
+        }
+        for (int x = -1; x <= 7; x++)
+            cells.add(new BlockExpectation(new BlockPos(x, 24, 65), "STONE_BRICK_STAIRS"));
+        return List.copyOf(cells);
+    }
+
     private static @NotNull List<BlockPos> floorFallATargetPositions() {
         List<BlockPos> positions = new ArrayList<>();
         for (int x = 29; x <= 37; x++) {
@@ -946,6 +1027,21 @@ public final class ToBeeCandidateProfileService {
             @NotNull String confidence
     ) {}
 
+
+    public record BlockExpectation(
+            @NotNull BlockPos pos,
+            @NotNull String materialName
+    ) {}
+
+    public record FireSnakeEvidence(
+            @NotNull String id,
+            @NotNull BlockPos warning,
+            @NotNull BlockPos actionSign,
+            @NotNull BlockPos button,
+            @NotNull List<BlockPos> sourceDispensers,
+            @NotNull List<BlockExpectation> path,
+            @NotNull String confidence
+    ) {}
 
     public record Result(
             boolean success,
