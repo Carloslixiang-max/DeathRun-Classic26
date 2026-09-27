@@ -54,6 +54,7 @@ jobs:
           python3 tools/test_anvil_topology.py
           python3 tools/test_anvil_route_portal_evidence.py
           python3 tools/test_anvil_portal_segment_evidence.py
+          python3 tools/test_anvil_portal_segment_graph.py
           python3 tools/test_anvil_pressure_route_evidence.py
           python3 tools/test_anvil_portal_shape_evidence.py
           python3 tools/test_anvil_sign_links.py
@@ -143,6 +144,13 @@ jobs:
             --pair-distance 30 --min-pairs 21 --min-portals 7
           echo '--- To Bee warning/action pair -> portal segment evidence ---'
           cat "$ROOT/to-bee-or-not-to-bee-portal-segments.txt"
+
+          python3 tools/anvil_portal_segment_graph.py \
+            "$ROOT/to-bee-or-not-to-bee-probe.txt" \
+            --output "$ROOT/to-bee-or-not-to-bee-segment-graph.txt" \
+            --min-portals 7 --require-mst-path
+          echo '--- To Bee portal segment warning-proximity graph ---'
+          cat "$ROOT/to-bee-or-not-to-bee-segment-graph.txt"
 
           python3 tools/anvil_mechanism_evidence.py \
             "$ROOT/to-bee-or-not-to-bee-probe.txt" \
