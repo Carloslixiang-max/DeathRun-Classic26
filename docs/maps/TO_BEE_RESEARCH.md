@@ -56,7 +56,10 @@ The pinned archive currently produces:
 - 0 failed chunks
 - 0 external chunks
 - 855 original button/pressure-plate/portal candidates
-- 1,138 enriched probe candidates after sign-block, mechanism and redstone expansion
+- **12,201** enriched probe candidates total
+  - 1,138 prior gameplay/research candidates
+  - 11,063 additional `ROUTE_STRUCTURE` blocks
+    (`barrier`, `iron_bars`, and fence-gate family)
 - 0 command-block entities
 - 409 buttons
 - 80 pressure plates
@@ -303,6 +306,26 @@ Death control/stage geometry, while #006 is a comparatively clean Runner-route
 endpoint with an explicit vertical-movement hint. This makes #006 the stronger
 **peripheral route-end review candidate**, but it still does not by itself prove
 finish-side vs start-side or route direction.
+
+
+Run #281 / commit `1e0c3506b86d4e185cdc6c424a772640491aeb1c`
+adds a deliberately narrow static route-structure family
+(`barrier`, `iron_bars`, fence gates) to test whether one MST endpoint has a
+distinct start/finish enclosure. The full archive contains **11,063** such
+blocks, so this family is dominated by broad map boundary / anti-escape
+construction rather than a unique start gate.
+
+Within the same 20-block endpoint radius:
+
+- #003 contains **705** route-structure blocks; nearest is a
+  `minecraft:barrier` at `30,29,-9`, **4.15** blocks from the portal center
+- #006 contains **615** route-structure blocks; nearest is a
+  `minecraft:barrier` at `82,29,86`, **4.21** blocks from the portal center
+
+Because both endpoints are similarly saturated, generic barrier/iron-bar/fence
+geometry is **negative evidence for endpoint classification**. It is retained
+as map-boundary evidence but must not be used to call either endpoint start or
+finish.
 
 ## Archived redstone/control-chain evidence
 
