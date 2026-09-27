@@ -890,3 +890,21 @@ Confidence remains intentionally split:
 This is enough for the existing `TrapArrows` implementation to fire projectiles
 using each dispenser's preserved block-facing direction while retaining the
 normal Classic26 cooldown/attribution lifecycle.
+
+
+### Semantic target-material recovery pass
+
+Run #302 adds a raw-Anvil material pass for trap labels whose surviving text
+names a concrete block family. It scans local archive geometry around the
+Runner-side warning/action anchors for:
+
+- ice / packed ice / blue ice
+- dark-oak block families
+- red-colored block families (explicitly excluding redstone blocks)
+- coal blocks
+- sea lanterns
+
+The pass groups matching blocks into face-connected components and reports
+component size, bounding box, material mix and distance from the text anchor.
+It is evidence-only: no component becomes a runtime trap target until the real
+archive output is reviewed.

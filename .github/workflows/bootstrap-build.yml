@@ -64,6 +64,7 @@ jobs:
           python3 tools/test_anvil_pressure_route_evidence.py
           python3 tools/test_anvil_portal_shape_evidence.py
           python3 tools/test_anvil_portal_spawn_surface_evidence.py
+          python3 tools/test_anvil_semantic_target_evidence.py
           python3 tools/test_anvil_portal_respawn_candidate_evidence.py
           python3 tools/test_anvil_vertical_hint_evidence.py
           python3 tools/test_anvil_sign_links.py
@@ -346,6 +347,12 @@ jobs:
             --min-portals 7 --min-portals-with-candidates 1
           echo '--- To Bee portal-side standing-surface evidence ---'
           cat "$ROOT/to-bee-or-not-to-bee-portal-standing.txt"
+          python3 tools/anvil_semantic_target_evidence.py \
+            "$ROOT/to-bee-or-not-to-bee" \
+            --output "$ROOT/to-bee-or-not-to-bee-semantic-targets.txt" \
+            --radius 18 --vertical-radius 8 --top 8
+          echo '--- To Bee semantic trap-target material evidence ---'
+          cat "$ROOT/to-bee-or-not-to-bee-semantic-targets.txt"
 
           python3 tools/anvil_portal_respawn_candidate_evidence.py \
             "$ROOT/to-bee-or-not-to-bee" \
