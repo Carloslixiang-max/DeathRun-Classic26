@@ -57,6 +57,7 @@ jobs:
           python3 tools/test_anvil_portal_segment_graph.py
           python3 tools/test_anvil_warning_facing_evidence.py
           python3 tools/test_anvil_route_direction_hypothesis.py
+          python3 tools/test_anvil_stage_direction_evidence.py
           python3 tools/test_anvil_endpoint_context.py
           python3 tools/test_anvil_pressure_route_evidence.py
           python3 tools/test_anvil_portal_shape_evidence.py
@@ -249,6 +250,16 @@ jobs:
             --min-stage-markers 2 --min-markers-with-portal 2 --min-very-close 1
           echo '--- To Bee stage marker / portal gate evidence ---'
           cat "$ROOT/to-bee-or-not-to-bee-stage-portals.txt"
+
+          python3 tools/anvil_stage_direction_evidence.py \
+            "$ROOT/to-bee-or-not-to-bee-probe.txt" \
+            "$ROOT/to-bee-or-not-to-bee-entity-evidence.txt" \
+            --output "$ROOT/to-bee-or-not-to-bee-stage-direction.txt" \
+            --dot-threshold 0.25 --portal-radius 30 \
+            --min-stage-compatible-directions 1 \
+            --require-best-stage-compatible
+          echo '--- To Bee stage-control / warning-direction cross-check ---'
+          cat "$ROOT/to-bee-or-not-to-bee-stage-direction.txt"
 
           python3 tools/anvil_endpoint_context.py \
             "$ROOT/to-bee-or-not-to-bee-probe.txt" \
