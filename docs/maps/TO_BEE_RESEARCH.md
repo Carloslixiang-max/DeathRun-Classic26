@@ -269,6 +269,41 @@ distance because it is derived from the surviving Runner trap-warning geometry.
 It still does **not** determine which endpoint is start-side vs finish-side, nor
 does it assign checkpoint numbers or respawn coordinates.
 
+
+Run #279 / commit `1ae687e7c37a595d8265fff03ad272ab0f0cebfb`
+compares the two MST endpoints using the same 20-block 3D radius.
+
+Endpoint **#003** is control/stage-rich:
+
+- 5 buttons
+- 1 pressure plate
+- 2 mechanisms
+- 1 Runner warning
+- 2 action signs
+- 1 named stage marker
+- nearest stage marker: `Previous Stage`, **6.89** blocks
+- nearest pressure plate: `27,29,-12`, **7.30** blocks
+- nearest action: `Make the floor fall` at `28,29,-17`, **9.23** blocks
+
+Endpoint **#006** is locally control-empty but route-hint-rich:
+
+- 0 buttons
+- 0 pressure plates
+- 0 mechanisms
+- 0 Runner warnings
+- 2 action signs
+- 1 Hint sign
+- 0 stage markers
+- nearest Hint: `Hint: Look down!` at `77,25,80`, **7.34** blocks
+- nearest action: unmatched `Remove Sea Lanterns` at `72,25,76`,
+  **13.04** blocks
+
+This sharply distinguishes the two chain ends. #003 is embedded in preserved
+Death control/stage geometry, while #006 is a comparatively clean Runner-route
+endpoint with an explicit vertical-movement hint. This makes #006 the stronger
+**peripheral route-end review candidate**, but it still does not by itself prove
+finish-side vs start-side or route direction.
+
 ## Archived redstone/control-chain evidence
 
 Run #255 / commit `19f330d3a0998c7af887865e0e420c1d50f3d168`
