@@ -149,6 +149,20 @@ public final class ToBeeCandidateProfileService {
             "TrapDisappearingBlocks: remove the three route-level five-block runs",
             "target geometry archive-backed; nearest-button reconstruction"
     );
+    private static final MaterialTrapEvidence DARK_WOOD_A_TRAP = new MaterialTrapEvidence(
+            "pair-002-dark-wood-A",
+            new BlockPos(-45, 29, -18),
+            new BlockPos(-41, 35, -14),
+            List.of(
+                    new BlockPos(-61, 24, -20),
+                    new BlockPos(-60, 24, -20),
+                    new BlockPos(-59, 24, -20),
+                    new BlockPos(-58, 24, -20)
+            ),
+            "SPRUCE_WOOD",
+            "TrapDisappearingBlocks: remove nearest route-level four-block wood run",
+            "target geometry archive-backed; nearest-button reconstruction"
+    );
     private static final int START_BARRIER_X = 84;
     private static final int START_BARRIER_MIN_Y = 25;
     private static final int START_BARRIER_MAX_Y = 26;
@@ -243,6 +257,7 @@ public final class ToBeeCandidateProfileService {
         addCoalFireTrap(map, world);
         addFireArrowTrap(map, world, FIRE_ARROW_TRAPS.get(0));
         addFireArrowTrap(map, world, FIRE_ARROW_TRAPS.get(1));
+        addDisappearingTrap(map, world, DARK_WOOD_A_TRAP);
         addIceMeltTrap(map, world);
         addFireArrowTrap(map, world, FIRE_ARROW_TRAPS.get(2));
         addDisappearingTrap(map, world, RED_A_TRAP);
@@ -358,7 +373,7 @@ public final class ToBeeCandidateProfileService {
 
         for (MaterialTrapEvidence evidence : List.of(
                 ICE_MELT_TRAP, COAL_FIRE_TRAP,
-                RED_A_TRAP, RED_B_TRAP, RED_D_TRAP, SEA_LANTERN_TRAP
+                RED_A_TRAP, RED_B_TRAP, RED_D_TRAP, SEA_LANTERN_TRAP, DARK_WOOD_A_TRAP
         )) {
             if (!world.getBlockAt(evidence.actionSign().x(), evidence.actionSign().y(), evidence.actionSign().z())
                     .getType().name().endsWith("_SIGN"))
@@ -439,7 +454,7 @@ public final class ToBeeCandidateProfileService {
     }
 
     public static int implementedTrapCount() {
-        return FIRE_ARROW_TRAPS.size() + 6;
+        return FIRE_ARROW_TRAPS.size() + 7;
     }
 
     public static @NotNull MaterialTrapEvidence iceMeltEvidence() {
@@ -457,6 +472,10 @@ public final class ToBeeCandidateProfileService {
     public static @NotNull MaterialTrapEvidence seaLanternEvidence() {
         return SEA_LANTERN_TRAP;
     }
+    public static @NotNull List<MaterialTrapEvidence> darkWoodEvidence() {
+        return List.of(DARK_WOOD_A_TRAP);
+    }
+
     public static int expectedPortalBlockTotal() {
         return GATES.values().stream().mapToInt(GateEvidence::expectedPortalBlocks).sum();
     }
@@ -480,9 +499,9 @@ public final class ToBeeCandidateProfileService {
                 "original-waiting-lobby-not-recovered",
                 "runner-start-layout-generated-from-safe-archive-geometry-not-original",
                 "death-spawns-generated-from-first-stage-control-geometry-not-original",
-                "death-button-to-trap-bindings-partially-reconstructed-9-of-21",
-                "trap-target-geometry-recovered-9-runtime-traps",
-                "remaining-12-trap-targets-and-original-reset-parameters-not-recovered",
+                "death-button-to-trap-bindings-partially-reconstructed-runtime-subset",
+                "trap-target-geometry-recovered-10-runtime-traps",
+                "remaining-trap-targets-and-original-reset-parameters-not-recovered",
                 "start-barrier-generated-outside-gate-006-not-original",
                 "original-checkpoint-score-values-not-recovered"
         );

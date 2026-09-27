@@ -979,3 +979,27 @@ Its reconstructed low-control button is `74,25,54`.
 All four use `TrapDisappearingBlocks`, so only the pinned archive target cells
 are removed during activation and their original BlockData is restored on end.
 The control-button bindings remain explicitly reconstruction-level evidence.
+
+
+### Dark-wood A promoted and unresolved route surfaces instrumented
+
+Run #309 promotes the first `Remove dark wood` instance using the nearest
+route-level archive component rather than the much larger control/building
+wood masses.
+
+- warning: `-57,25,-14`
+- action: `-45,29,-18`
+- reconstructed nearest control button: `-41,35,-14`
+- target: exactly four `spruce_wood` cells at
+  `(-61..-58,24,-20)`
+- runtime behavior: `TrapDisappearingBlocks`, restoring original BlockData
+
+The map text says `dark wood`; the surviving Java archive uses spruce wood for
+this nearest route segment. The target geometry is archive-backed; the exact
+button binding and original duration remain reconstruction-level.
+
+Run #309 also adds `anvil_route_surface_evidence.py`. It scans conservative
+walkable support components around the still-unresolved Random Wall, Flood,
+Minefield, Fire Snake and Floor Fall warnings. This does not auto-create
+targets; it prints exact material components and coordinates so the next
+runtime conversions can use original route geometry rather than guessed cuboids.
