@@ -812,6 +812,62 @@ public final class ToBeeCandidateProfileService {
         return List.copyOf(positions);
     }
 
+    private static @NotNull List<BlockPos> fireSnakeBSourceDispensers() {
+        List<BlockPos> positions = new ArrayList<>();
+        for (int z = 47; z <= 54; z++)
+            positions.add(new BlockPos(84, 24, z));
+        return List.copyOf(positions);
+    }
+
+    private static @NotNull List<BlockExpectation> fireSnakeBPathCells() {
+        List<BlockExpectation> cells = new ArrayList<>();
+        addFireSnakeBRow(cells, 83, 23, "DGDGGGCG");
+        addFireSnakeBRow(cells, 82, 23, "DCGGCDGG");
+        addFireSnakeBRow(cells, 81, 23, ".GGGDDG.");
+        addFireSnakeBRow(cells, 80, 23, "GCCGGDDD");
+        addFireSnakeBRow(cells, 79, 23, ".DGGGCG.");
+        addFireSnakeBRow(cells, 78, 23, "DGGDGCCD");
+        addFireSnakeBRow(cells, 77, 23, "CGGCDDCG");
+        addFireSnakeBRow(cells, 76, 23, ".GGGGGGC");
+        addFireSnakeBRow(cells, 75, 23, "GGCGGDGC");
+        addFireSnakeBRow(cells, 74, 23, ".GGDDGD.");
+        addFireSnakeBRow(cells, 73, 23, "CCGGCDDC");
+        addFireSnakeBRow(cells, 72, 23, ".GGGDCG.");
+        addFireSnakeBRow(cells, 71, 24, ".SSSSSS.");
+        addFireSnakeBRow(cells, 70, 24, ".GGGGG.G");
+        addFireSnakeBRow(cells, 69, 24, "G.GGGGGG");
+        addFireSnakeBRow(cells, 68, 24, "GGGGGGGG");
+        addFireSnakeBRow(cells, 67, 24, ".GGGGGG.");
+        addFireSnakeBRow(cells, 66, 24, "GGGGGGG.");
+        addFireSnakeBRow(cells, 65, 24, ".GGGG.G.");
+        addFireSnakeBRow(cells, 64, 24, "GGGGGGGG");
+        addFireSnakeBRow(cells, 63, 24, "GGGGGGG.");
+        return List.copyOf(cells);
+    }
+
+    private static void addFireSnakeBRow(
+            @NotNull List<BlockExpectation> cells,
+            int x,
+            int y,
+            @NotNull String spec
+    ) {
+        if (spec.length() != 8)
+            throw new IllegalArgumentException("Fire Snake B row spec must span z=47..54");
+
+        for (int index = 0; index < spec.length(); index++) {
+            String material = switch (spec.charAt(index)) {
+                case 'G' -> "GRASS_BLOCK";
+                case 'D' -> "DIRT";
+                case 'C' -> "COARSE_DIRT";
+                case 'S' -> "STONE_BRICK_STAIRS";
+                case '.' -> null;
+                default -> throw new IllegalArgumentException("Unknown Fire Snake B row token");
+            };
+            if (material != null)
+                cells.add(new BlockExpectation(new BlockPos(x, y, 47 + index), material));
+        }
+    }
+
     private static @NotNull List<BlockExpectation> fireSnakeAPathCells() {
         List<BlockExpectation> cells = new ArrayList<>();
         for (int z = 52; z <= 58; z++)
