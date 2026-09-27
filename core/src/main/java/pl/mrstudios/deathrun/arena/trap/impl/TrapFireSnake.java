@@ -11,6 +11,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitTask;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import pl.mrstudios.deathrun.api.arena.trap.annotations.Serializable;
 import pl.mrstudios.deathrun.arena.trap.Trap;
 
 import java.time.Duration;
@@ -32,6 +33,9 @@ public final class TrapFireSnake extends Trap {
     private final Map<Location, BlockData> backup = new LinkedHashMap<>();
     private final List<BukkitTask> tasks = new ArrayList<>();
 
+    @Serializable
+    private boolean reverse;
+
     @Override
     public void start() {
         if (this.abortIfAnyNullWorldLocation("start"))
@@ -42,7 +46,7 @@ public final class TrapFireSnake extends Trap {
         for (Location location : this.locations)
             this.backup.put(location.clone(), location.getBlock().getBlockData());
 
-        List<List<Location>> frames = frames(this.locations);
+        List<List<Location>> frames = frames(this.locations, this.reverse);
         if (frames.isEmpty())
             return;
 
@@ -102,7 +106,7 @@ public final class TrapFireSnake extends Trap {
         this.tasks.clear();
     }
 
-    private static @NotNull List<List<Location>> frames(@NotNull List<Location> locations) {
+    private static @NotNull List<List<Location>> frames(@NotNull List<Location> locations, boolean reverse) {
         if (locations.isEmpty())
             return List.of();
 
@@ -112,12 +116,21 @@ public final class TrapFireSnake extends Trap {
         int maxZ = locations.stream().mapToInt(Location::getBlockZ).max().orElse(0);
         boolean travelZ = (maxZ - minZ) >= (maxX - minX);
 
-        Map<Integer, List<Location>> grouped = new TreeMap<>();
+        TreeMap<Integer, List<Location>> grouped = new TreeMap<>();
         for (Location location : locations) {
             int key = travelZ ? location.getBlockZ() : location.getBlockX();
             grouped.computeIfAbsent(key, ignored -> new ArrayList<>()).add(location);
         }
-        return grouped.values().stream().map(List::copyOf).toList();
+        var ordered = reverse ? grouped.descendingMap().values() : grouped.values();
+        return ordered.stream().map(List::copyOf).toList();
+    }
+
+    public void setReverse(boolean reverse) {
+        this.reverse = reverse;
+    }
+
+    public boolean isReverse() {
+        return this.reverse;
     }
 
     @Override

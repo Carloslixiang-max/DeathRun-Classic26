@@ -211,8 +211,27 @@ public final class ToBeeCandidateProfileService {
             new BlockPos(11, 29, 55),
             new BlockPos(15, 35, 55),
             fireSnakeASourceDispensers(),
+            "SOUTH",
             fireSnakeAPathCells(),
+            false,
             "source dispenser row and path geometry archive-backed; nearest-button and active timing reconstruction"
+    );
+
+    private static final FireSnakeEvidence FIRE_SNAKE_B_TRAP = new FireSnakeEvidence(
+            "pair-020-fire-snake-B",
+            new BlockPos(70, 25, 53),
+            new BlockPos(76, 25, 56),
+            new BlockPos(76, 25, 47),
+            fireSnakeBSourceDispensers(),
+            "WEST",
+            fireSnakeBPathCells(),
+            true,
+            "8/8 west-facing source row and 21/21 route slices archive-backed; button independently axis-unique; timing reconstruction"
+    );
+
+    private static final List<FireSnakeEvidence> FIRE_SNAKE_TRAPS = List.of(
+            FIRE_SNAKE_A_TRAP,
+            FIRE_SNAKE_B_TRAP
     );
     private static final int START_BARRIER_X = 84;
     private static final int START_BARRIER_MIN_Y = 25;
@@ -303,13 +322,14 @@ public final class ToBeeCandidateProfileService {
 
         // Keep implemented controls in recovered route order so Death navigation
         // advances through the map rather than through trap-class insertion order.
+        addFireSnakeTrap(map, world, FIRE_SNAKE_B_TRAP);
         addDisappearingTrap(map, world, RED_D_TRAP);
         addDisappearingTrap(map, world, SEA_LANTERN_TRAP);
         addDisappearingTrap(map, world, FLOOR_FALL_B_TRAP);
         addCoalFireTrap(map, world);
         addFloodTrap(map, world, FLOOD_B_TRAP);
         addFireArrowTrap(map, world, FIRE_ARROW_TRAPS.get(0));
-        addFireSnakeTrap(map, world);
+        addFireSnakeTrap(map, world, FIRE_SNAKE_A_TRAP);
         addMinefieldTrap(map, world);
         addFireArrowTrap(map, world, FIRE_ARROW_TRAPS.get(1));
         addDisappearingTrap(map, world, DARK_WOOD_A_TRAP);
@@ -455,31 +475,41 @@ public final class ToBeeCandidateProfileService {
             }
         }
 
-        if (!world.getBlockAt(FIRE_SNAKE_A_TRAP.actionSign().x(), FIRE_SNAKE_A_TRAP.actionSign().y(), FIRE_SNAKE_A_TRAP.actionSign().z())
-                .getType().name().endsWith("_SIGN"))
-            issues.add("fire-snake-action-missing:" + FIRE_SNAKE_A_TRAP.actionSign().compact());
+        for (FireSnakeEvidence evidence : FIRE_SNAKE_TRAPS) {
+            if (!world.getBlockAt(evidence.actionSign().x(), evidence.actionSign().y(), evidence.actionSign().z())
+                    .getType().name().endsWith("_SIGN"))
+                issues.add("fire-snake-action-missing:" + evidence.id() + ":" + evidence.actionSign().compact());
 
-        if (!world.getBlockAt(FIRE_SNAKE_A_TRAP.button().x(), FIRE_SNAKE_A_TRAP.button().y(), FIRE_SNAKE_A_TRAP.button().z())
-                .getType().name().endsWith("_BUTTON"))
-            issues.add("fire-snake-button-missing:" + FIRE_SNAKE_A_TRAP.button().compact());
+            if (!world.getBlockAt(evidence.button().x(), evidence.button().y(), evidence.button().z())
+                    .getType().name().endsWith("_BUTTON"))
+                issues.add("fire-snake-button-missing:" + evidence.id() + ":" + evidence.button().compact());
 
-        for (BlockPos dispenser : FIRE_SNAKE_A_TRAP.sourceDispensers()) {
-            var block = world.getBlockAt(dispenser.x(), dispenser.y(), dispenser.z());
-            if (block.getType() != Material.DISPENSER) {
-                issues.add("fire-snake-source-missing:" + dispenser.compact());
+            BlockFace expectedFacing;
+            try {
+                expectedFacing = BlockFace.valueOf(evidence.sourceFacingName());
+            } catch (IllegalArgumentException exception) {
+                issues.add("fire-snake-facing-invalid:" + evidence.id() + ":" + evidence.sourceFacingName());
                 continue;
             }
-            if (!(block.getBlockData() instanceof Directional directional)
-                    || directional.getFacing() != BlockFace.SOUTH)
-                issues.add("fire-snake-source-facing:" + dispenser.compact());
-        }
 
-        for (BlockExpectation expected : FIRE_SNAKE_A_TRAP.path()) {
-            Material material = Material.matchMaterial(expected.materialName());
-            Material actual = world.getBlockAt(expected.pos().x(), expected.pos().y(), expected.pos().z()).getType();
-            if (material == null || actual != material)
-                issues.add("fire-snake-path-mismatch:" + expected.pos().compact() + ":"
-                        + actual.name() + "/" + expected.materialName());
+            for (BlockPos dispenser : evidence.sourceDispensers()) {
+                var block = world.getBlockAt(dispenser.x(), dispenser.y(), dispenser.z());
+                if (block.getType() != Material.DISPENSER) {
+                    issues.add("fire-snake-source-missing:" + evidence.id() + ":" + dispenser.compact());
+                    continue;
+                }
+                if (!(block.getBlockData() instanceof Directional directional)
+                        || directional.getFacing() != expectedFacing)
+                    issues.add("fire-snake-source-facing:" + evidence.id() + ":" + dispenser.compact());
+            }
+
+            for (BlockExpectation expected : evidence.path()) {
+                Material material = Material.matchMaterial(expected.materialName());
+                Material actual = world.getBlockAt(expected.pos().x(), expected.pos().y(), expected.pos().z()).getType();
+                if (material == null || actual != material)
+                    issues.add("fire-snake-path-mismatch:" + evidence.id() + ":" + expected.pos().compact() + ":"
+                            + actual.name() + "/" + expected.materialName());
+            }
         }
         return issues;
     }
@@ -537,7 +567,7 @@ public final class ToBeeCandidateProfileService {
     }
 
     public static int implementedTrapCount() {
-        return FIRE_ARROW_TRAPS.size() + 12;
+        return FIRE_ARROW_TRAPS.size() + 13;
     }
 
     public static @NotNull MaterialTrapEvidence iceMeltEvidence() {
@@ -579,6 +609,10 @@ public final class ToBeeCandidateProfileService {
         return FIRE_SNAKE_A_TRAP;
     }
 
+    public static @NotNull List<FireSnakeEvidence> fireSnakeEvidenceAll() {
+        return FIRE_SNAKE_TRAPS;
+    }
+
     public static int expectedPortalBlockTotal() {
         return GATES.values().stream().mapToInt(GateEvidence::expectedPortalBlocks).sum();
     }
@@ -603,7 +637,7 @@ public final class ToBeeCandidateProfileService {
                 "runner-start-layout-generated-from-safe-archive-geometry-not-original",
                 "death-spawns-generated-from-first-stage-control-geometry-not-original",
                 "death-button-to-trap-bindings-partially-reconstructed-runtime-subset",
-                "trap-target-geometry-recovered-15-runtime-traps",
+                "trap-target-geometry-recovered-16-runtime-traps",
                 "remaining-trap-targets-and-original-reset-parameters-not-recovered",
                 "start-barrier-generated-outside-gate-006-not-original",
                 "original-checkpoint-score-values-not-recovered"
@@ -652,13 +686,15 @@ public final class ToBeeCandidateProfileService {
     }
     private static void addFireSnakeTrap(
             @NotNull MapConfiguration.MapDefinition map,
-            @NotNull World world
+            @NotNull World world,
+            @NotNull FireSnakeEvidence evidence
     ) {
         TrapFireSnake trap = new TrapFireSnake();
-        trap.setButton(blockLocation(world, FIRE_SNAKE_A_TRAP.button()));
-        trap.setLocations(FIRE_SNAKE_A_TRAP.path().stream()
+        trap.setButton(blockLocation(world, evidence.button()));
+        trap.setLocations(evidence.path().stream()
                 .map(cell -> blockLocation(world, cell.pos()))
                 .toList());
+        trap.setReverse(evidence.reverse());
         map.arenaTraps.add(trap);
     }
 
@@ -1039,7 +1075,9 @@ public final class ToBeeCandidateProfileService {
             @NotNull BlockPos actionSign,
             @NotNull BlockPos button,
             @NotNull List<BlockPos> sourceDispensers,
+            @NotNull String sourceFacingName,
             @NotNull List<BlockExpectation> path,
+            boolean reverse,
             @NotNull String confidence
     ) {}
 

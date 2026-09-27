@@ -1109,3 +1109,32 @@ toward `x=63` across the warning corridor around `70,25,53`.
 This intentionally separates source/path recovery from effect timing. A runtime
 Fire Snake B will only be added after the real archive output confirms that a
 continuous westbound route surface survives between the source and warning.
+
+
+### Moving Fire Snake B reconstruction
+
+Run #314 promotes the second `Release fire snake` after run #313 confirmed the
+full source/path hypothesis on the real archive.
+
+Physical evidence:
+
+- warning: `70,25,53`
+- action: `76,25,56`
+- control: `76,25,47`, already the unique axis/panel button candidate
+- source: **8/8 dispensers** at `x=84,y=24,z=47..54`, all facing west
+- route: **21/21 westbound x-slices** retain walkable support between
+  `x=83..63`
+- runtime path: **147 exact support blocks** after excluding the two fence cells
+  and warning-sign cell that are not route floor targets
+
+The route changes elevation cleanly: earth support at `y=23` through x=72,
+a six-cell stone-brick-stair transition at x=71, then grass support at `y=24`
+through x=63.
+
+`TrapFireSnake` now serializes a `reverse` flag. Fire Snake A keeps ascending
+coordinate order (southbound z); Fire Snake B uses descending x order so its
+moving magma/flame front follows the preserved west-facing launcher direction.
+
+This raises the To Bee candidate runtime to **16 implemented traps**. Original
+Hive timing remains unknown; physical source direction, path and the B control
+button are archive-backed.

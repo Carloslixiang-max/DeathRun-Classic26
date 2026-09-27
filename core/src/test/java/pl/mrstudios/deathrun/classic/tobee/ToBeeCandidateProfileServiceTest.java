@@ -21,7 +21,7 @@ class ToBeeCandidateProfileServiceTest {
         assertEquals(726, ToBeeCandidateProfileService.startSearchColumnCount());
         assertEquals(14, ToBeeCandidateProfileService.startBarrierPositions().size());
         assertEquals(3, ToBeeCandidateProfileService.fireArrowTrapCount());
-        assertEquals(15, ToBeeCandidateProfileService.implementedTrapCount());
+        assertEquals(16, ToBeeCandidateProfileService.implementedTrapCount());
         assertEquals(366, ToBeeCandidateProfileService.expectedPortalBlockTotal());
         assertEquals(7, new HashSet<>(ToBeeCandidateProfileService.routeGateIds()).size());
     }
@@ -176,6 +176,32 @@ class ToBeeCandidateProfileServiceTest {
     }
 
     @Test
+    void fireSnakeBUsesEightWestSourcesAndTwentyOneWestboundSlices() {
+        var snakes = ToBeeCandidateProfileService.fireSnakeEvidenceAll();
+        assertEquals(2, snakes.size());
+
+        var snake = snakes.get(1);
+        assertEquals("pair-020-fire-snake-B", snake.id());
+        assertEquals(new ToBeeCandidateProfileService.BlockPos(70, 25, 53), snake.warning());
+        assertEquals(new ToBeeCandidateProfileService.BlockPos(76, 25, 56), snake.actionSign());
+        assertEquals(new ToBeeCandidateProfileService.BlockPos(76, 25, 47), snake.button());
+        assertEquals("WEST", snake.sourceFacingName());
+        assertTrue(snake.reverse());
+        assertEquals(8, snake.sourceDispensers().size());
+        assertEquals(147, snake.path().size());
+        assertEquals(147, new HashSet<>(snake.path().stream()
+                .map(ToBeeCandidateProfileService.BlockExpectation::pos).toList()).size());
+        assertEquals(21, snake.path().stream()
+                .map(cell -> cell.pos().x())
+                .distinct()
+                .count());
+        assertEquals(6, snake.path().stream()
+                .filter(cell -> cell.materialName().equals("STONE_BRICK_STAIRS")).count());
+        assertTrue(snake.path().stream().noneMatch(cell ->
+                cell.materialName().endsWith("_SIGN") || cell.materialName().endsWith("_FENCE")));
+    }
+
+    @Test
     void deathControlStartAnchorsStayPinnedToUniqueArchiveCandidate() {
         assertEquals(new ToBeeCandidateProfileService.BlockPos(76, 25, 47),
                 ToBeeCandidateProfileService.deathControlButtonCandidate());
@@ -206,7 +232,7 @@ class ToBeeCandidateProfileServiceTest {
                 "runner-start-layout-generated-from-safe-archive-geometry-not-original",
                 "death-spawns-generated-from-first-stage-control-geometry-not-original",
                 "death-button-to-trap-bindings-partially-reconstructed-runtime-subset",
-                "trap-target-geometry-recovered-15-runtime-traps",
+                "trap-target-geometry-recovered-16-runtime-traps",
                 "remaining-trap-targets-and-original-reset-parameters-not-recovered",
                 "start-barrier-generated-outside-gate-006-not-original",
                 "original-checkpoint-score-values-not-recovered"
