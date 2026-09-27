@@ -373,6 +373,39 @@ checkpoint/spawn configuration is absent from the archive. In particular, this
 does not authorize using portal centers as respawn positions.
 
 
+## Portal-side standing and route-side evidence
+
+Run #289 / commit `0891bbbca649e5f1bc3eaa6bf53faae6114ded38`
+scans the original Anvil block palette around all seven portal gates rather than
+using portal centers as fake spawns. A conservative standing column requires
+air at feet/head and a non-air, non-fluid, non-portal, non-barrier support block.
+
+Real archive result:
+
+- **7/7** portals have at least one conservative standing candidate
+- **7/7** have candidates on **both** normal sides of the portal plane
+- therefore raw standability alone cannot identify the original respawn side
+
+Run #290 / commit `e0f7602f8e62c7a6e57ee7e110a080c39e379fe7`
+then combines the candidate route direction with the MST connection warnings:
+
+- #002: positive-side incoming / negative-side outgoing
+- #001: positive-side incoming / negative-side outgoing
+- #004: positive-side incoming / negative-side outgoing
+- #005: negative-side incoming / positive-side outgoing
+- #007: both connection warnings remain on the positive side, so the vertical
+  transition remains intentionally ambiguous
+- #006 start-endpoint hypothesis: chain side is negative x, candidate external
+  start side is **positive x**
+- #003 finish-endpoint hypothesis: incoming side is negative z, candidate
+  external finish side is **positive z**
+
+Thus **4/5 interior gates** independently look like ordinary through-gates, with
+#007 remaining the single special transition. These side assignments are strong
+enough to restrict playtest-safe spawn searches, but still do not recover the
+original Hive respawn coordinates.
+
+
 Run #281 / commit `1e0c3506b86d4e185cdc6c424a772640491aeb1c`
 adds a deliberately narrow static route-structure family
 (`barrier`, `iron_bars`, fence gates) to test whether one MST endpoint has a
