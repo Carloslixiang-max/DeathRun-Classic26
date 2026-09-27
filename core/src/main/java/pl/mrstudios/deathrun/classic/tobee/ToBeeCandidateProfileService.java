@@ -193,6 +193,15 @@ public final class ToBeeCandidateProfileService {
             "TrapFlood: replace exact 79-cell high-stage stone-brick floor with water",
             "target geometry archive-backed; nearest panel-button reconstruction"
     );
+    private static final MaterialTrapEvidence FLOOR_FALL_B_TRAP = new MaterialTrapEvidence(
+            "pair-019-floor-fall-B",
+            new BlockPos(52, 25, 56),
+            new BlockPos(79, 25, 54),
+            floorFallBTargetPositions(),
+            "GREEN_STAINED_GLASS",
+            "TrapDisappearingBlocks: remove the exact 78-cell green glass floor component",
+            "target geometry archive-backed; one-to-one completion of low-stage control panel reconstruction"
+    );
     private static final int START_BARRIER_X = 84;
     private static final int START_BARRIER_MIN_Y = 25;
     private static final int START_BARRIER_MAX_Y = 26;
@@ -284,6 +293,7 @@ public final class ToBeeCandidateProfileService {
         // advances through the map rather than through trap-class insertion order.
         addDisappearingTrap(map, world, RED_D_TRAP);
         addDisappearingTrap(map, world, SEA_LANTERN_TRAP);
+        addDisappearingTrap(map, world, FLOOR_FALL_B_TRAP);
         addCoalFireTrap(map, world);
         addFloodTrap(map, world, FLOOD_B_TRAP);
         addFireArrowTrap(map, world, FIRE_ARROW_TRAPS.get(0));
@@ -407,7 +417,7 @@ public final class ToBeeCandidateProfileService {
         for (MaterialTrapEvidence evidence : List.of(
                 ICE_MELT_TRAP, COAL_FIRE_TRAP,
                 RED_A_TRAP, RED_B_TRAP, RED_D_TRAP, SEA_LANTERN_TRAP, DARK_WOOD_A_TRAP,
-                FLOOR_FALL_A_TRAP, MINEFIELD_TRAP, FLOOD_B_TRAP
+                FLOOR_FALL_A_TRAP, FLOOR_FALL_B_TRAP, MINEFIELD_TRAP, FLOOD_B_TRAP
         )) {
             if (!world.getBlockAt(evidence.actionSign().x(), evidence.actionSign().y(), evidence.actionSign().z())
                     .getType().name().endsWith("_SIGN"))
@@ -488,7 +498,7 @@ public final class ToBeeCandidateProfileService {
     }
 
     public static int implementedTrapCount() {
-        return FIRE_ARROW_TRAPS.size() + 10;
+        return FIRE_ARROW_TRAPS.size() + 11;
     }
 
     public static @NotNull MaterialTrapEvidence iceMeltEvidence() {
@@ -512,6 +522,10 @@ public final class ToBeeCandidateProfileService {
     public static @NotNull MaterialTrapEvidence floorFallEvidence() {
         return FLOOR_FALL_A_TRAP;
     }
+    public static @NotNull MaterialTrapEvidence floorFallBEvidence() {
+        return FLOOR_FALL_B_TRAP;
+    }
+
 
     public static @NotNull MaterialTrapEvidence minefieldEvidence() {
         return MINEFIELD_TRAP;
@@ -546,7 +560,7 @@ public final class ToBeeCandidateProfileService {
                 "runner-start-layout-generated-from-safe-archive-geometry-not-original",
                 "death-spawns-generated-from-first-stage-control-geometry-not-original",
                 "death-button-to-trap-bindings-partially-reconstructed-runtime-subset",
-                "trap-target-geometry-recovered-13-runtime-traps",
+                "trap-target-geometry-recovered-14-runtime-traps",
                 "remaining-trap-targets-and-original-reset-parameters-not-recovered",
                 "start-barrier-generated-outside-gate-006-not-original",
                 "original-checkpoint-score-values-not-recovered"
@@ -711,6 +725,16 @@ public final class ToBeeCandidateProfileService {
                 positions.add(new BlockPos(x, 24, z));
             }
         }
+        return List.copyOf(positions);
+    }
+
+    private static @NotNull List<BlockPos> floorFallBTargetPositions() {
+        List<BlockPos> positions = new ArrayList<>();
+        for (int z = 48; z <= 53; z++)
+            positions.add(new BlockPos(51, 24, z));
+        for (int x = 52; x <= 60; x++)
+            for (int z = 47; z <= 54; z++)
+                positions.add(new BlockPos(x, 24, z));
         return List.copyOf(positions);
     }
 

@@ -1038,3 +1038,26 @@ clear physical structures, raising the To Bee runtime subset to **13 traps**.
 
 These are still playability reconstructions for control binding and duration;
 the physical target geometry itself comes directly from the archived Java map.
+
+
+### Second Floor Fall and low-stage control-panel completion
+
+Run #311 promotes the second `Make the floor fall` target:
+
+- warning: `50,25,53`
+- action: `52,25,56`
+- archive target: **78 `green_stained_glass` floor cells** at `y=24`
+  (`x=51,z=48..53` plus the full `x=52..60,z=47..54` field)
+- runtime: `TrapDisappearingBlocks`
+
+The original action-to-button link is absent. For playability, the control
+binding is reconstructed as `79,25,54` by one-to-one completion of the
+surviving low-stage four-button group:
+
+- `76,25,47` = Fire Snake, independently axis-unique
+- `74,25,54` = reconstructed Sea Lantern control
+- `81,25,54` = reconstructed Red-D control
+- `79,25,54` = remaining distinct control, assigned to Floor Fall B
+
+This is explicitly a reconstruction, not proof of Hive's original binding.
+The runtime To Bee candidate profile now contains **14 implemented traps**.

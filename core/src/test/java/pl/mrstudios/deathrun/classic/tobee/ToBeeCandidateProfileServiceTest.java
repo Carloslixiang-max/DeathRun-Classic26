@@ -21,7 +21,7 @@ class ToBeeCandidateProfileServiceTest {
         assertEquals(726, ToBeeCandidateProfileService.startSearchColumnCount());
         assertEquals(14, ToBeeCandidateProfileService.startBarrierPositions().size());
         assertEquals(3, ToBeeCandidateProfileService.fireArrowTrapCount());
-        assertEquals(13, ToBeeCandidateProfileService.implementedTrapCount());
+        assertEquals(14, ToBeeCandidateProfileService.implementedTrapCount());
         assertEquals(366, ToBeeCandidateProfileService.expectedPortalBlockTotal());
         assertEquals(7, new HashSet<>(ToBeeCandidateProfileService.routeGateIds()).size());
     }
@@ -141,6 +141,25 @@ class ToBeeCandidateProfileServiceTest {
     }
 
     @Test
+    void secondFloorFallCompletesLowStagePanelWithoutButtonReuse() {
+        var floor = ToBeeCandidateProfileService.floorFallBEvidence();
+        assertEquals("pair-019-floor-fall-B", floor.id());
+        assertEquals("GREEN_STAINED_GLASS", floor.expectedMaterialName());
+        assertEquals(78, floor.targets().size());
+        assertEquals(78, new HashSet<>(floor.targets()).size());
+        assertEquals(new ToBeeCandidateProfileService.BlockPos(52, 25, 56), floor.actionSign());
+        assertEquals(new ToBeeCandidateProfileService.BlockPos(79, 25, 54), floor.button());
+
+        var lowPanelButtons = List.of(
+                ToBeeCandidateProfileService.deathControlButtonCandidate(),
+                ToBeeCandidateProfileService.seaLanternEvidence().button(),
+                ToBeeCandidateProfileService.redBlockEvidence().get(2).button(),
+                floor.button()
+        );
+        assertEquals(4, new HashSet<>(lowPanelButtons).size());
+    }
+
+    @Test
     void deathControlStartAnchorsStayPinnedToUniqueArchiveCandidate() {
         assertEquals(new ToBeeCandidateProfileService.BlockPos(76, 25, 47),
                 ToBeeCandidateProfileService.deathControlButtonCandidate());
@@ -171,7 +190,7 @@ class ToBeeCandidateProfileServiceTest {
                 "runner-start-layout-generated-from-safe-archive-geometry-not-original",
                 "death-spawns-generated-from-first-stage-control-geometry-not-original",
                 "death-button-to-trap-bindings-partially-reconstructed-runtime-subset",
-                "trap-target-geometry-recovered-13-runtime-traps",
+                "trap-target-geometry-recovered-14-runtime-traps",
                 "remaining-trap-targets-and-original-reset-parameters-not-recovered",
                 "start-barrier-generated-outside-gate-006-not-original",
                 "original-checkpoint-score-values-not-recovered"
