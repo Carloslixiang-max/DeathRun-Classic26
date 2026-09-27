@@ -44,6 +44,8 @@ LEGACY_CANDIDATES = {
     93: ("REDSTONE", "minecraft:repeater"),
     94: ("REDSTONE", "minecraft:repeater"),
     90: ("PORTAL", "minecraft:nether_portal"),
+    101: ("ROUTE_STRUCTURE", "minecraft:iron_bars"),
+    107: ("ROUTE_STRUCTURE", "minecraft:oak_fence_gate"),
     119: ("PORTAL", "minecraft:end_portal"),
     120: ("PORTAL", "minecraft:end_portal_frame"),
     123: ("REDSTONE", "minecraft:redstone_lamp"),
@@ -59,7 +61,13 @@ LEGACY_CANDIDATES = {
     152: ("REDSTONE", "minecraft:redstone_block"),
     154: ("MECHANISM", "minecraft:hopper"),
     158: ("MECHANISM", "minecraft:dropper"),
+    166: ("ROUTE_STRUCTURE", "minecraft:barrier"),
     178: ("REDSTONE", "minecraft:daylight_detector"),
+    183: ("ROUTE_STRUCTURE", "minecraft:spruce_fence_gate"),
+    184: ("ROUTE_STRUCTURE", "minecraft:birch_fence_gate"),
+    185: ("ROUTE_STRUCTURE", "minecraft:jungle_fence_gate"),
+    186: ("ROUTE_STRUCTURE", "minecraft:dark_oak_fence_gate"),
+    187: ("ROUTE_STRUCTURE", "minecraft:acacia_fence_gate"),
     209: ("PORTAL", "minecraft:end_gateway"),
     210: ("COMMAND_BLOCK", "minecraft:repeating_command_block"),
     211: ("COMMAND_BLOCK", "minecraft:chain_command_block"),
@@ -220,6 +228,12 @@ def candidate_category(name: str) -> str | None:
         return "PRESSURE_PLATE"
     if normalized.endswith("_wall_sign") or normalized.endswith("_sign"):
         return "SIGN_BLOCK"
+    if (
+        normalized == "minecraft:barrier"
+        or normalized == "minecraft:iron_bars"
+        or normalized.endswith("_fence_gate")
+    ):
+        return "ROUTE_STRUCTURE"
     if normalized in {
         "minecraft:redstone_wire",
         "minecraft:repeater",

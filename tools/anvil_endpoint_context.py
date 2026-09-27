@@ -43,6 +43,7 @@ class EndpointContext:
     buttons: tuple[Candidate, ...]
     pressure_plates: tuple[Candidate, ...]
     mechanisms: tuple[Mechanism, ...]
+    route_structures: tuple[Candidate, ...]
     warnings: tuple[Sign, ...]
     actions: tuple[Sign, ...]
     hints: tuple[Sign, ...]
@@ -85,6 +86,31 @@ def parse_mechanisms(path: Path) -> list[Mechanism]:
     return result
 
 
+def parse_route_structures(path: Path) -> list[Candidate]:
+    result: list[Candidate] = []
+    for raw in path.read_text(encoding="utf-8").splitlines():
+        if not raw.startswith("BLOCK\tROUTE_STRUCTURE\t"):
+            continue
+        fields = raw.split("\t")
+        if len(fields) < 6:
+            continue
+        try:
+            result.append(
+                Candidate(
+                    category="ROUTE_STRUCTURE",
+                    name=fields[2],
+                    x=int(fields[3]),
+                    y=int(fields[4]),
+                    z=int(fields[5]),
+                    source=path.name,
+                )
+            )
+        except ValueError:
+            continue
+    result.sort(key=lambda item: (item.x, item.y, item.z, item.name))
+    return result
+
+
 def mst_endpoints(probe_report: Path) -> tuple[list[Component], list[int]]:
     portals, grouped = warning_groups(probe_report)
     gaps = build_gaps(len(portals), grouped)
@@ -110,6 +136,7 @@ def build_contexts(
     interactive, _portal_points = parse_candidate_probe(probe_report)
     _buttons, signs = parse_sign_probe(probe_report)
     mechanisms = parse_mechanisms(probe_report)
+    route_structures = parse_route_structures(probe_report)
     stages = parse_stage_markers(entity_evidence_report)
 
     warnings = [sign for sign in signs if sign_kind(sign) == "WARNING"]
@@ -149,6 +176,10 @@ def build_contexts(
                 ),
                 mechanisms=tuple(
                     item for item in mechanisms
+                    if _within(portal, item.x, item.y, item.z, radius)
+                ),
+                route_structures=tuple(
+                    item for item in route_structures
                     if _within(portal, item.x, item.y, item.z, radius)
                 ),
                 warnings=tuple(
@@ -231,6 +262,7 @@ def render_report(
         "endpoint_ids": endpoint_ids or "none",
         "endpoints_with_hint": sum(bool(item.hints) for item in contexts),
         "endpoints_with_stage_marker": sum(bool(item.stage_markers) for item in contexts),
+        "endpoints_with_route_structure": sum(bool(item.route_structures) for item in contexts),
     }
 
     lines = [
@@ -242,6 +274,7 @@ def render_report(
             f"endpoint_ids={stats['endpoint_ids']} "
             f"endpoints_with_hint={stats['endpoints_with_hint']} "
             f"endpoints_with_stage_marker={stats['endpoints_with_stage_marker']} "
+            f"endpoints_with_route_structure={stats['endpoints_with_route_structure']} "
             f"radius={radius:g}"
         ),
         "# Endpoint means only an endpoint of the undirected warning-proximity MST.",
@@ -260,6 +293,7 @@ def render_report(
             f"buttons={len(item.buttons)}\t"
             f"pressure_plates={len(item.pressure_plates)}\t"
             f"mechanisms={len(item.mechanisms)}\t"
+            f"route_structures={len(item.route_structures)}\t"
             f"warnings={len(item.warnings)}\t"
             f"actions={len(item.actions)}\t"
             f"hints={len(item.hints)}\t"
@@ -273,6 +307,7 @@ def render_report(
             f"button={_nearest(portal,item.buttons,lambda x:(x.x,x.y,x.z),_candidate_text)}\t"
             f"pressure_plate={_nearest(portal,item.pressure_plates,lambda x:(x.x,x.y,x.z),_candidate_text)}\t"
             f"mechanism={_nearest(portal,item.mechanisms,lambda x:(x.x,x.y,x.z),_mechanism_text)}\t"
+            f"route_structure={_nearest(portal,item.route_structures,lambda x:(x.x,x.y,x.z),_candidate_text)}\t"
             f"warning={_nearest(portal,item.warnings,lambda x:(x.x,x.y,x.z),_sign_text)}\t"
             f"action={_nearest(portal,item.actions,lambda x:(x.x,x.y,x.z),_sign_text)}\t"
             f"hint={_nearest(portal,item.hints,lambda x:(x.x,x.y,x.z),_sign_text)}\t"

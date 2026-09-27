@@ -52,6 +52,31 @@ class AnvilProbeTest(unittest.TestCase):
         self.assertEqual("BUTTON", candidate.category)
         self.assertEqual((32, 64, -48), (candidate.x, candidate.y, candidate.z))
 
+    def test_scan_modern_route_structures(self):
+        indices = [0] * 4096
+        indices[0] = 1
+        indices[1] = 2
+        section = {
+            "Y": 4,
+            "Palette": [
+                {"Name": "minecraft:air"},
+                {"Name": "minecraft:barrier"},
+                {
+                    "Name": "minecraft:dark_oak_fence_gate",
+                    "Properties": {"facing": "east", "open": "false"},
+                },
+            ],
+            "BlockStates": pack_padded(indices, 3),
+        }
+
+        candidates = scan_modern_section(section, 0, 0, "r.0.0.mca")
+        self.assertEqual(2, len(candidates))
+        self.assertEqual(
+            ["minecraft:barrier", "minecraft:dark_oak_fence_gate"],
+            [item.name for item in candidates],
+        )
+        self.assertTrue(all(item.category == "ROUTE_STRUCTURE" for item in candidates))
+
     def test_scan_modern_redstone_wire_preserves_state(self):
         indices = [0] * 4096
         indices[0] = 1
@@ -109,6 +134,20 @@ class AnvilProbeTest(unittest.TestCase):
             (("facing", "north"), ("triggered", "false")),
             candidate.properties,
         )
+
+    def test_scan_legacy_iron_bars(self):
+        blocks = bytearray(4096)
+        blocks[0] = 101
+        section = {
+            "Y": 5,
+            "Blocks": bytes(blocks),
+            "Data": bytes(2048),
+        }
+
+        candidates = scan_legacy_section(section, 0, 0, "r.0.0.mca")
+        self.assertEqual(1, len(candidates))
+        self.assertEqual("ROUTE_STRUCTURE", candidates[0].category)
+        self.assertEqual("minecraft:iron_bars", candidates[0].name)
 
     def test_scan_legacy_redstone_wire(self):
         blocks = bytearray(4096)

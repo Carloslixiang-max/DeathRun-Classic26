@@ -30,6 +30,9 @@ class AnvilEndpointContextTest(unittest.TestCase):
                 buttons=(),
                 pressure_plates=(),
                 mechanisms=(),
+                route_structures=(
+                    Candidate("ROUTE_STRUCTURE","minecraft:iron_bars",1,64,1,"fixture"),
+                ),
                 warnings=(warning,),
                 actions=(),
                 hints=(),
@@ -43,6 +46,7 @@ class AnvilEndpointContextTest(unittest.TestCase):
                 buttons=(),
                 pressure_plates=(),
                 mechanisms=(Mechanism("minecraft:dispenser",29,64,0),),
+                route_structures=(),
                 warnings=(),
                 actions=(),
                 hints=(hint,),
@@ -57,6 +61,9 @@ class AnvilEndpointContextTest(unittest.TestCase):
             self.assertEqual("001,002", stats["endpoint_ids"])
             self.assertEqual(1, stats["endpoints_with_hint"])
             self.assertEqual(1, stats["endpoints_with_stage_marker"])
+            self.assertEqual(1, stats["endpoints_with_route_structure"])
+            self.assertIn("route_structures=1", report)
+            self.assertIn("route_structure=1,64,1[minecraft:iron_bars]", report)
             self.assertIn("ENDPOINT_CONTEXT", report)
             self.assertIn("does NOT assign start, finish", report)
 
