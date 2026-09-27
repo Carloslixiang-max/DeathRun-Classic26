@@ -61,6 +61,7 @@ jobs:
           python3 tools/test_anvil_endpoint_context.py
           python3 tools/test_anvil_pressure_route_evidence.py
           python3 tools/test_anvil_portal_shape_evidence.py
+          python3 tools/test_anvil_portal_spawn_surface_evidence.py
           python3 tools/test_anvil_sign_links.py
           python3 tools/test_anvil_trap_evidence.py
           python3 tools/test_anvil_route_evidence.py
@@ -317,6 +318,15 @@ jobs:
             --dense-threshold 0.80 --min-planar 7 --min-dense-planar 7
           echo '--- To Bee portal shape evidence ---'
           cat "$ROOT/to-bee-or-not-to-bee-portal-shapes.txt"
+
+          python3 tools/anvil_portal_spawn_surface_evidence.py \
+            "$ROOT/to-bee-or-not-to-bee" \
+            "$ROOT/to-bee-or-not-to-bee-probe.txt" \
+            --output "$ROOT/to-bee-or-not-to-bee-portal-standing.txt" \
+            --max-normal-distance 6 --lateral-padding 2 --top 5 \
+            --min-portals 7 --min-portals-with-candidates 1
+          echo '--- To Bee portal-side standing-surface evidence ---'
+          cat "$ROOT/to-bee-or-not-to-bee-portal-standing.txt"
 
           python3 tools/anvil_pressure_route_evidence.py \
             "$ROOT/to-bee-or-not-to-bee-probe.txt" \
