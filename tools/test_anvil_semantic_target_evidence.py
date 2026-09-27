@@ -19,6 +19,7 @@ class SemanticTargetEvidenceTest(unittest.TestCase):
         self.assertEqual("RED_STRUCTURAL", semantic_family("minecraft:red_terracotta"))
         self.assertEqual("COAL", semantic_family("minecraft:coal_block"))
         self.assertEqual("SEA_LANTERN", semantic_family("minecraft:sea_lantern"))
+        self.assertEqual("TNT", semantic_family("minecraft:tnt"))
         self.assertIsNone(semantic_family("minecraft:redstone_block"))
         self.assertIsNone(semantic_family("minecraft:red_tulip"))
         self.assertIsNone(semantic_family("minecraft:oak_leaves"))
