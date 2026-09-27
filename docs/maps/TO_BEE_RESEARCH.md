@@ -362,9 +362,25 @@ at `27,29,-12`, and is surrounded by:
 
 Run #258 / the current stage-evidence gate requires both named markers to retain
 their direct pressure-plate anchors. This is stronger evidence that the archived
-world retains a physical Death stage-control/navigation layer. It does **not**
-establish the original stage numbering, Death spawn position, or exact
-button-to-action mapping.
+world retains a physical Death stage-control/navigation layer.
+
+Run #271 / commit `c147331f982fffb581d933f96219255ab93c05ed`
+adds independent stage-marker ↔ portal-gate geometry and passes the full Java 25
+build plus Paper 26.2 restart smoke:
+
+- `Previous Stage` at `27.500,30.250,-11.500` has Portal **#003** as its
+  unique portal inside 30 blocks, only **6.89** blocks away
+  (`bbox=31,25,-10:37,33,-10`)
+- `Next Stage` at `24.500,45.250,13.500` has Portal **#007** as its unique
+  portal inside 30 blocks, **24.62** blocks away
+  (`bbox=32,45,36:36,52,36`)
+- the two markers therefore select **two distinct portal gates**
+
+Portal #003 is now a particularly strong Death-stage boundary candidate because
+the named Previous Stage control marker is almost adjacent to it. Portal #007 is
+a weaker but still unique high-stage association. This still does **not**
+establish checkpoint numbering, Runner respawn positions, route order, Death
+spawn, or exact button-to-action mapping.
 
 ## BlockEntity and container evidence
 
