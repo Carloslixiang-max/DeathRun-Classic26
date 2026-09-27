@@ -56,6 +56,22 @@ SIGN\tminecraft:sign\t2\t20\t0\tregion=r.0.0.mca\tchunk=0,0\ttext=8 | 2
             )
             self.assertIn("value=8|2\tcount=1\tredstone_block_above=0", report)
 
+    def test_other_nonempty_signs_are_preserved_for_manual_review(self):
+        fixture = """SIGN\tminecraft:sign\t0\t64\t0\tregion=r.0.0.mca\tchunk=0,0\ttext=Welcome bees!
+SIGN\tminecraft:sign\t1\t64\t0\tregion=r.0.0.mca\tchunk=0,0\ttext=
+SIGN\tminecraft:sign\t2\t64\t0\tregion=r.0.0.mca\tchunk=0,0\ttext=Warning! | Trap ahead
+"""
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "probe.txt"
+            path.write_text(fixture, encoding="utf-8")
+            _buttons, signs = parse_probe_report(path)
+
+            report = render_report(path, signs)
+            self.assertIn("other_nonempty_signs=1", report)
+            self.assertIn("OTHER_SIGN\tpos=0,64,0\ttext=Welcome bees!", report)
+            self.assertNotIn("OTHER_SIGN\tpos=1,64,0", report)
+            self.assertNotIn("OTHER_SIGN\tpos=2,64,0", report)
+
     def test_route_keyword_matching_uses_whole_tokens(self):
         fixture = """SIGN\tminecraft:sign\t0\t64\t0\tregion=r.0.0.mca\tchunk=0,0\ttext=LE END!
 SIGN\tminecraft:sign\t1\t64\t0\tregion=r.0.0.mca\tchunk=0,0\ttext=Remove Sea Lanterns

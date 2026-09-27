@@ -199,6 +199,14 @@ def render_report(
             item[0].text,
         )
     )
+    other_signs = sorted(
+        (
+            sign
+            for sign in signs
+            if sign_kind(sign) == "OTHER" and sign.text.strip()
+        ),
+        key=lambda sign: (sign.x, sign.y, sign.z, sign.text),
+    )
 
     largest = max((len(group.members) for group in components), default=0)
     multi_sign_components = sum(len(group.members) > 1 for group in components)
@@ -209,6 +217,7 @@ def render_report(
         (
             "route_evidence_summary "
             f"signs={len(signs)} route_keyword_signs={len(route_signs)} "
+            f"other_nonempty_signs={len(other_signs)} "
             f"numeric_pair_signs={len(numeric)} "
             f"distinct_numeric_pairs={len(pair_counts)} "
             f"numeric_components={len(components)} "
@@ -218,6 +227,8 @@ def render_report(
             f"numeric_pairs_with_redstone_support={len(supported_pair_counts)}"
         ),
         "# ROUTE_SIGN is a direct preserved keyword hit; it is not automatically a gameplay region.",
+        "# OTHER_SIGN preserves otherwise-unclassified non-empty sign text for manual route review.",
+        "# OTHER_SIGN is not automatically a start, finish, checkpoint, spawn or gameplay marker.",
         "# Numeric-pair panels remain unexplained metadata until independently corroborated.",
         "# REDSTONE support means only that a preserved redstone block sits exactly one block above the sign.",
         "",
@@ -227,6 +238,12 @@ def render_report(
         lines.append(
             "ROUTE_SIGN\t"
             f"pos={_pos(sign)}\tkeywords={','.join(keywords)}\ttext={sign.text}"
+        )
+
+    for sign in other_signs:
+        lines.append(
+            "OTHER_SIGN\t"
+            f"pos={_pos(sign)}\ttext={sign.text}"
         )
 
     lines.append("")
