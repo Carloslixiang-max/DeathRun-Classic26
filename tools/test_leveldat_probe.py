@@ -73,6 +73,30 @@ class LevelDatProbeTest(unittest.TestCase):
             self.assertIn("spawn=12,70,-34", report)
             self.assertIn("spawn_status=reported", report)
 
+    def test_extracts_saved_player_anchor_without_calling_it_spawn(self):
+        metadata = extract_metadata(
+            {
+                "SpawnX": 0,
+                "SpawnY": 0,
+                "SpawnZ": 0,
+                "initialized": 0,
+                "Player": {
+                    "Pos": [83.5, 29.0, 81.5],
+                    "Rotation": [90.0, -12.5],
+                    "Dimension": "minecraft:overworld",
+                },
+            }
+        )
+        self.assertEqual((83.5, 29.0, 81.5), metadata["player_save_pos"])
+        self.assertEqual((90.0, -12.5), metadata["player_save_rotation"])
+        self.assertEqual("minecraft:overworld", metadata["player_save_dimension"])
+        self.assertEqual("placeholder", metadata["spawn_status"])
+
+        report = render_report(Path("level.dat"), metadata)
+        self.assertIn("player_save_pos=83.5,29.0,81.5", report)
+        self.assertIn("player_save_rotation=90.0,-12.5", report)
+        self.assertIn("player_save_dimension=minecraft:overworld", report)
+
     def test_marks_uninitialized_zero_spawn_as_placeholder(self):
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "level.dat"

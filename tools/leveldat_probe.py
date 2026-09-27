@@ -32,6 +32,14 @@ def _value(data: dict[str, Any], *names: str) -> Any:
     return None
 
 
+def _numeric_vector(value: Any, length: int) -> tuple[Any, ...] | None:
+    if not isinstance(value, list) or len(value) != length:
+        return None
+    if not all(isinstance(item, (int, float)) for item in value):
+        return None
+    return tuple(value)
+
+
 def extract_metadata(data: dict[str, Any]) -> dict[str, Any]:
     spawn = (
         _value(data, "SpawnX"),
@@ -44,6 +52,11 @@ def extract_metadata(data: dict[str, Any]) -> dict[str, Any]:
         if spawn == (0, 0, 0) and initialized in (0, False)
         else "reported"
     )
+    player = data.get("Player")
+    player = player if isinstance(player, dict) else {}
+    player_pos = _numeric_vector(player.get("Pos"), 3)
+    player_rotation = _numeric_vector(player.get("Rotation"), 2)
+    player_dimension = _value(player, "Dimension", "dimension")
     return {
         "data_version": _value(data, "DataVersion"),
         "level_name": _value(data, "LevelName"),
@@ -60,6 +73,9 @@ def extract_metadata(data: dict[str, Any]) -> dict[str, Any]:
             if isinstance(data.get("Version"), dict)
             else None
         ),
+        "player_save_pos": player_pos,
+        "player_save_rotation": player_rotation,
+        "player_save_dimension": player_dimension,
     }
 
 
@@ -71,6 +87,12 @@ def _render(value: Any) -> str:
     if isinstance(value, bool):
         return "true" if value else "false"
     return str(value)
+
+
+def _render_vector(value: tuple[Any, ...] | None) -> str:
+    if value is None:
+        return "none"
+    return ",".join(_render(item) for item in value)
 
 
 def render_report(path: Path, metadata: dict[str, Any]) -> str:
@@ -89,6 +111,9 @@ def render_report(path: Path, metadata: dict[str, Any]) -> str:
         f"initialized={_render(metadata['initialized'])}",
         f"time={_render(metadata['time'])}",
         f"day_time={_render(metadata['day_time'])}",
+        f"player_save_pos={_render_vector(metadata['player_save_pos'])}",
+        f"player_save_rotation={_render_vector(metadata['player_save_rotation'])}",
+        f"player_save_dimension={_render(metadata['player_save_dimension'])}",
     ]
     return "leveldat\t" + "\t".join(fields) + "\n"
 
