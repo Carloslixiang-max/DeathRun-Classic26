@@ -43,7 +43,8 @@ class AnvilPortalShapeEvidenceTest(unittest.TestCase):
         points = [
             Candidate("PORTAL", "minecraft:nether_portal", 0, 64, 0, "fixture"),
             Candidate("PORTAL", "minecraft:nether_portal", 1, 64, 0, "fixture"),
-            Candidate("PORTAL", "minecraft:nether_portal", 1, 64, 1, "fixture"),
+            Candidate("PORTAL", "minecraft:nether_portal", 1, 65, 0, "fixture"),
+            Candidate("PORTAL", "minecraft:nether_portal", 1, 65, 1, "fixture"),
         ]
         component = portal_components(points)[0]
         shape = analyze_component(component)
