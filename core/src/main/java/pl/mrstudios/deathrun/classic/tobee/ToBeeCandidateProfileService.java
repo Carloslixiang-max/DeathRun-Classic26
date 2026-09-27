@@ -554,6 +554,62 @@ public final class ToBeeCandidateProfileService {
         return List.copyOf(positions);
     }
 
+    private static @NotNull List<BlockPos> redATargetPositions() {
+        return List.of(
+                new BlockPos(-20, 17, -35),
+                new BlockPos(-21, 17, -29),
+                new BlockPos(-17, 17, -38),
+                new BlockPos(-18, 17, -40),
+                new BlockPos(-14, 17, -34),
+                new BlockPos(-14, 17, -37),
+                new BlockPos(-11, 17, -36)
+        );
+    }
+
+    private static @NotNull List<BlockPos> redBTargetPositions() {
+        List<BlockPos> positions = new ArrayList<>();
+        for (int x = 8; x <= 12; x++)
+            positions.add(new BlockPos(x, 24, -34));
+        for (int z = -39; z <= -35; z++)
+            positions.add(new BlockPos(13, 24, z));
+        for (int x = 14; x <= 18; x++)
+            positions.add(new BlockPos(x, 24, -40));
+        return List.copyOf(positions);
+    }
+
+    private static @NotNull List<BlockPos> redDTargetPositions() {
+        return List.of(
+                new BlockPos(100, 24, 57), new BlockPos(99, 24, 60),
+                new BlockPos(87, 24, 64), new BlockPos(88, 24, 64), new BlockPos(89, 24, 64),
+                new BlockPos(89, 24, 66), new BlockPos(87, 24, 66),
+                new BlockPos(87, 24, 68), new BlockPos(88, 24, 68), new BlockPos(89, 24, 68),
+                new BlockPos(79, 24, 56), new BlockPos(79, 24, 57), new BlockPos(79, 24, 58),
+                new BlockPos(100, 24, 69), new BlockPos(77, 24, 56), new BlockPos(77, 24, 58),
+                new BlockPos(102, 24, 70), new BlockPos(99, 24, 72),
+                new BlockPos(75, 24, 56), new BlockPos(75, 24, 57), new BlockPos(75, 24, 58)
+        );
+    }
+
+    private static @NotNull List<BlockPos> seaLanternTargetPositions() {
+        List<BlockPos> positions = new ArrayList<>();
+        for (int x = 67; x <= 68; x++)
+            for (int z = 80; z <= 85; z++)
+                positions.add(new BlockPos(x, 20, z));
+        for (int x = 69; x <= 75; x++)
+            for (int z = 84; z <= 85; z++)
+                positions.add(new BlockPos(x, 20, z));
+        for (int z = 84; z <= 85; z++) positions.add(new BlockPos(55, 20, z));
+        for (int z = 83; z <= 85; z++) positions.add(new BlockPos(56, 20, z));
+        for (int z = 82; z <= 84; z++) positions.add(new BlockPos(57, 20, z));
+        for (int z = 81; z <= 83; z++) positions.add(new BlockPos(58, 20, z));
+        for (int z = 80; z <= 82; z++) positions.add(new BlockPos(59, 20, z));
+        for (int z = 79; z <= 81; z++) positions.add(new BlockPos(60, 20, z));
+        for (int z = 78; z <= 80; z++) positions.add(new BlockPos(61, 20, z));
+        for (int x = 62; x <= 66; x++)
+            for (int z = 78; z <= 79; z++)
+                positions.add(new BlockPos(x, 20, z));
+        return List.copyOf(positions);
+    }
     private static void addRectangle(
             @NotNull List<BlockPos> positions,
             int minX, int maxX, int y, int minZ, int maxZ
