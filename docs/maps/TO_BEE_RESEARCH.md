@@ -77,6 +77,19 @@ Because the archive reports `initialized=0` with a zero world spawn,
 Classic26 marks it `spawn_status=placeholder`. It must not be used as a
 Runner spawn, Death spawn, waiting lobby, or orientation anchor.
 
+Run #265 / commit `f5071283f3024045dd7550b417ab454c20bdd5e8`
+also exposes the archived `Player.Pos` / `Rotation` save state without
+relabeling it as a gameplay spawn. To Bee retains:
+
+- saved player position: `20.9998,70.6084,43.1460`
+- saved rotation: `yaw=-244.826, pitch=18.833`
+- saved dimension: `minecraft:overworld`
+
+The y≈70 position sits well above the surviving Runner-warning/action layers
+around y≈18–45 and is therefore treated only as an **author/save-camera
+anchor**. It is useful for screenshot/orientation reconstruction, not as
+Runner/Death spawn evidence.
+
 ## Physical topology evidence
 
 `tools/anvil_topology.py` groups only physically adjacent pressure plates and
@@ -95,6 +108,21 @@ portal blocks. Real archive results:
 
 This is strong negative evidence against treating either surviving pressure
 plates or portal components as a direct 9-checkpoint encoding.
+
+Run #266 / commit `76c9823ef14850168d85a2cfc06270cc58283733`
+adds a route-context probe for the two rare heavy weighted pressure plates:
+
+- `30,25,57`
+- `32,25,57`
+
+Their nearest Runner warning is `WARNING: Unstable floor ahead!` at
+`50,25,53`, **20.40 / 18.44 blocks** away respectively. Their nearest action
+sign is `Remove red blocks` at `32,25,76`, **19.10 / 19.00 blocks** away.
+The nearest physical portal component is still over 31 blocks away.
+
+This makes the two heavy plates poor candidates for a direct checkpoint/start/
+finish trigger under the current geometry. They remain physical evidence only;
+no gameplay role is assigned.
 
 A separate portal-to-warning geometry pass uses a conservative 20-block 3D
 radius around each of the 7 physical Nether Portal components. It is intended
