@@ -60,6 +60,7 @@ jobs:
           python3 tools/test_anvil_entity_evidence.py
           python3 tools/test_anvil_block_entity_evidence.py
           python3 tools/test_anvil_stage_evidence.py
+          python3 tools/test_anvil_stage_portal_evidence.py
           python3 tools/test_anvil_mechanism_evidence.py
           python3 tools/test_anvil_redstone_evidence.py
 
@@ -205,6 +206,15 @@ jobs:
             --horizontal-radius 12 --vertical-radius 10 --min-stage-markers 0
           cat "$ROOT/to-bee-or-not-to-bee-stage-evidence.txt"
           grep '^stage_evidence_summary ' "$ROOT/toxic-factory-stage-evidence.txt"
+
+          python3 tools/anvil_stage_portal_evidence.py \
+            "$ROOT/to-bee-or-not-to-bee-probe.txt" \
+            "$ROOT/to-bee-or-not-to-bee-entity-evidence.txt" \
+            --output "$ROOT/to-bee-or-not-to-bee-stage-portals.txt" \
+            --portal-radius 30 --very-close-radius 8 \
+            --min-stage-markers 2 --min-markers-with-portal 2 --min-very-close 1
+          echo '--- To Bee stage marker / portal gate evidence ---'
+          cat "$ROOT/to-bee-or-not-to-bee-stage-portals.txt"
 
           python3 tools/leveldat_probe.py --require-spawn "$ROOT/toxic-factory-level.dat" --output "$ROOT/toxic-factory-leveldat.txt"
           python3 tools/leveldat_probe.py --require-spawn "$ROOT/to-bee-or-not-to-bee-level.dat" --output "$ROOT/to-bee-or-not-to-bee-leveldat.txt"
