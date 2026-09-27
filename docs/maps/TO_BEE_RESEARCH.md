@@ -857,3 +857,36 @@ outside Runner starts instead of the old `x=84` anchor.
 
 This is a **playability reconstruction**, not a claim about the original Hive
 start-gate implementation.
+
+
+### First production traps: all three archived Fire Arrows instances
+
+Run #301 moves the first trap family from evidence-only into the runtime To Bee
+candidate profile.
+
+All **3/3 Fire Arrows** instances now become `TrapArrows` entries. Their target
+locations are not guessed cuboids: they are the **23 preserved dispenser blocks**
+already corroborated by warning text, action text, dispenser geometry and
+dispenser facing.
+
+The three reconstructed runtime instances use:
+
+- pair 011: action `10,27,67`, reconstructed control button `15,35,62`,
+  10 original dispensers in opposing east/west banks
+- pair 007: action `-23,29,10`, reconstructed control button `-24,35,6`,
+  7 original dispensers in opposing north/south banks
+- pair 005: action `-35,29,-19`, reconstructed control button `-34,35,-15`,
+  6 original south-facing dispensers
+
+Bootstrap/verify now rejects the world if any pinned action sign, reconstructed
+button anchor, or original dispenser is missing/wrong material.
+
+Confidence remains intentionally split:
+
+- **target dispenser geometry: archive-backed/high confidence**
+- **control buttons for these three runtime traps: playability reconstruction,
+  not claimed as original Hive bindings**
+
+This is enough for the existing `TrapArrows` implementation to fire projectiles
+using each dispenser's preserved block-facing direction while retaining the
+normal Classic26 cooldown/attribution lifecycle.

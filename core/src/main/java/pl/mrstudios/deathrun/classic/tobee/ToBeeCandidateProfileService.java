@@ -6,6 +6,7 @@ import org.bukkit.World;
 import org.jetbrains.annotations.NotNull;
 import pl.mrstudios.deathrun.arena.ArenaManager;
 import pl.mrstudios.deathrun.arena.checkpoint.Checkpoint;
+import pl.mrstudios.deathrun.arena.trap.impl.TrapArrows;
 import pl.mrstudios.deathrun.config.Configuration;
 import pl.mrstudios.deathrun.config.impl.MapConfiguration;
 
@@ -35,6 +36,56 @@ public final class ToBeeCandidateProfileService {
     private static final Map<Integer, GateEvidence> GATES = buildGates();
     private static final BlockPos DEATH_CONTROL_BUTTON = new BlockPos(76, 25, 47);
     private static final BlockPos DEATH_CONTROL_ACTION = new BlockPos(76, 25, 56);
+
+    private static final List<FireArrowEvidence> FIRE_ARROW_TRAPS = List.of(
+            new FireArrowEvidence(
+                    "pair-011",
+                    new BlockPos(10, 27, 67),
+                    new BlockPos(15, 35, 62),
+                    List.of(
+                            new BlockPos(9, 26, 70),
+                            new BlockPos(9, 25, 69),
+                            new BlockPos(9, 26, 68),
+                            new BlockPos(9, 25, 67),
+                            new BlockPos(9, 26, 66),
+                            new BlockPos(-2, 25, 70),
+                            new BlockPos(-2, 26, 69),
+                            new BlockPos(-2, 25, 68),
+                            new BlockPos(-2, 26, 67),
+                            new BlockPos(-2, 25, 66)
+                    ),
+                    "nearest-button reconstruction; opposing east/west archive banks"
+            ),
+            new FireArrowEvidence(
+                    "pair-007",
+                    new BlockPos(-23, 29, 10),
+                    new BlockPos(-24, 35, 6),
+                    List.of(
+                            new BlockPos(-22, 26, 18),
+                            new BlockPos(-24, 26, 18),
+                            new BlockPos(-26, 26, 18),
+                            new BlockPos(-21, 26, 28),
+                            new BlockPos(-23, 26, 28),
+                            new BlockPos(-28, 25, 18),
+                            new BlockPos(-25, 26, 28)
+                    ),
+                    "nearest-button reconstruction; opposing north/south archive banks"
+            ),
+            new FireArrowEvidence(
+                    "pair-005",
+                    new BlockPos(-35, 29, -19),
+                    new BlockPos(-34, 35, -15),
+                    List.of(
+                            new BlockPos(-39, 19, -38),
+                            new BlockPos(-37, 19, -37),
+                            new BlockPos(-38, 19, -39),
+                            new BlockPos(-35, 19, -40),
+                            new BlockPos(-33, 19, -38),
+                            new BlockPos(-32, 19, -37)
+                    ),
+                    "nearest-button reconstruction; single surviving south-facing archive bank"
+            )
+    );
 
     private static final int START_BARRIER_X = 84;
     private static final int START_BARRIER_MIN_Y = 25;
@@ -123,6 +174,15 @@ public final class ToBeeCandidateProfileService {
         }
         map.arenaFinishCheckpointId = map.arenaCheckpoints.size();
 
+        for (FireArrowEvidence evidence : FIRE_ARROW_TRAPS) {
+            TrapArrows trap = new TrapArrows();
+            trap.setButton(blockLocation(world, evidence.button()));
+            trap.setLocations(evidence.dispensers().stream()
+                    .map(pos -> blockLocation(world, pos))
+                    .toList());
+            map.arenaTraps.add(trap);
+        }
+
         map.arenaMaxPlayers = 22;
         map.arenaRequiredPlayersToStart = 11;
 
@@ -163,6 +223,8 @@ public final class ToBeeCandidateProfileService {
                 issues.add("start-barrier-count:" + map.arenaStartBarrierBlocks.size());
             if (map.arenaStartBarrierRestoreMaterials.size() != startBarrierPositions().size())
                 issues.add("start-barrier-restore-count:" + map.arenaStartBarrierRestoreMaterials.size());
+            if (map.arenaTraps.size() != FIRE_ARROW_TRAPS.size())
+                issues.add("fire-arrow-trap-count:" + map.arenaTraps.size());
             if (map.arenaCheckpoints.size() != CHECKPOINT_GATE_IDS.size())
                 issues.add("checkpoint-count:" + map.arenaCheckpoints.size());
             if (map.arenaFinishCheckpointId == null
@@ -214,6 +276,21 @@ public final class ToBeeCandidateProfileService {
         if (deathStartCount < 2)
             issues.add("safe-death-start-capacity:" + deathStartCount + "/2");
 
+        for (FireArrowEvidence evidence : FIRE_ARROW_TRAPS) {
+            if (!world.getBlockAt(evidence.actionSign().x(), evidence.actionSign().y(), evidence.actionSign().z())
+                    .getType().name().endsWith("_SIGN"))
+                issues.add("fire-arrow-action-missing:" + evidence.id() + ":" + evidence.actionSign().compact());
+
+            if (!world.getBlockAt(evidence.button().x(), evidence.button().y(), evidence.button().z())
+                    .getType().name().endsWith("_BUTTON"))
+                issues.add("fire-arrow-button-missing:" + evidence.id() + ":" + evidence.button().compact());
+
+            for (BlockPos dispenser : evidence.dispensers()) {
+                if (world.getBlockAt(dispenser.x(), dispenser.y(), dispenser.z()).getType() != Material.DISPENSER)
+                    issues.add("fire-arrow-dispenser-missing:" + evidence.id() + ":" + dispenser.compact());
+            }
+        }
+
         return issues;
     }
 
@@ -261,6 +338,14 @@ public final class ToBeeCandidateProfileService {
         return List.copyOf(positions);
     }
 
+    public static int fireArrowTrapCount() {
+        return FIRE_ARROW_TRAPS.size();
+    }
+
+    public static @NotNull List<FireArrowEvidence> fireArrowEvidence() {
+        return FIRE_ARROW_TRAPS;
+    }
+
     public static int expectedPortalBlockTotal() {
         return GATES.values().stream().mapToInt(GateEvidence::expectedPortalBlocks).sum();
     }
@@ -284,8 +369,9 @@ public final class ToBeeCandidateProfileService {
                 "original-waiting-lobby-not-recovered",
                 "runner-start-layout-generated-from-safe-archive-geometry-not-original",
                 "death-spawns-generated-from-first-stage-control-geometry-not-original",
-                "death-button-to-trap-bindings-not-recovered",
-                "trap-target-cuboids-and-reset-parameters-not-recovered",
+                "death-button-to-trap-bindings-partially-reconstructed-fire-arrows-3",
+                "trap-target-geometry-partially-recovered-fire-arrows-3",
+                "remaining-trap-target-cuboids-and-reset-parameters-not-recovered",
                 "start-barrier-generated-outside-gate-006-not-original",
                 "original-checkpoint-score-values-not-recovered"
         );
@@ -434,6 +520,14 @@ public final class ToBeeCandidateProfileService {
             @NotNull BlockPos min,
             @NotNull BlockPos max,
             int expectedPortalBlocks
+    ) {}
+
+    public record FireArrowEvidence(
+            @NotNull String id,
+            @NotNull BlockPos actionSign,
+            @NotNull BlockPos button,
+            @NotNull List<BlockPos> dispensers,
+            @NotNull String confidence
     ) {}
 
     public record Result(

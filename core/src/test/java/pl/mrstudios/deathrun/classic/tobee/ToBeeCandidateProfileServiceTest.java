@@ -20,6 +20,7 @@ class ToBeeCandidateProfileServiceTest {
         assertEquals(2, ToBeeCandidateProfileService.deathSpawnTarget());
         assertEquals(726, ToBeeCandidateProfileService.startSearchColumnCount());
         assertEquals(14, ToBeeCandidateProfileService.startBarrierPositions().size());
+        assertEquals(3, ToBeeCandidateProfileService.fireArrowTrapCount());
         assertEquals(366, ToBeeCandidateProfileService.expectedPortalBlockTotal());
         assertEquals(7, new HashSet<>(ToBeeCandidateProfileService.routeGateIds()).size());
     }
@@ -52,6 +53,20 @@ class ToBeeCandidateProfileServiceTest {
     }
 
     @Test
+    void fireArrowEvidencePinsAllThreeArchiveDispenserBanks() {
+        var evidence = ToBeeCandidateProfileService.fireArrowEvidence();
+        assertEquals(3, evidence.size());
+        assertEquals(List.of("pair-011", "pair-007", "pair-005"),
+                evidence.stream().map(ToBeeCandidateProfileService.FireArrowEvidence::id).toList());
+        assertEquals(List.of(10, 7, 6),
+                evidence.stream().map(item -> item.dispensers().size()).toList());
+        assertEquals(23, evidence.stream().mapToInt(item -> item.dispensers().size()).sum());
+        assertEquals(23, new HashSet<>(evidence.stream()
+                .flatMap(item -> item.dispensers().stream())
+                .toList()).size());
+    }
+
+    @Test
     void deathControlStartAnchorsStayPinnedToUniqueArchiveCandidate() {
         assertEquals(new ToBeeCandidateProfileService.BlockPos(76, 25, 47),
                 ToBeeCandidateProfileService.deathControlButtonCandidate());
@@ -81,8 +96,9 @@ class ToBeeCandidateProfileServiceTest {
                 "original-waiting-lobby-not-recovered",
                 "runner-start-layout-generated-from-safe-archive-geometry-not-original",
                 "death-spawns-generated-from-first-stage-control-geometry-not-original",
-                "death-button-to-trap-bindings-not-recovered",
-                "trap-target-cuboids-and-reset-parameters-not-recovered",
+                "death-button-to-trap-bindings-partially-reconstructed-fire-arrows-3",
+                "trap-target-geometry-partially-recovered-fire-arrows-3",
+                "remaining-trap-target-cuboids-and-reset-parameters-not-recovered",
                 "start-barrier-generated-outside-gate-006-not-original",
                 "original-checkpoint-score-values-not-recovered"
         ), ToBeeCandidateProfileService.knownRemainingBlockers());
