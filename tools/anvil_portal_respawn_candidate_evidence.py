@@ -21,6 +21,11 @@ from typing import Sequence
 
 from anvil_cluster import parse_probe_report
 from anvil_portal_route_side_evidence import PortalRouteSide, build_route_sides
+from anvil_portal7_transition_evidence import (
+    build_portal7_pairs,
+    next_stage_markers,
+    render_report as render_portal7_transition_report,
+)
 from anvil_portal_spawn_surface_evidence import (
     StandingCandidate,
     _portal_bounds,
@@ -65,7 +70,12 @@ def _rank(candidates: Sequence[StandingCandidate]) -> tuple[StandingCandidate, .
     )
 
 
-def selected_side(item: PortalRouteSide) -> tuple[int | None, str]:
+def selected_side(
+    item: PortalRouteSide,
+    portal7_override: int | None = None,
+) -> tuple[int | None, str]:
+    if item.portal_id == 7 and portal7_override in (-1, 1):
+        return portal7_override, "CHECKPOINT_TRANSITION_SIDE"
     if item.classification == "START_ENDPOINT":
         return item.external_side_candidate, "START_SIDE"
     if item.classification == "FINISH_ENDPOINT":
@@ -81,6 +91,8 @@ def build_evidence(
     dot_threshold: float,
     max_normal_distance: int,
     lateral_padding: int,
+    entity_evidence_report: Path | None = None,
+    portal7_high_tolerance: float = 3.0,
 ) -> list[RespawnCandidateEvidence]:
     _interactive, portal_points = parse_probe_report(probe_report)
     portals = portal_components(portal_points)
@@ -97,10 +109,28 @@ def build_evidence(
         for index, component in enumerate(portals, 1)
     }
 
+    portal7_override: int | None = None
+    if entity_evidence_report is not None:
+        portal7, portal7_pairs = build_portal7_pairs(probe_report)
+        portal7_stages = next_stage_markers(entity_evidence_report, portal7)
+        _portal7_report, portal7_stats = render_portal7_transition_report(
+            probe_report,
+            entity_evidence_report,
+            portal7,
+            portal7_pairs,
+            portal7_stages,
+            portal7_high_tolerance,
+        )
+        candidate_side = portal7_stats["candidate_outgoing_side"]
+        if candidate_side == "negative":
+            portal7_override = -1
+        elif candidate_side == "positive":
+            portal7_override = 1
+
     _path, route_sides = build_route_sides(probe_report, dot_threshold)
     result: list[RespawnCandidateEvidence] = []
     for item in route_sides:
-        side, purpose = selected_side(item)
+        side, purpose = selected_side(item, portal7_override)
         available: Sequence[StandingCandidate] = ()
         if side == -1:
             available = standing[item.portal_id].negative
@@ -188,7 +218,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("world_dir", type=Path)
     parser.add_argument("probe_report", type=Path)
     parser.add_argument("--output", type=Path)
+    parser.add_argument("--entity-evidence-report", type=Path)
     parser.add_argument("--dot-threshold", type=float, default=0.25)
+    parser.add_argument("--portal7-high-tolerance", type=float, default=3.0)
     parser.add_argument("--max-normal-distance", type=int, default=6)
     parser.add_argument("--lateral-padding", type=int, default=2)
     parser.add_argument("--top", type=int, default=5)
@@ -202,6 +234,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         args.dot_threshold,
         args.max_normal_distance,
         args.lateral_padding,
+        entity_evidence_report=args.entity_evidence_report,
+        portal7_high_tolerance=args.portal7_high_tolerance,
     )
     report, stats = render_report(args.probe_report, evidence, args.top)
 

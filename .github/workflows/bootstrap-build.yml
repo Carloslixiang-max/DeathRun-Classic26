@@ -350,9 +350,11 @@ jobs:
           python3 tools/anvil_portal_respawn_candidate_evidence.py \
             "$ROOT/to-bee-or-not-to-bee" \
             "$ROOT/to-bee-or-not-to-bee-probe.txt" \
+            --entity-evidence-report "$ROOT/to-bee-or-not-to-bee-entity-evidence.txt" \
             --output "$ROOT/to-bee-or-not-to-bee-respawn-candidates.txt" \
-            --dot-threshold 0.25 --max-normal-distance 6 --lateral-padding 2 --top 5 \
-            --min-selected-portals 6 --min-selected-with-candidates 6
+            --dot-threshold 0.25 --portal7-high-tolerance 3 \
+            --max-normal-distance 6 --lateral-padding 2 --top 5 \
+            --min-selected-portals 7 --min-selected-with-candidates 7
           echo '--- To Bee route-side standing candidates ---'
           cat "$ROOT/to-bee-or-not-to-bee-respawn-candidates.txt"
 
