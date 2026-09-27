@@ -7,6 +7,7 @@ import org.jetbrains.annotations.NotNull;
 import pl.mrstudios.deathrun.arena.ArenaManager;
 import pl.mrstudios.deathrun.arena.checkpoint.Checkpoint;
 import pl.mrstudios.deathrun.arena.trap.impl.TrapArrows;
+import pl.mrstudios.deathrun.arena.trap.impl.TrapDisappearingBlocks;
 import pl.mrstudios.deathrun.arena.trap.impl.TrapFireFloor;
 import pl.mrstudios.deathrun.arena.trap.impl.TrapFlood;
 import pl.mrstudios.deathrun.config.Configuration;
@@ -109,6 +110,45 @@ public final class ToBeeCandidateProfileService {
             "target geometry archive-backed; nearest-button/effect-duration reconstruction"
     );
 
+    private static final MaterialTrapEvidence RED_D_TRAP = new MaterialTrapEvidence(
+            "pair-021-red-D",
+            new BlockPos(89, 25, 65),
+            new BlockPos(81, 25, 54),
+            redDTargetPositions(),
+            "RED_TERRACOTTA",
+            "TrapDisappearingBlocks: remove exact route-level red terracotta",
+            "target geometry archive-backed; nearest existing low-control button reconstruction"
+    );
+
+    private static final MaterialTrapEvidence SEA_LANTERN_TRAP = new MaterialTrapEvidence(
+            "action-021-sea-lantern",
+            new BlockPos(72, 25, 76),
+            new BlockPos(74, 25, 54),
+            seaLanternTargetPositions(),
+            "SEA_LANTERN",
+            "TrapDisappearingBlocks: remove two large archive sea-lantern route components",
+            "target geometry archive-backed; nearest existing low-control button reconstruction"
+    );
+
+    private static final MaterialTrapEvidence RED_A_TRAP = new MaterialTrapEvidence(
+            "pair-006-red-A",
+            new BlockPos(-21, 29, -19),
+            new BlockPos(-21, 35, -15),
+            redATargetPositions(),
+            "RED_TERRACOTTA",
+            "TrapDisappearingBlocks: remove exact route-level red terracotta",
+            "target geometry archive-backed; nearest-button reconstruction"
+    );
+
+    private static final MaterialTrapEvidence RED_B_TRAP = new MaterialTrapEvidence(
+            "pair-012-red-B",
+            new BlockPos(13, 29, -19),
+            new BlockPos(13, 35, -15),
+            redBTargetPositions(),
+            "RED_TERRACOTTA",
+            "TrapDisappearingBlocks: remove the three route-level five-block runs",
+            "target geometry archive-backed; nearest-button reconstruction"
+    );
     private static final int START_BARRIER_X = 84;
     private static final int START_BARRIER_MIN_Y = 25;
     private static final int START_BARRIER_MAX_Y = 26;
@@ -198,11 +238,15 @@ public final class ToBeeCandidateProfileService {
 
         // Keep implemented controls in recovered route order so Death navigation
         // advances through the map rather than through trap-class insertion order.
+        addDisappearingTrap(map, world, SEA_LANTERN_TRAP);
+        addDisappearingTrap(map, world, RED_D_TRAP);
         addCoalFireTrap(map, world);
         addFireArrowTrap(map, world, FIRE_ARROW_TRAPS.get(0));
         addFireArrowTrap(map, world, FIRE_ARROW_TRAPS.get(1));
         addIceMeltTrap(map, world);
         addFireArrowTrap(map, world, FIRE_ARROW_TRAPS.get(2));
+        addDisappearingTrap(map, world, RED_A_TRAP);
+        addDisappearingTrap(map, world, RED_B_TRAP);
 
         map.arenaMaxPlayers = 22;
         map.arenaRequiredPlayersToStart = 11;
@@ -312,7 +356,10 @@ public final class ToBeeCandidateProfileService {
             }
         }
 
-        for (MaterialTrapEvidence evidence : List.of(ICE_MELT_TRAP, COAL_FIRE_TRAP)) {
+        for (MaterialTrapEvidence evidence : List.of(
+                ICE_MELT_TRAP, COAL_FIRE_TRAP,
+                RED_A_TRAP, RED_B_TRAP, RED_D_TRAP, SEA_LANTERN_TRAP
+        )) {
             if (!world.getBlockAt(evidence.actionSign().x(), evidence.actionSign().y(), evidence.actionSign().z())
                     .getType().name().endsWith("_SIGN"))
                 issues.add("material-trap-action-missing:" + evidence.id() + ":" + evidence.actionSign().compact());
@@ -392,7 +439,7 @@ public final class ToBeeCandidateProfileService {
     }
 
     public static int implementedTrapCount() {
-        return FIRE_ARROW_TRAPS.size() + 2;
+        return FIRE_ARROW_TRAPS.size() + 6;
     }
 
     public static @NotNull MaterialTrapEvidence iceMeltEvidence() {
@@ -403,6 +450,13 @@ public final class ToBeeCandidateProfileService {
         return COAL_FIRE_TRAP;
     }
 
+    public static @NotNull List<MaterialTrapEvidence> redBlockEvidence() {
+        return List.of(RED_A_TRAP, RED_B_TRAP, RED_D_TRAP);
+    }
+
+    public static @NotNull MaterialTrapEvidence seaLanternEvidence() {
+        return SEA_LANTERN_TRAP;
+    }
     public static int expectedPortalBlockTotal() {
         return GATES.values().stream().mapToInt(GateEvidence::expectedPortalBlocks).sum();
     }
@@ -426,9 +480,9 @@ public final class ToBeeCandidateProfileService {
                 "original-waiting-lobby-not-recovered",
                 "runner-start-layout-generated-from-safe-archive-geometry-not-original",
                 "death-spawns-generated-from-first-stage-control-geometry-not-original",
-                "death-button-to-trap-bindings-partially-reconstructed-5-of-21",
-                "trap-target-geometry-recovered-fire-arrows-3-ice-1-coal-1",
-                "remaining-16-trap-targets-and-original-reset-parameters-not-recovered",
+                "death-button-to-trap-bindings-partially-reconstructed-9-of-21",
+                "trap-target-geometry-recovered-9-runtime-traps",
+                "remaining-12-trap-targets-and-original-reset-parameters-not-recovered",
                 "start-barrier-generated-outside-gate-006-not-original",
                 "original-checkpoint-score-values-not-recovered"
         );
@@ -459,6 +513,21 @@ public final class ToBeeCandidateProfileService {
         map.arenaTraps.add(trap);
     }
 
+    private static void addDisappearingTrap(
+            @NotNull MapConfiguration.MapDefinition map,
+            @NotNull World world,
+            @NotNull MaterialTrapEvidence evidence
+    ) {
+        TrapDisappearingBlocks trap = new TrapDisappearingBlocks();
+        Material material = Material.matchMaterial(evidence.expectedMaterialName());
+        if (material != null)
+            trap.setMaterial(material);
+        trap.setButton(blockLocation(world, evidence.button()));
+        trap.setLocations(evidence.targets().stream()
+                .map(pos -> blockLocation(world, pos))
+                .toList());
+        map.arenaTraps.add(trap);
+    }
     private static void addCoalFireTrap(
             @NotNull MapConfiguration.MapDefinition map,
             @NotNull World world

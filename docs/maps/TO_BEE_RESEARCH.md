@@ -951,3 +951,31 @@ Run #303 also tightens semantic research for the remaining traps:
   Minecraft's `dark_oak` namespace
 - components of up to 80 blocks print exact positions, enabling later direct
   import of red/wood/sea-lantern targets without invented cuboids
+
+
+### Red-block and Sea-Lantern disappearing traps
+
+Run #307 promotes four more archive-backed target sets into the runtime
+candidate profile, bringing the implemented subset to **9 traps**.
+
+The red-block scanner is now structural-only, so these targets are all
+`red_terracotta` and no flowers/redstone/decorative noise are included:
+
+- pair 006 / red-A: **7** route-level cells; reconstructed button `-21,35,-15`
+- pair 012 / red-B: **15** route-level cells in three five-block runs;
+  reconstructed button `13,35,-15`
+- pair 021 / red-D: **21** route-level cells; reconstructed low-control button
+  `81,25,54`
+
+The weaker red-C action at `32,25,76` is deliberately **not** promoted yet
+because its control-button evidence is substantially worse and its nearest
+reported button would collide with an already reconstructed Fire Arrows control.
+
+`Remove Sea Lanterns` is also promoted using the two large archive components
+at `y=20` only: **26 + 30 = 56 sea-lantern cells**. The three isolated lanterns
+from the semantic scan are excluded as likely ambient/decorative blocks.
+Its reconstructed low-control button is `74,25,54`.
+
+All four use `TrapDisappearingBlocks`, so only the pinned archive target cells
+are removed during activation and their original BlockData is restored on end.
+The control-button bindings remain explicitly reconstruction-level evidence.
