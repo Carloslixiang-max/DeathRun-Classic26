@@ -740,3 +740,56 @@ duration, payload, or reset behavior.
 The archive is now strong enough to recover the **trap concept catalog and a
 21-instance warning/action review set**, but not yet strong enough to claim a
 faithful formal Classic26 map configuration.
+
+
+## Production candidate profile bootstrap
+
+Run #297 introduces the first **runtime map profile generated directly from the
+archive evidence** rather than leaving the To Bee work only in research tools.
+
+The command is intentionally admin-only and must be executed while standing in
+the imported archived Java world:
+
+`/dr tobee bootstrap`
+
+Before writing any configuration it verifies all seven known Nether-portal
+components against their archived bounding boxes and exact block counts
+(**366 portal blocks total**) and re-checks the seven resolved safe standing
+columns. If the signature does not match, bootstrap aborts instead of applying
+coordinates to the wrong world.
+
+The generated route remains the cross-corroborated candidate:
+
+`#006 -> #007 -> #002 -> #001 -> #004 -> #005 -> #003`
+
+For runtime semantics the bootstrap keeps **#006 as the start gate candidate**
+rather than awarding an immediate checkpoint at the Runner start. The six
+in-round checkpoint volumes therefore use the exact surviving portal component
+bounds in this order:
+
+`#007 -> #002 -> #001 -> #004 -> #005 -> #003 (finish)`
+
+Their respawn candidates are the already recovered route-side standing columns:
+
+- #007: `33,45,35`
+- #002: `7,25,81`
+- #001: `-14,25,22`
+- #004: `-59,25,5`
+- #005: `-5,18,-38`
+- #003 / finish: `33,25,-9`
+
+The start-side Runner candidate remains `84,25,81` beside #006.
+
+This profile is **deliberately saved with setup mode still enabled**. It is not
+presented as an exact recovered Hive server configuration. The archive still
+does not prove the original waiting lobby, the full 20-player Runner spawn
+layout, Death spawn coordinates, exact Death button-to-trap bindings, trap
+target cuboids/reset parameters, start barrier, or original checkpoint point
+values. The bootstrap leaves those fields unresolved instead of manufacturing
+values. A previously promoted `to-bee-or-not-to-bee` map is never overwritten.
+
+Use:
+
+- `/dr tobee verify` to re-check archive signature + candidate profile
+- `/dr map manifest to-bee-or-not-to-bee` to inspect the generated runtime data
+- `/dr map check to-bee-or-not-to-bee` to expose the remaining promotion blockers

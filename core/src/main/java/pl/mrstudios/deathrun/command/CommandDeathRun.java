@@ -38,6 +38,7 @@ import pl.mrstudios.deathrun.config.Configuration;
 import pl.mrstudios.deathrun.config.impl.MapConfiguration;
 import pl.mrstudios.deathrun.classic.playtest.ClassicPlaytestService;
 import pl.mrstudios.deathrun.classic.playtest.PlaytestTraceService;
+import pl.mrstudios.deathrun.classic.tobee.ToBeeCandidateProfileService;
 import pl.mrstudios.deathrun.classic.vote.ClassicVoteService;
 
 import java.nio.file.Path;
@@ -155,6 +156,44 @@ public class CommandDeathRun {
         }
 
         this.message(sender, PREFIX + "<green>Classic26 playtest verification passed.");
+    }
+
+    @Execute(name = "tobee bootstrap")
+    @Permission("mrstudios.command.deathrun.setup")
+    public void bootstrapToBeeCandidate(@Context Player player) {
+        ToBeeCandidateProfileService.Result result = new ToBeeCandidateProfileService(
+                this.configuration, this.arenaManager
+        ).bootstrap(player.getWorld());
+
+        if (!result.success()) {
+            this.message(player, PREFIX + "<red>To Bee candidate bootstrap failed: <white>" + result.message());
+            if (!result.details().isEmpty())
+                this.message(player, PREFIX + "<gray>" + String.join(", ", result.details()));
+            return;
+        }
+
+        this.message(player, PREFIX + "<green>To Bee archive-backed candidate profile created.");
+        this.message(player, PREFIX + "<yellow>Safety lock remains enabled; this is not promoted as an exact Hive server config.");
+        this.message(player, PREFIX + "<gray>Remaining blockers: <white>" + String.join(", ", result.details()));
+        this.message(player, PREFIX + "<gray>Inspect with <white>/dr map manifest to-bee-or-not-to-bee</white> and <white>/dr map check to-bee-or-not-to-bee</white>.");
+    }
+
+    @Execute(name = "tobee verify")
+    @Permission("mrstudios.command.deathrun.setup")
+    public void verifyToBeeCandidate(@Context Player player) {
+        ToBeeCandidateProfileService.Result result = new ToBeeCandidateProfileService(
+                this.configuration, this.arenaManager
+        ).verify(player.getWorld());
+
+        if (!result.success()) {
+            this.message(player, PREFIX + "<red>To Bee candidate verification failed: <white>" + result.message());
+            if (!result.details().isEmpty())
+                this.message(player, PREFIX + "<gray>" + String.join(", ", result.details()));
+            return;
+        }
+
+        this.message(player, PREFIX + "<green>To Bee archive signature and candidate profile verified.");
+        this.message(player, PREFIX + "<gray>Still intentionally unresolved: <white>" + String.join(", ", result.details()));
     }
 
     @Execute(name = "vote")
