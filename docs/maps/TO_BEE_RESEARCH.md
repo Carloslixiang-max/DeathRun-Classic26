@@ -308,6 +308,25 @@ endpoint with an explicit vertical-movement hint. This makes #006 the stronger
 finish-side vs start-side or route direction.
 
 
+## Runner-warning orientation evidence
+
+Run #283 / commit `bd725eded839c5ad138dd5ecd81084f99fd7c646`
+adds a BlockState-facing pass for the warning signs that define the six MST
+edges. **12/12 edge-side warning fronts survive**.
+
+Five of the six MST edges show a strong paired orientation pattern: the two
+warning signs on that edge agree on one local travel orientation if the sign
+front is interpreted as the side from which an approaching Runner reads the
+warning. The sole exception is the **#006 ↔ #007** edge, which is already the
+route end associated with `Hint: Look down!` and an unusually vertical /
+control-empty context.
+
+This does not yet prove route direction because "warning front = Runner incoming
+side" is a gameplay-placement assumption rather than archived server logic.
+However it creates a strong, testable direction hypothesis for the core chain
+instead of relying on coordinate sorting.
+
+
 Run #281 / commit `1e0c3506b86d4e185cdc6c424a772640491aeb1c`
 adds a deliberately narrow static route-structure family
 (`barrier`, `iron_bars`, fence gates) to test whether one MST endpoint has a

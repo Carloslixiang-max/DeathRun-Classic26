@@ -56,6 +56,7 @@ jobs:
           python3 tools/test_anvil_portal_segment_evidence.py
           python3 tools/test_anvil_portal_segment_graph.py
           python3 tools/test_anvil_warning_facing_evidence.py
+          python3 tools/test_anvil_route_direction_hypothesis.py
           python3 tools/test_anvil_endpoint_context.py
           python3 tools/test_anvil_pressure_route_evidence.py
           python3 tools/test_anvil_portal_shape_evidence.py
@@ -160,6 +161,13 @@ jobs:
             --min-known-front-sides 1
           echo '--- To Bee Runner-warning facing evidence ---'
           cat "$ROOT/to-bee-or-not-to-bee-warning-facing.txt"
+
+          python3 tools/anvil_route_direction_hypothesis.py \
+            "$ROOT/to-bee-or-not-to-bee-probe.txt" \
+            --output "$ROOT/to-bee-or-not-to-bee-route-direction.txt" \
+            --dot-threshold 0.25 --min-best-agree 8 --min-score-margin 8
+          echo '--- To Bee warning-facing route-direction hypothesis ---'
+          cat "$ROOT/to-bee-or-not-to-bee-route-direction.txt"
 
           python3 tools/anvil_mechanism_evidence.py \
             "$ROOT/to-bee-or-not-to-bee-probe.txt" \
