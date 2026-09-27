@@ -64,6 +64,7 @@ jobs:
           python3 tools/test_anvil_portal_shape_evidence.py
           python3 tools/test_anvil_portal_spawn_surface_evidence.py
           python3 tools/test_anvil_portal_respawn_candidate_evidence.py
+          python3 tools/test_anvil_vertical_hint_evidence.py
           python3 tools/test_anvil_sign_links.py
           python3 tools/test_anvil_trap_evidence.py
           python3 tools/test_anvil_route_evidence.py
@@ -345,6 +346,15 @@ jobs:
             --min-selected-portals 6 --min-selected-with-candidates 6
           echo '--- To Bee route-side standing candidates ---'
           cat "$ROOT/to-bee-or-not-to-bee-respawn-candidates.txt"
+
+          python3 tools/anvil_vertical_hint_evidence.py \
+            "$ROOT/to-bee-or-not-to-bee" \
+            "$ROOT/to-bee-or-not-to-bee-probe.txt" \
+            --output "$ROOT/to-bee-or-not-to-bee-vertical-hint.txt" \
+            --hint-radius 8 --min-drop 3 --max-drop 24 \
+            --min-y 0 --max-y 64 --corridor-padding 6 --top 12
+          echo '--- To Bee #006/#007 vertical-transition evidence ---'
+          cat "$ROOT/to-bee-or-not-to-bee-vertical-hint.txt"
 
           python3 tools/anvil_pressure_route_evidence.py \
             "$ROOT/to-bee-or-not-to-bee-probe.txt" \
