@@ -1094,3 +1094,18 @@ duration remain explicit Classic26 playability reconstruction. Source
 direction and physical path are archive-backed.
 
 The To Bee candidate runtime now contains **15 implemented traps**.
+
+
+### Fire Snake B focused source/path probe
+
+Run #313 adds a dedicated evidence gate for the second `Release fire snake`
+instance before runtime implementation.
+
+The focused pass tests the preserved dispenser row at
+`x=84,y=24,z=47..54`. It requires at least eight dispensers with
+`facing=west`, then scans conservative walkable support slices from `x=83`
+toward `x=63` across the warning corridor around `70,25,53`.
+
+This intentionally separates source/path recovery from effect timing. A runtime
+Fire Snake B will only be added after the real archive output confirms that a
+continuous westbound route surface survives between the source and warning.
