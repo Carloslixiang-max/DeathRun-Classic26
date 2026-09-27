@@ -243,6 +243,32 @@ The fact that all seven gates receive trap-pair assignments also means there is
 no surviving portal gate that can be identified as start/finish merely because
 it lacks nearby trap evidence.
 
+
+Run #277 / commit `156671c2e34e72ddd9d50defab9dbd2c202709fb`
+adds an undirected warning-segment proximity graph. For every pair of portal
+segments, the edge weight is the nearest 3D distance between their Runner
+warning signs. The complete 7-node graph has 21 edges; its minimum spanning
+tree has 6 edges and is **exactly a path**, with endpoints **#003 and #006**.
+
+The six MST edges are:
+
+- #003 ↔ #005: **15.30**
+- #005 ↔ #004: **26.55**
+- #004 ↔ #001: **27.00**
+- #001 ↔ #002: **14.00**
+- #002 ↔ #007: **35.69**
+- #007 ↔ #006: **20.00**
+
+Therefore the strongest current archive-only topology is the **undirected**
+candidate chain:
+
+`#003 — #005 — #004 — #001 — #002 — #007 — #006`
+
+This is substantially stronger than sorting gates by coordinate or portal-center
+distance because it is derived from the surviving Runner trap-warning geometry.
+It still does **not** determine which endpoint is start-side vs finish-side, nor
+does it assign checkpoint numbers or respawn coordinates.
+
 ## Archived redstone/control-chain evidence
 
 Run #255 / commit `19f330d3a0998c7af887865e0e420c1d50f3d168`
