@@ -18,10 +18,11 @@ import java.util.Map;
 /**
  * Converts only archive-backed To Bee evidence into a setup-locked map profile.
  *
- * This intentionally does not invent the missing Hive server-side data:
- * Death spawn positions, button-to-trap bindings, trap target cuboids, start
- * barrier and original scoring remain unset until independently recovered or
- * deliberately reconstructed and reviewed.
+ * This intentionally does not mislabel reconstructed playability geometry as
+ * recovered Hive server-side data. Runner/Death starts and the start barrier
+ * are explicitly geometry-derived; button-to-trap bindings, trap target
+ * cuboids and original scoring remain unresolved until independently recovered
+ * or deliberately reconstructed and reviewed.
  */
 public final class ToBeeCandidateProfileService {
 
@@ -34,6 +35,12 @@ public final class ToBeeCandidateProfileService {
     private static final Map<Integer, GateEvidence> GATES = buildGates();
     private static final BlockPos DEATH_CONTROL_BUTTON = new BlockPos(76, 25, 47);
     private static final BlockPos DEATH_CONTROL_ACTION = new BlockPos(76, 25, 56);
+
+    private static final int START_BARRIER_X = 84;
+    private static final int START_BARRIER_MIN_Y = 25;
+    private static final int START_BARRIER_MAX_Y = 26;
+    private static final int START_BARRIER_MIN_Z = 79;
+    private static final int START_BARRIER_MAX_Z = 85;
 
     private static final Map<Integer, BlockPos> SAFE_ROUTE_SIDE_CANDIDATES = Map.of(
             6, new BlockPos(84, 25, 81),
@@ -72,17 +79,20 @@ public final class ToBeeCandidateProfileService {
         map.creator = "Unknown (archived HiveMC Java world)";
         map.world = world.getName();
 
-        BlockPos start = SAFE_ROUTE_SIDE_CANDIDATES.get(6);
-        map.arenaWaitingLobbyLocation = feetLocation(world, start);
-
         List<BlockPos> runnerStarts = runnerStartCandidates(world, 20);
         if (runnerStarts.size() < 20)
             return new Result(false, "insufficient-safe-runner-starts",
                     List.of(runnerStarts.size() + "/20"));
 
+        map.arenaWaitingLobbyLocation = feetLocation(world, runnerStarts.get(0));
         runnerStarts.stream()
                 .map(pos -> feetLocation(world, pos))
                 .forEach(map.arenaRunnerSpawnLocations::add);
+
+        for (BlockPos pos : startBarrierPositions()) {
+            map.arenaStartBarrierBlocks.add(blockLocation(world, pos));
+            map.arenaStartBarrierRestoreMaterials.add(Material.BARRIER);
+        }
 
         List<BlockPos> deathStarts = deathStartCandidates(world, 2);
         if (deathStarts.size() < 2)
@@ -118,8 +128,9 @@ public final class ToBeeCandidateProfileService {
 
         // Critical safety lock: the archive does not contain enough server-side
         // logic to claim production fidelity yet. Promotion must remain manual
-        // after Death spawns, 20 unique Runner starts, traps and start barrier
-        // are reconstructed and pass the normal /dr map disable preflight.
+        // until traps are reconstructed/reviewed and the normal /dr map disable
+        // preflight passes. Runner/Death starts and the barrier above are
+        // explicitly reconstructed playability geometry, not claimed originals.
         map.arenaSetupEnabled = true;
 
         this.configuration.map().maps.removeIf(candidate ->
@@ -148,6 +159,10 @@ public final class ToBeeCandidateProfileService {
                 issues.add("runner-spawn-count:" + map.arenaRunnerSpawnLocations.size());
             if (map.arenaDeathSpawnLocations.size() != 2)
                 issues.add("death-spawn-count:" + map.arenaDeathSpawnLocations.size());
+            if (map.arenaStartBarrierBlocks.size() != startBarrierPositions().size())
+                issues.add("start-barrier-count:" + map.arenaStartBarrierBlocks.size());
+            if (map.arenaStartBarrierRestoreMaterials.size() != startBarrierPositions().size())
+                issues.add("start-barrier-restore-count:" + map.arenaStartBarrierRestoreMaterials.size());
             if (map.arenaCheckpoints.size() != CHECKPOINT_GATE_IDS.size())
                 issues.add("checkpoint-count:" + map.arenaCheckpoints.size());
             if (map.arenaFinishCheckpointId == null
@@ -172,9 +187,15 @@ public final class ToBeeCandidateProfileService {
                         + "-blocks:" + actualPortalBlocks + "/" + gate.expectedPortalBlocks());
 
             BlockPos candidate = SAFE_ROUTE_SIDE_CANDIDATES.get(gateId);
-            if (!safeStandingColumn(world, candidate))
+            if (!routeSideAnchorValid(world, gateId, candidate))
                 issues.add("unsafe-route-side-candidate-" + String.format("%03d", gateId)
                         + ":" + candidate.compact());
+        }
+
+        for (BlockPos barrier : startBarrierPositions()) {
+            Material material = world.getBlockAt(barrier.x(), barrier.y(), barrier.z()).getType();
+            if (!material.isAir() && material != Material.BARRIER)
+                issues.add("start-barrier-overlay-not-clear:" + barrier.compact() + ":" + material.name());
         }
 
         int runnerStartCount = runnerStartCandidates(world, 20).size();
@@ -226,10 +247,18 @@ public final class ToBeeCandidateProfileService {
 
     public static int startSearchColumnCount() {
         GateEvidence gate = GATES.get(6);
-        int normalDistances = 6;
+        int normalDistances = 11; // d=2..12, kept behind the reconstructed x=84 barrier.
         int lateralColumns = (gate.max().z() - gate.min().z() + 1) + 4;
         int verticalColumns = 6;
         return normalDistances * lateralColumns * verticalColumns;
+    }
+
+    public static @NotNull List<BlockPos> startBarrierPositions() {
+        List<BlockPos> positions = new ArrayList<>();
+        for (int y = START_BARRIER_MIN_Y; y <= START_BARRIER_MAX_Y; y++)
+            for (int z = START_BARRIER_MIN_Z; z <= START_BARRIER_MAX_Z; z++)
+                positions.add(new BlockPos(START_BARRIER_X, y, z));
+        return List.copyOf(positions);
     }
 
     public static int expectedPortalBlockTotal() {
@@ -257,7 +286,7 @@ public final class ToBeeCandidateProfileService {
                 "death-spawns-generated-from-first-stage-control-geometry-not-original",
                 "death-button-to-trap-bindings-not-recovered",
                 "trap-target-cuboids-and-reset-parameters-not-recovered",
-                "start-barrier-not-recovered",
+                "start-barrier-generated-outside-gate-006-not-original",
                 "original-checkpoint-score-values-not-recovered"
         );
     }
@@ -309,7 +338,7 @@ public final class ToBeeCandidateProfileService {
         GateEvidence gate = GATES.get(6);
         List<BlockPos> candidates = new ArrayList<>();
 
-        for (int normalDistance = 1; normalDistance <= 6; normalDistance++) {
+        for (int normalDistance = 2; normalDistance <= 12; normalDistance++) {
             int x = gate.max().x() + normalDistance;
             for (int z = gate.min().z() - 2; z <= gate.max().z() + 2; z++) {
                 for (int y = gate.min().y() - 2; y < gate.min().y() + 4; y++) {
@@ -348,6 +377,24 @@ public final class ToBeeCandidateProfileService {
                     if (world.getBlockAt(x, y, z).getType() == Material.NETHER_PORTAL)
                         count++;
         return count;
+    }
+
+    private static boolean routeSideAnchorValid(
+            @NotNull World world,
+            int gateId,
+            @NotNull BlockPos candidate
+    ) {
+        if (safeStandingColumn(world, candidate))
+            return true;
+
+        // Once the reconstructed start barrier is active, the original #006
+        // anchor column is intentionally occupied by two BARRIER blocks.
+        if (gateId != 6 || candidate.x() != START_BARRIER_X)
+            return false;
+
+        return world.getBlockAt(candidate.x(), candidate.y(), candidate.z()).getType() == Material.BARRIER
+                && world.getBlockAt(candidate.x(), candidate.y() + 1, candidate.z()).getType() == Material.BARRIER
+                && world.getBlockAt(candidate.x(), candidate.y() - 1, candidate.z()).getType().isSolid();
     }
 
     private static boolean safeStandingColumn(@NotNull World world, @NotNull BlockPos candidate) {

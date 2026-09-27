@@ -7,6 +7,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ToBeeCandidateProfileServiceTest {
 
@@ -17,7 +18,8 @@ class ToBeeCandidateProfileServiceTest {
         assertEquals(3, ToBeeCandidateProfileService.finishGateId());
         assertEquals(20, ToBeeCandidateProfileService.runnerSpawnTarget());
         assertEquals(2, ToBeeCandidateProfileService.deathSpawnTarget());
-        assertEquals(396, ToBeeCandidateProfileService.startSearchColumnCount());
+        assertEquals(726, ToBeeCandidateProfileService.startSearchColumnCount());
+        assertEquals(14, ToBeeCandidateProfileService.startBarrierPositions().size());
         assertEquals(366, ToBeeCandidateProfileService.expectedPortalBlockTotal());
         assertEquals(7, new HashSet<>(ToBeeCandidateProfileService.routeGateIds()).size());
     }
@@ -38,6 +40,15 @@ class ToBeeCandidateProfileServiceTest {
                 ToBeeCandidateProfileService.safeRouteSideCandidate(5));
         assertEquals(new ToBeeCandidateProfileService.BlockPos(33, 25, -9),
                 ToBeeCandidateProfileService.safeRouteSideCandidate(3));
+    }
+
+    @Test
+    void reconstructedStartBarrierStaysOutsidePortal006AndHasNoDuplicateCells() {
+        List<ToBeeCandidateProfileService.BlockPos> barrier = ToBeeCandidateProfileService.startBarrierPositions();
+        assertEquals(14, new HashSet<>(barrier).size());
+        assertTrue(barrier.stream().allMatch(pos -> pos.x() == 84));
+        assertTrue(barrier.stream().allMatch(pos -> pos.y() >= 25 && pos.y() <= 26));
+        assertTrue(barrier.stream().allMatch(pos -> pos.z() >= 79 && pos.z() <= 85));
     }
 
     @Test
@@ -72,7 +83,7 @@ class ToBeeCandidateProfileServiceTest {
                 "death-spawns-generated-from-first-stage-control-geometry-not-original",
                 "death-button-to-trap-bindings-not-recovered",
                 "trap-target-cuboids-and-reset-parameters-not-recovered",
-                "start-barrier-not-recovered",
+                "start-barrier-generated-outside-gate-006-not-original",
                 "original-checkpoint-score-values-not-recovered"
         ), ToBeeCandidateProfileService.knownRemainingBlockers());
     }

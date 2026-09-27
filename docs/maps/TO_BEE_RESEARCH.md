@@ -829,3 +829,31 @@ This removes the missing/insufficient Death-spawn capacity blocker for a full
 22-player room. As with the reconstructed Runner grid, these are deliberately
 tagged as **geometry-derived playability positions**, not claimed as original
 Hive server spawn coordinates.
+
+
+### Reconstructed start gate barrier
+
+Run #300 closes the generic start-barrier preflight gap without reusing any of
+the archive's **11,063** noisy route-structure blocks. Those old barrier/iron-bar
+structures remain evidence only and are not mutated.
+
+The bootstrap now creates a clearly reconstructed, two-block-high temporary
+barrier immediately outside Portal #006 at:
+
+- plane: `x=84`
+- vertical range: `y=25..26`
+- gate span: `z=79..85`
+- total temporary barrier cells: **14**
+
+Before accepting the world, bootstrap requires every overlay cell to be either
+air or an already-created DeathRun barrier. The runtime's existing barrier
+lifecycle then places `BARRIER` while waiting and removes the layer to air at
+the start signal.
+
+Runner start reconstruction was moved farther outside the gate
+(`normal distance 2..12`, i.e. `x>=85`) so no Runner can spawn inside the
+temporary barrier. The waiting location is likewise derived from the selected
+outside Runner starts instead of the old `x=84` anchor.
+
+This is a **playability reconstruction**, not a claim about the original Hive
+start-gate implementation.
