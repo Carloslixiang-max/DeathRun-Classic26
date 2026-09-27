@@ -29,7 +29,7 @@ class AnvilRouteDirectionHypothesisTest(unittest.TestCase):
 
     def test_scores_both_path_directions_without_claiming_confirmation(self):
         # Geometry path 1--2--3. Signs face west, so under the incoming-facing
-        # assumption the preferred travel direction is 3->2->1.
+        # assumption the preferred travel direction is 1->2->3.
         e12 = SegmentGap(
             1, 2, 10.0,
             wall_sign(0, 0, "west"),
@@ -47,15 +47,15 @@ class AnvilRouteDirectionHypothesisTest(unittest.TestCase):
         measurements = measure_tree(tree)
         forward = score_direction(path, measurements, 0.25)
         reverse = score_direction(tuple(reversed(path)), measurements, 0.25)
-        self.assertGreater(reverse.agree, forward.agree)
-        self.assertGreater(reverse.agree - reverse.disagree, 0)
+        self.assertGreater(forward.agree, reverse.agree)
+        self.assertGreater(forward.agree - forward.disagree, 0)
 
         report, stats = render_report(
             Path("probe.txt"),
             [forward, reverse],
             0.25,
         )
-        self.assertEqual("003->002->001", stats["best_path"])
+        self.assertEqual("001->002->003", stats["best_path"])
         self.assertIn("candidate interpretation", report)
         self.assertIn("NOT confirmed start/finish", report)
 
