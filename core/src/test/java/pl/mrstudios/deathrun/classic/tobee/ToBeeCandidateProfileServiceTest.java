@@ -15,6 +15,8 @@ class ToBeeCandidateProfileServiceTest {
         assertEquals(List.of(6, 7, 2, 1, 4, 5, 3), ToBeeCandidateProfileService.routeGateIds());
         assertEquals(List.of(7, 2, 1, 4, 5, 3), ToBeeCandidateProfileService.checkpointGateIds());
         assertEquals(3, ToBeeCandidateProfileService.finishGateId());
+        assertEquals(20, ToBeeCandidateProfileService.runnerSpawnTarget());
+        assertEquals(396, ToBeeCandidateProfileService.startSearchColumnCount());
         assertEquals(366, ToBeeCandidateProfileService.expectedPortalBlockTotal());
         assertEquals(7, new HashSet<>(ToBeeCandidateProfileService.routeGateIds()).size());
     }
@@ -57,7 +59,7 @@ class ToBeeCandidateProfileServiceTest {
     void candidateProfileRetainsExplicitUnknownsInsteadOfInventingThem() {
         assertEquals(List.of(
                 "original-waiting-lobby-not-recovered",
-                "runner-start-layout-only-1-of-20-safe-candidates-recovered",
+                "runner-start-layout-generated-from-safe-archive-geometry-not-original",
                 "death-spawns-not-recovered",
                 "death-button-to-trap-bindings-not-recovered",
                 "trap-target-cuboids-and-reset-parameters-not-recovered",

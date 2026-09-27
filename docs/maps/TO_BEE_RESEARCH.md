@@ -793,3 +793,20 @@ Use:
 - `/dr tobee verify` to re-check archive signature + candidate profile
 - `/dr map manifest to-bee-or-not-to-bee` to inspect the generated runtime data
 - `/dr map check to-bee-or-not-to-bee` to expose the remaining promotion blockers
+
+
+### Runner start capacity resolved for playtest use
+
+Run #298 upgrades the candidate bootstrap from one pinned start-side column to
+**20 unique Runner spawn positions selected from the original archive geometry**.
+
+The selection is restricted to the already resolved positive/external side of
+Portal #006 and uses the same conservative standing rule used by the Anvil
+research pass. The prior archive report found **44** safe candidates on this
+side, so the runtime bootstrap deterministically chooses the best 20 rather than
+duplicating one coordinate or inventing a new platform.
+
+This removes the production preflight blocker for insufficient Runner spawn
+capacity at a 22-player / 2-Death Classic room. It does **not** claim these 20
+positions are the exact original Hive spawn coordinates; they are a safe
+geometry-derived reconstruction.

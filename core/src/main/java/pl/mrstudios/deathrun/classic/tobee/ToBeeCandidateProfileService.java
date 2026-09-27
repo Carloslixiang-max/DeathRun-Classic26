@@ -10,6 +10,7 @@ import pl.mrstudios.deathrun.config.Configuration;
 import pl.mrstudios.deathrun.config.impl.MapConfiguration;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -70,7 +71,15 @@ public final class ToBeeCandidateProfileService {
 
         BlockPos start = SAFE_ROUTE_SIDE_CANDIDATES.get(6);
         map.arenaWaitingLobbyLocation = feetLocation(world, start);
-        map.arenaRunnerSpawnLocations.add(feetLocation(world, start));
+
+        List<BlockPos> runnerStarts = runnerStartCandidates(world, 20);
+        if (runnerStarts.size() < 20)
+            return new Result(false, "insufficient-safe-runner-starts",
+                    List.of(runnerStarts.size() + "/20"));
+
+        runnerStarts.stream()
+                .map(pos -> feetLocation(world, pos))
+                .forEach(map.arenaRunnerSpawnLocations::add);
 
         int checkpointId = 1;
         for (int gateId : CHECKPOINT_GATE_IDS) {
@@ -123,6 +132,8 @@ public final class ToBeeCandidateProfileService {
                 issues.add("profile-world-mismatch:" + map.world);
             if (!map.arenaSetupEnabled)
                 issues.add("candidate-profile-unexpectedly-promoted");
+            if (map.arenaRunnerSpawnLocations.size() != 20)
+                issues.add("runner-spawn-count:" + map.arenaRunnerSpawnLocations.size());
             if (map.arenaCheckpoints.size() != CHECKPOINT_GATE_IDS.size())
                 issues.add("checkpoint-count:" + map.arenaCheckpoints.size());
             if (map.arenaFinishCheckpointId == null
@@ -152,6 +163,10 @@ public final class ToBeeCandidateProfileService {
                         + ":" + candidate.compact());
         }
 
+        int runnerStartCount = runnerStartCandidates(world, 20).size();
+        if (runnerStartCount < 20)
+            issues.add("safe-runner-start-capacity:" + runnerStartCount + "/20");
+
         return issues;
     }
 
@@ -165,6 +180,18 @@ public final class ToBeeCandidateProfileService {
 
     public static int finishGateId() {
         return 3;
+    }
+
+    public static int runnerSpawnTarget() {
+        return 20;
+    }
+
+    public static int startSearchColumnCount() {
+        GateEvidence gate = GATES.get(6);
+        int normalDistances = 6;
+        int lateralColumns = (gate.max().z() - gate.min().z() + 1) + 4;
+        int verticalColumns = 6;
+        return normalDistances * lateralColumns * verticalColumns;
     }
 
     public static int expectedPortalBlockTotal() {
@@ -188,13 +215,51 @@ public final class ToBeeCandidateProfileService {
     public static @NotNull List<String> knownRemainingBlockers() {
         return List.of(
                 "original-waiting-lobby-not-recovered",
-                "runner-start-layout-only-1-of-20-safe-candidates-recovered",
+                "runner-start-layout-generated-from-safe-archive-geometry-not-original",
                 "death-spawns-not-recovered",
                 "death-button-to-trap-bindings-not-recovered",
                 "trap-target-cuboids-and-reset-parameters-not-recovered",
                 "start-barrier-not-recovered",
                 "original-checkpoint-score-values-not-recovered"
         );
+    }
+
+    private static @NotNull List<BlockPos> runnerStartCandidates(
+            @NotNull World world,
+            int limit
+    ) {
+        GateEvidence gate = GATES.get(6);
+        List<BlockPos> candidates = new ArrayList<>();
+
+        for (int normalDistance = 1; normalDistance <= 6; normalDistance++) {
+            int x = gate.max().x() + normalDistance;
+            for (int z = gate.min().z() - 2; z <= gate.max().z() + 2; z++) {
+                for (int y = gate.min().y() - 2; y < gate.min().y() + 4; y++) {
+                    BlockPos pos = new BlockPos(x, y, z);
+                    if (safeStandingColumn(world, pos))
+                        candidates.add(pos);
+                }
+            }
+        }
+
+        final double centerY = 28.76;
+        final double centerZ = 81.91;
+        candidates.sort(
+                Comparator.comparingInt((BlockPos pos) -> pos.x() - gate.max().x())
+                        .thenComparingInt(pos -> Math.abs(pos.y() - gate.min().y()))
+                        .thenComparingDouble(pos -> {
+                            double dy = pos.y() - centerY;
+                            double dz = pos.z() + 0.5 - centerZ;
+                            return dy * dy + dz * dz;
+                        })
+                        .thenComparingInt(BlockPos::x)
+                        .thenComparingInt(BlockPos::y)
+                        .thenComparingInt(BlockPos::z)
+        );
+
+        if (candidates.size() <= limit)
+            return List.copyOf(candidates);
+        return List.copyOf(candidates.subList(0, limit));
     }
 
     private static int countPortalBlocks(@NotNull World world, @NotNull GateEvidence gate) {
