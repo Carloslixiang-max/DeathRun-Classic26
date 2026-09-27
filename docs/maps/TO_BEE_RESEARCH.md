@@ -327,6 +327,28 @@ However it creates a strong, testable direction hypothesis for the core chain
 instead of relying on coordinate sorting.
 
 
+Run #285 / commits `5af2c69629f6f75e92041380dd896684bbcee64f` +
+`ec0e28d7f70b0cb240d325b37077eb9e28b3ec0b` score both directions of the
+entire seven-gate MST under that explicit incoming-facing assumption and pass
+the complete Java 25 / Paper 26.2 restart smoke.
+
+The result is strongly asymmetric:
+
+- candidate `#006 → #007 → #002 → #001 → #004 → #005 → #003`:
+  **9 agree / 2 disagree / 1 lateral**, net **+7**
+- reverse `#003 → #005 → #004 → #001 → #002 → #007 → #006`:
+  **2 agree / 9 disagree / 1 lateral**, net **−7**
+- score margin: **14**
+- four MST edges have both warning sides agreeing with the preferred direction
+- only one MST edge contains a directional disagreement: **#006 ↔ #007**
+
+Accordingly the current **high-confidence direction hypothesis** is from the
+#006 side toward #003, with the important caveat that #006↔#007 is anomalous
+and already corresponds to the `Hint: Look down!` vertical-transition area.
+This is still not promoted to confirmed checkpoint order until an independent
+gameplay/route signal corroborates it.
+
+
 Run #281 / commit `1e0c3506b86d4e185cdc6c424a772640491aeb1c`
 adds a deliberately narrow static route-structure family
 (`barrier`, `iron_bars`, fence gates) to test whether one MST endpoint has a
