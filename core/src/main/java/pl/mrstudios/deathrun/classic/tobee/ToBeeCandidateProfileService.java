@@ -94,7 +94,7 @@ public final class ToBeeCandidateProfileService {
             new BlockPos(-45, 29, 7),
             new BlockPos(-41, 35, 3),
             iceTargetPositions(),
-            Material.PACKED_ICE,
+            "PACKED_ICE",
             "TrapFlood: replace packed ice with water for Classic26 active duration",
             "target geometry archive-backed; nearest-button/effect-duration reconstruction"
     );
@@ -104,7 +104,7 @@ public final class ToBeeCandidateProfileService {
             new BlockPos(30, 44, 15),
             new BlockPos(31, 48, 14),
             coalTargetPositions(),
-            Material.COAL_BLOCK,
+            "COAL_BLOCK",
             "TrapFireFloor: replace coal with magma and use active trap contact",
             "target geometry archive-backed; nearest-button/effect-duration reconstruction"
     );
@@ -321,11 +321,18 @@ public final class ToBeeCandidateProfileService {
                     .getType().name().endsWith("_BUTTON"))
                 issues.add("material-trap-button-missing:" + evidence.id() + ":" + evidence.button().compact());
 
+            Material expected = Material.matchMaterial(evidence.expectedMaterialName());
+            if (expected == null) {
+                issues.add("material-trap-expected-material-invalid:" + evidence.id()
+                        + ":" + evidence.expectedMaterialName());
+                continue;
+            }
+
             for (BlockPos target : evidence.targets()) {
                 Material actual = world.getBlockAt(target.x(), target.y(), target.z()).getType();
-                if (actual != evidence.expectedMaterial())
+                if (actual != expected)
                     issues.add("material-trap-target-missing:" + evidence.id() + ":"
-                            + target.compact() + ":" + actual.name() + "/" + evidence.expectedMaterial().name());
+                            + target.compact() + ":" + actual.name() + "/" + evidence.expectedMaterialName());
             }
         }
 
@@ -644,7 +651,7 @@ public final class ToBeeCandidateProfileService {
             @NotNull BlockPos actionSign,
             @NotNull BlockPos button,
             @NotNull List<BlockPos> targets,
-            @NotNull Material expectedMaterial,
+            @NotNull String expectedMaterialName,
             @NotNull String behavior,
             @NotNull String confidence
     ) {}

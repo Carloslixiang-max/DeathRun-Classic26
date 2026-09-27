@@ -22,6 +22,8 @@ class SemanticTargetEvidenceTest(unittest.TestCase):
         self.assertIsNone(semantic_family("minecraft:redstone_block"))
         self.assertIsNone(semantic_family("minecraft:red_tulip"))
         self.assertIsNone(semantic_family("minecraft:oak_leaves"))
+        self.assertIsNone(semantic_family("minecraft:stone_brick_slab"))
+        self.assertIsNone(semantic_family("minecraft:stone_brick_stairs"))
 
     def test_connected_components_use_face_adjacency(self):
         points = {(0, 0, 0), (1, 0, 0), (1, 1, 0), (5, 0, 0)}

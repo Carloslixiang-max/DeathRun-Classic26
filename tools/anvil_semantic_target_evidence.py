@@ -31,11 +31,11 @@ CASES = (
     TargetCase("001", "Melt the ice", (-62, 25, 24), ("ICE",)),
     TargetCase("002", "Remove dark wood A", (-57, 25, -14), ("WOODLIKE",)),
     TargetCase("006", "Remove red blocks A", (-25, 18, -34), ("RED_STRUCTURAL",)),
-    TargetCase("012", "Remove red blocks B", (7, 25, -36), ("RED_COLOR",)),
+    TargetCase("012", "Remove red blocks B", (7, 25, -36), ("RED_STRUCTURAL",)),
     TargetCase("014", "Remove dark wood B", (24, 35, 79), ("WOODLIKE",)),
     TargetCase("015", "Set the coals on fire", (32, 45, 11), ("COAL",)),
-    TargetCase("018", "Remove red blocks C", (37, 34, 85), ("RED_COLOR",)),
-    TargetCase("021", "Remove red blocks D", (93, 25, 56), ("RED_COLOR",)),
+    TargetCase("018", "Remove red blocks C", (37, 34, 85), ("RED_STRUCTURAL",)),
+    TargetCase("021", "Remove red blocks D", (93, 25, 56), ("RED_STRUCTURAL",)),
     TargetCase("sea-lantern", "Remove Sea Lanterns", (72, 25, 76), ("SEA_LANTERN",)),
 )
 
@@ -53,6 +53,10 @@ WOODLIKE_SUFFIXES = (
     "_planks", "_log", "_wood", "_stem", "_hyphae",
     "_slab", "_stairs", "_fence", "_fence_gate", "_trapdoor",
 )
+WOODLIKE_SPECIES = (
+    "oak", "spruce", "birch", "jungle", "acacia", "dark_oak",
+    "crimson", "warped",
+)
 
 
 def semantic_family(name: str) -> str | None:
@@ -61,8 +65,15 @@ def semantic_family(name: str) -> str | None:
         return "ICE"
     if normalized in RED_STRUCTURAL:
         return "RED_STRUCTURAL"
-    if normalized.startswith("minecraft:") and normalized.endswith(WOODLIKE_SUFFIXES):
-        return "WOODLIKE"
+    if normalized.startswith("minecraft:"):
+        block_name = normalized.removeprefix("minecraft:")
+        is_wood_species = any(
+            block_name.startswith(species + "_")
+            or block_name.startswith("stripped_" + species + "_")
+            for species in WOODLIKE_SPECIES
+        )
+        if is_wood_species and block_name.endswith(WOODLIKE_SUFFIXES):
+            return "WOODLIKE"
     if normalized == "minecraft:coal_block":
         return "COAL"
     if normalized == "minecraft:sea_lantern":
