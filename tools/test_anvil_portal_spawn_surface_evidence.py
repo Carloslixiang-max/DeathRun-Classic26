@@ -38,6 +38,26 @@ class AnvilPortalSpawnSurfaceEvidenceTest(unittest.TestCase):
         self.assertEqual(1, evidence.negative[0].normal_distance)
         self.assertEqual("minecraft:stone", evidence.positive[0].support)
 
+    def test_grass_plant_is_not_accepted_as_spawn_support(self):
+        portal_points = [
+            Candidate("PORTAL", "minecraft:nether_portal", 0, 64, 0, "fixture"),
+            Candidate("PORTAL", "minecraft:nether_portal", 0, 65, 0, "fixture"),
+        ]
+        component = portal_components(portal_points)[0]
+        blocks = {
+            (1, 63, 0): "minecraft:grass",
+            (1, 64, 0): "minecraft:air",
+            (1, 65, 0): "minecraft:air",
+        }
+        evidence = standing_candidates(
+            1,
+            component,
+            blocks,
+            max_normal_distance=1,
+            lateral_padding=0,
+        )
+        self.assertFalse(evidence.positive)
+
     def test_barrier_is_not_accepted_as_spawn_support(self):
         portal_points = [
             Candidate("PORTAL", "minecraft:nether_portal", 0, 64, 0, "fixture"),

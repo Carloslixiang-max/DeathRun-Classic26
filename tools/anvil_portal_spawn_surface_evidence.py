@@ -5,7 +5,8 @@ For each surviving Nether Portal component, scan a small block window on both
 normal sides of the gate. A standing column is considered conservative when:
 - feet block is air;
 - head block is air;
-- support block below is present and is not air, fluid, portal, or barrier.
+- support block below is a conservative floor-like block, excluding air, fluids,
+  portals, barriers, no-collision plants, rails, wire, buttons and pressure plates.
 
 This is physical geometry evidence only. The nearest standing column is NOT
 automatically the original Hive checkpoint respawn, start, or finish position.
@@ -43,7 +44,69 @@ NON_SUPPORT = AIR | {
     "minecraft:end_portal",
     "minecraft:end_gateway",
     "minecraft:barrier",
+    # No-collision / non-floor blocks. The scan is deliberately conservative:
+    # if an integer-Y spawn would fall through or settle lower than modeled,
+    # it is not accepted as a safe standing support.
+    "minecraft:grass",
+    "minecraft:tall_grass",
+    "minecraft:fern",
+    "minecraft:large_fern",
+    "minecraft:dead_bush",
+    "minecraft:vine",
+    "minecraft:seagrass",
+    "minecraft:tall_seagrass",
+    "minecraft:kelp",
+    "minecraft:kelp_plant",
+    "minecraft:sugar_cane",
+    "minecraft:bamboo",
+    "minecraft:bamboo_sapling",
+    "minecraft:snow",
+    "minecraft:redstone_wire",
+    "minecraft:tripwire",
+    "minecraft:torch",
+    "minecraft:wall_torch",
+    "minecraft:redstone_torch",
+    "minecraft:redstone_wall_torch",
+    "minecraft:soul_torch",
+    "minecraft:soul_wall_torch",
+    "minecraft:rail",
+    "minecraft:powered_rail",
+    "minecraft:detector_rail",
+    "minecraft:activator_rail",
+    "minecraft:dandelion",
+    "minecraft:poppy",
+    "minecraft:blue_orchid",
+    "minecraft:allium",
+    "minecraft:azure_bluet",
+    "minecraft:red_tulip",
+    "minecraft:orange_tulip",
+    "minecraft:white_tulip",
+    "minecraft:pink_tulip",
+    "minecraft:oxeye_daisy",
+    "minecraft:cornflower",
+    "minecraft:lily_of_the_valley",
+    "minecraft:wither_rose",
+    "minecraft:sunflower",
+    "minecraft:lilac",
+    "minecraft:rose_bush",
+    "minecraft:peony",
 }
+
+NON_SUPPORT_SUFFIXES = (
+    "_sapling",
+    "_roots",
+    "_fungus",
+    "_coral_fan",
+    "_wall_coral_fan",
+    "_button",
+    "_pressure_plate",
+)
+
+
+def _is_support_block(name: str) -> bool:
+    if name in NON_SUPPORT:
+        return False
+    return not name.endswith(NON_SUPPORT_SUFFIXES)
 
 
 @dataclass(frozen=True)
@@ -241,7 +304,7 @@ def _safe_standing(
     head = blocks.get((x, y + 1, z), "minecraft:air")
     support = blocks.get((x, y - 1, z), "minecraft:air")
     return (
-        feet in AIR and head in AIR and support not in NON_SUPPORT,
+        feet in AIR and head in AIR and _is_support_block(support),
         support,
     )
 
@@ -356,7 +419,7 @@ def render_report(
             f"legacy_sections_skipped={stats.legacy_sections_skipped} "
             f"captured_blocks={stats.captured_blocks}"
         ),
-        "# Candidates require air at feet/head plus a non-air/non-fluid/non-portal/non-barrier support block.",
+        "# Candidates require air at feet/head plus a conservative floor-like support block.",
         "# They are safe-standing geometry candidates only; they are NOT original checkpoint respawns.",
         "",
     ]
