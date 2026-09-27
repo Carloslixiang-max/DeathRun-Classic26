@@ -55,6 +55,7 @@ jobs:
           python3 tools/test_anvil_route_portal_evidence.py
           python3 tools/test_anvil_portal_segment_evidence.py
           python3 tools/test_anvil_portal_segment_graph.py
+          python3 tools/test_anvil_warning_facing_evidence.py
           python3 tools/test_anvil_endpoint_context.py
           python3 tools/test_anvil_pressure_route_evidence.py
           python3 tools/test_anvil_portal_shape_evidence.py
@@ -152,6 +153,13 @@ jobs:
             --min-portals 7 --require-mst-path
           echo '--- To Bee portal segment warning-proximity graph ---'
           cat "$ROOT/to-bee-or-not-to-bee-segment-graph.txt"
+
+          python3 tools/anvil_warning_facing_evidence.py \
+            "$ROOT/to-bee-or-not-to-bee-probe.txt" \
+            --output "$ROOT/to-bee-or-not-to-bee-warning-facing.txt" \
+            --min-known-front-sides 1
+          echo '--- To Bee Runner-warning facing evidence ---'
+          cat "$ROOT/to-bee-or-not-to-bee-warning-facing.txt"
 
           python3 tools/anvil_mechanism_evidence.py \
             "$ROOT/to-bee-or-not-to-bee-probe.txt" \
