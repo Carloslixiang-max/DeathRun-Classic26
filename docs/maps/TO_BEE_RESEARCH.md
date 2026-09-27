@@ -181,6 +181,52 @@ version. The outstanding question is now whether the Java layout truly used
 seven gates or whether additional gates/configuration were stripped or changed
 in later Gardens/Bedrock revisions.
 
+
+## Portal trap-segment partition evidence
+
+Run #273 / commit `53ac2f72c621acb2b050cb487b21078d148412da`
+partitions the stable **21 warning/action review pairs** by the nearest surviving
+portal gate to the Runner warning position. This is a nearest-center geometry
+partition only; it does not assign checkpoint numbers or route order.
+
+Real archive result:
+
+- **21** warning/action pairs
+- **7** surviving portal gates
+- **7/7** gates receive at least one Runner warning pair
+- **19/21** pairs have both the Runner warning and Death action nearest to the
+  same portal gate
+- **2/21** pairs cross nearest-gate assignments, and both use Portal **#005**
+  on the Runner-warning side
+
+Per-gate warning-pair groups:
+
+| Portal | Warning pairs | Surviving action labels |
+| --- | ---: | --- |
+| #001 | 3 | Fire Arrows; Summon a random wall; Explode the minefield |
+| #002 | 4 | Release fire snake; Fire Arrows; Remove dark wood; Remove red blocks |
+| #003 | 2 | Summon a random wall; Make the floor fall |
+| #004 | 4 | Melt the ice; Remove dark wood; Summon a random wall; Flood the floor |
+| #005 | 3 | Fire Arrows; Remove red blocks; Remove red blocks |
+| #006 | 2 | Release fire snake; Remove red blocks |
+| #007 | 3 | Set the coals on fire; Flood the floor; Make the floor fall |
+
+The two cross-gate pair candidates are:
+
+- Runner warning `-41,18,-34` is nearest Portal **#005**, while its
+  `Fire Arrows` action `-35,29,-19` is nearest Portal **#004**
+- Runner warning `7,25,-36` is nearest Portal **#005**, while its
+  `Remove red blocks` action `13,29,-19` is nearest Portal **#003**
+
+This makes Portal #005 a strong **structural bridge review candidate between the
+#004/#003 control neighborhoods**. The direction of that relationship is not a
+checkpoint-order claim: warning-side vs action-side geometry is not equivalent
+to Runner travel direction.
+
+The fact that all seven gates receive trap-pair assignments also means there is
+no surviving portal gate that can be identified as start/finish merely because
+it lacks nearby trap evidence.
+
 ## Archived redstone/control-chain evidence
 
 Run #255 / commit `19f330d3a0998c7af887865e0e420c1d50f3d168`
