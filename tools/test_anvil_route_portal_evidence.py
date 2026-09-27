@@ -17,6 +17,7 @@ class AnvilRoutePortalEvidenceTest(unittest.TestCase):
 BLOCK\tPORTAL\tminecraft:nether_portal\t0\t65\t0\tregion=r.0.0.mca\tchunk=0,0
 BLOCK\tPORTAL\tminecraft:nether_portal\t40\t64\t0\tregion=r.0.0.mca\tchunk=2,0
 SIGN\tminecraft:sign\t3\t64\t0\tregion=r.0.0.mca\tchunk=0,0\ttext=Warning! | Test trap
+SIGN\tminecraft:sign\t42\t64\t0\tregion=r.0.0.mca\tchunk=2,0\ttext=Hint: | Look down!
 """
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "probe.txt"
@@ -32,14 +33,26 @@ SIGN\tminecraft:sign\t3\t64\t0\tregion=r.0.0.mca\tchunk=0,0\ttext=Warning! | Tes
                 components,
                 [sign for sign in signs if sign.text.startswith("Warning")],
                 warning_radius=10.0,
+                hints=[sign for sign in signs if sign.text.startswith("Hint")],
+                hint_radius=5.0,
             )
             self.assertEqual(2, len(links))
             self.assertEqual(1, sum(bool(link.nearby_warnings) for link in links))
+            self.assertEqual(1, sum(bool(link.nearby_hints) for link in links))
 
-            report, stats = render_report(path, signs, components, warning_radius=10.0)
+            report, stats = render_report(
+                path,
+                signs,
+                components,
+                warning_radius=10.0,
+                hint_radius=5.0,
+            )
             self.assertEqual(1, stats["portals_with_warning_nearby"])
             self.assertEqual(1, stats["portals_without_warning_nearby"])
+            self.assertEqual(1, stats["hints"])
+            self.assertEqual(1, stats["portals_with_hint_nearby"])
             self.assertIn("ROUTE_PORTAL", report)
+            self.assertIn("ROUTE_PORTAL_HINT", report)
             self.assertIn("ROUTE_PORTAL_WARNING", report)
             self.assertNotIn("checkpoint=true", report)
             self.assertIn("NOT automatically a checkpoint", report)

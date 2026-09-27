@@ -26,6 +26,7 @@ class PortalWarningLink:
     nearest_warning: Sign | None
     nearest_distance: float | None
     nearby_warnings: tuple[tuple[Sign, float], ...]
+    nearby_hints: tuple[tuple[Sign, float], ...]
 
 
 def _distance(component: Component, sign: Sign) -> float:
@@ -37,6 +38,8 @@ def build_links(
     components: Sequence[Component],
     warnings: Sequence[Sign],
     warning_radius: float,
+    hints: Sequence[Sign] = (),
+    hint_radius: float = 12.0,
 ) -> list[PortalWarningLink]:
     result: list[PortalWarningLink] = []
     for component in components:
@@ -51,12 +54,24 @@ def build_links(
             ),
         )
         nearby = tuple(item for item in ranked if item[1] <= warning_radius)
+        ranked_hints = sorted(
+            ((hint, _distance(component, hint)) for hint in hints),
+            key=lambda item: (
+                item[1],
+                item[0].x,
+                item[0].y,
+                item[0].z,
+                item[0].text,
+            ),
+        )
+        nearby_hints = tuple(item for item in ranked_hints if item[1] <= hint_radius)
         result.append(
             PortalWarningLink(
                 component=component,
                 nearest_warning=ranked[0][0] if ranked else None,
                 nearest_distance=ranked[0][1] if ranked else None,
                 nearby_warnings=nearby,
+                nearby_hints=nearby_hints,
             )
         )
     return result
@@ -81,15 +96,32 @@ def render_report(
     signs: Sequence[Sign],
     components: Sequence[Component],
     warning_radius: float,
+    hint_radius: float = 12.0,
 ) -> tuple[str, dict[str, int]]:
     warnings = sorted(
         (sign for sign in signs if sign_kind(sign) == "WARNING"),
         key=lambda sign: (sign.x, sign.y, sign.z, sign.text),
     )
-    links = build_links(components, warnings, warning_radius)
+    hints = sorted(
+        (
+            sign
+            for sign in signs
+            if sign_kind(sign) == "OTHER"
+            and sign.text.strip().lower().startswith("hint")
+        ),
+        key=lambda sign: (sign.x, sign.y, sign.z, sign.text),
+    )
+    links = build_links(
+        components,
+        warnings,
+        warning_radius,
+        hints=hints,
+        hint_radius=hint_radius,
+    )
 
     with_warning = sum(bool(link.nearby_warnings) for link in links)
     without_warning = len(links) - with_warning
+    with_hint = sum(bool(link.nearby_hints) for link in links)
     covered_warning_positions = {
         (warning.x, warning.y, warning.z)
         for link in links
@@ -101,6 +133,8 @@ def render_report(
         "portals_with_warning_nearby": with_warning,
         "portals_without_warning_nearby": without_warning,
         "warnings_near_portal": len(covered_warning_positions),
+        "hints": len(hints),
+        "portals_with_hint_nearby": with_hint,
     }
 
     lines = [
@@ -113,10 +147,13 @@ def render_report(
             f"portals_with_warning_nearby={stats['portals_with_warning_nearby']} "
             f"portals_without_warning_nearby={stats['portals_without_warning_nearby']} "
             f"warnings_near_portal={stats['warnings_near_portal']} "
-            f"warning_radius={warning_radius:g}"
+            f"hints={stats['hints']} "
+            f"portals_with_hint_nearby={stats['portals_with_hint_nearby']} "
+            f"warning_radius={warning_radius:g} hint_radius={hint_radius:g}"
         ),
         "# Portal proximity is physical evidence only.",
-        "# A portal with/without nearby warning signs is NOT automatically a checkpoint, start, finish, or route-order marker.",
+        "# ROUTE_PORTAL_HINT preserves explicit Hint: sign proximity; it does not assign portal behavior.",
+        "# A portal with/without nearby warning or hint signs is NOT automatically a checkpoint, start, finish, or route-order marker.",
         "",
     ]
 
@@ -133,6 +170,7 @@ def render_report(
             f"center={_center_text(link.component)}\t"
             f"bbox={_bbox_text(link.component)}\t"
             f"nearby_warnings={len(link.nearby_warnings)}\t"
+            f"nearby_hints={len(link.nearby_hints)}\t"
             f"nearest_warning={nearest_pos}\t"
             f"nearest_distance={nearest_distance}"
         )
@@ -141,6 +179,12 @@ def render_report(
                 "ROUTE_PORTAL_WARNING\t"
                 f"portal={index:03d}\twarning_pos={_warning_pos(warning)}\t"
                 f"distance={distance_value:.2f}\ttext={warning.text}"
+            )
+        for hint, distance_value in link.nearby_hints:
+            lines.append(
+                "ROUTE_PORTAL_HINT\t"
+                f"portal={index:03d}\thint_pos={_warning_pos(hint)}\t"
+                f"distance={distance_value:.2f}\ttext={hint.text}"
             )
 
     return "\n".join(lines) + "\n", stats
@@ -151,13 +195,15 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("probe_report", type=Path)
     parser.add_argument("--output", type=Path)
     parser.add_argument("--warning-radius", type=float, default=20.0)
+    parser.add_argument("--hint-radius", type=float, default=12.0)
     parser.add_argument("--min-portals", type=int, default=0)
     parser.add_argument("--min-portals-with-warning", type=int, default=0)
     parser.add_argument("--min-portals-without-warning", type=int, default=0)
+    parser.add_argument("--min-portals-with-hint", type=int, default=0)
     args = parser.parse_args(argv)
 
-    if args.warning_radius <= 0:
-        parser.error("--warning-radius must be positive")
+    if args.warning_radius <= 0 or args.hint_radius <= 0:
+        parser.error("warning/hint radii must be positive")
 
     _buttons, signs = parse_sign_probe(args.probe_report)
     points, portals = parse_candidate_probe(args.probe_report)
@@ -168,6 +214,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         signs,
         components,
         args.warning_radius,
+        args.hint_radius,
     )
 
     if args.output:
@@ -182,6 +229,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         return 3
     if stats["portals_without_warning_nearby"] < args.min_portals_without_warning:
         return 4
+    if stats["portals_with_hint_nearby"] < args.min_portals_with_hint:
+        return 5
     return 0
 
 
