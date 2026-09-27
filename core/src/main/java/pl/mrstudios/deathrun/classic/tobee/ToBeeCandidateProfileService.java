@@ -10,6 +10,7 @@ import pl.mrstudios.deathrun.arena.trap.impl.TrapArrows;
 import pl.mrstudios.deathrun.arena.trap.impl.TrapDisappearingBlocks;
 import pl.mrstudios.deathrun.arena.trap.impl.TrapFireFloor;
 import pl.mrstudios.deathrun.arena.trap.impl.TrapFlood;
+import pl.mrstudios.deathrun.arena.trap.impl.TrapMinefield;
 import pl.mrstudios.deathrun.config.Configuration;
 import pl.mrstudios.deathrun.config.impl.MapConfiguration;
 
@@ -163,6 +164,35 @@ public final class ToBeeCandidateProfileService {
             "TrapDisappearingBlocks: remove nearest route-level four-block wood run",
             "target geometry archive-backed; nearest-button reconstruction"
     );
+    private static final MaterialTrapEvidence FLOOR_FALL_A_TRAP = new MaterialTrapEvidence(
+            "pair-016-floor-fall-A",
+            new BlockPos(28, 29, -17),
+            new BlockPos(24, 35, -15),
+            floorFallATargetPositions(),
+            "LIGHT_BLUE_STAINED_GLASS",
+            "TrapDisappearingBlocks: remove the exact 82-cell glass floor component",
+            "target geometry archive-backed; nearest-button reconstruction"
+    );
+
+    private static final MaterialTrapEvidence MINEFIELD_TRAP = new MaterialTrapEvidence(
+            "pair-009-minefield",
+            new BlockPos(11, 29, 40),
+            new BlockPos(15, 35, 39),
+            minefieldTntPositions(),
+            "TNT",
+            "TrapMinefield: prime random mines one block above the 32 preserved TNT cells",
+            "target geometry archive-backed; nearest-button reconstruction"
+    );
+
+    private static final MaterialTrapEvidence FLOOD_B_TRAP = new MaterialTrapEvidence(
+            "pair-017-flood-B",
+            new BlockPos(27, 44, 21),
+            new BlockPos(26, 48, 23),
+            floodBTargetPositions(),
+            "STONE_BRICKS",
+            "TrapFlood: replace exact 79-cell high-stage stone-brick floor with water",
+            "target geometry archive-backed; nearest panel-button reconstruction"
+    );
     private static final int START_BARRIER_X = 84;
     private static final int START_BARRIER_MIN_Y = 25;
     private static final int START_BARRIER_MAX_Y = 26;
@@ -252,16 +282,19 @@ public final class ToBeeCandidateProfileService {
 
         // Keep implemented controls in recovered route order so Death navigation
         // advances through the map rather than through trap-class insertion order.
-        addDisappearingTrap(map, world, SEA_LANTERN_TRAP);
         addDisappearingTrap(map, world, RED_D_TRAP);
+        addDisappearingTrap(map, world, SEA_LANTERN_TRAP);
         addCoalFireTrap(map, world);
+        addFloodTrap(map, world, FLOOD_B_TRAP);
         addFireArrowTrap(map, world, FIRE_ARROW_TRAPS.get(0));
+        addMinefieldTrap(map, world);
         addFireArrowTrap(map, world, FIRE_ARROW_TRAPS.get(1));
         addDisappearingTrap(map, world, DARK_WOOD_A_TRAP);
         addIceMeltTrap(map, world);
         addFireArrowTrap(map, world, FIRE_ARROW_TRAPS.get(2));
         addDisappearingTrap(map, world, RED_A_TRAP);
         addDisappearingTrap(map, world, RED_B_TRAP);
+        addDisappearingTrap(map, world, FLOOR_FALL_A_TRAP);
 
         map.arenaMaxPlayers = 22;
         map.arenaRequiredPlayersToStart = 11;
@@ -373,7 +406,8 @@ public final class ToBeeCandidateProfileService {
 
         for (MaterialTrapEvidence evidence : List.of(
                 ICE_MELT_TRAP, COAL_FIRE_TRAP,
-                RED_A_TRAP, RED_B_TRAP, RED_D_TRAP, SEA_LANTERN_TRAP, DARK_WOOD_A_TRAP
+                RED_A_TRAP, RED_B_TRAP, RED_D_TRAP, SEA_LANTERN_TRAP, DARK_WOOD_A_TRAP,
+                FLOOR_FALL_A_TRAP, MINEFIELD_TRAP, FLOOD_B_TRAP
         )) {
             if (!world.getBlockAt(evidence.actionSign().x(), evidence.actionSign().y(), evidence.actionSign().z())
                     .getType().name().endsWith("_SIGN"))
@@ -454,7 +488,7 @@ public final class ToBeeCandidateProfileService {
     }
 
     public static int implementedTrapCount() {
-        return FIRE_ARROW_TRAPS.size() + 7;
+        return FIRE_ARROW_TRAPS.size() + 10;
     }
 
     public static @NotNull MaterialTrapEvidence iceMeltEvidence() {
@@ -475,6 +509,18 @@ public final class ToBeeCandidateProfileService {
     public static @NotNull List<MaterialTrapEvidence> darkWoodEvidence() {
         return List.of(DARK_WOOD_A_TRAP);
     }
+    public static @NotNull MaterialTrapEvidence floorFallEvidence() {
+        return FLOOR_FALL_A_TRAP;
+    }
+
+    public static @NotNull MaterialTrapEvidence minefieldEvidence() {
+        return MINEFIELD_TRAP;
+    }
+
+    public static @NotNull MaterialTrapEvidence floodEvidence() {
+        return FLOOD_B_TRAP;
+    }
+
 
     public static int expectedPortalBlockTotal() {
         return GATES.values().stream().mapToInt(GateEvidence::expectedPortalBlocks).sum();
@@ -500,7 +546,7 @@ public final class ToBeeCandidateProfileService {
                 "runner-start-layout-generated-from-safe-archive-geometry-not-original",
                 "death-spawns-generated-from-first-stage-control-geometry-not-original",
                 "death-button-to-trap-bindings-partially-reconstructed-runtime-subset",
-                "trap-target-geometry-recovered-10-runtime-traps",
+                "trap-target-geometry-recovered-13-runtime-traps",
                 "remaining-trap-targets-and-original-reset-parameters-not-recovered",
                 "start-barrier-generated-outside-gate-006-not-original",
                 "original-checkpoint-score-values-not-recovered"
@@ -547,6 +593,31 @@ public final class ToBeeCandidateProfileService {
                 .toList());
         map.arenaTraps.add(trap);
     }
+    private static void addMinefieldTrap(
+            @NotNull MapConfiguration.MapDefinition map,
+            @NotNull World world
+    ) {
+        TrapMinefield trap = new TrapMinefield();
+        trap.setButton(blockLocation(world, MINEFIELD_TRAP.button()));
+        trap.setLocations(MINEFIELD_TRAP.targets().stream()
+                .map(pos -> blockLocation(world, new BlockPos(pos.x(), pos.y() + 1, pos.z())))
+                .toList());
+        map.arenaTraps.add(trap);
+    }
+
+    private static void addFloodTrap(
+            @NotNull MapConfiguration.MapDefinition map,
+            @NotNull World world,
+            @NotNull MaterialTrapEvidence evidence
+    ) {
+        TrapFlood trap = new TrapFlood();
+        trap.setButton(blockLocation(world, evidence.button()));
+        trap.setLocations(evidence.targets().stream()
+                .map(pos -> blockLocation(world, pos))
+                .toList());
+        map.arenaTraps.add(trap);
+    }
+
     private static void addCoalFireTrap(
             @NotNull MapConfiguration.MapDefinition map,
             @NotNull World world
@@ -629,6 +700,57 @@ public final class ToBeeCandidateProfileService {
                 positions.add(new BlockPos(x, 20, z));
         return List.copyOf(positions);
     }
+    private static @NotNull List<BlockPos> floorFallATargetPositions() {
+        List<BlockPos> positions = new ArrayList<>();
+        for (int x = 29; x <= 37; x++) {
+            for (int z = -27; z <= -18; z++) {
+                if (x == 29 && z >= -24 && z <= -20)
+                    continue;
+                if (x == 37 && z >= -27 && z <= -25)
+                    continue;
+                positions.add(new BlockPos(x, 24, z));
+            }
+        }
+        return List.copyOf(positions);
+    }
+
+    private static @NotNull List<BlockPos> minefieldTntPositions() {
+        return List.of(
+                new BlockPos(-2,23,37), new BlockPos(-2,23,38), new BlockPos(-2,23,39),
+                new BlockPos(-2,23,40), new BlockPos(-2,23,41),
+                new BlockPos(-1,23,36), new BlockPos(-1,23,37), new BlockPos(-1,23,41), new BlockPos(-1,23,42),
+                new BlockPos(0,23,36), new BlockPos(0,23,42),
+                new BlockPos(1,23,43),
+                new BlockPos(2,23,38), new BlockPos(2,23,43),
+                new BlockPos(3,23,38), new BlockPos(3,23,39), new BlockPos(3,23,42), new BlockPos(3,23,43),
+                new BlockPos(4,23,39), new BlockPos(4,23,40), new BlockPos(4,23,41), new BlockPos(4,23,42),
+                new BlockPos(4,23,36),
+                new BlockPos(5,23,36), new BlockPos(5,23,37),
+                new BlockPos(6,23,37), new BlockPos(6,23,38), new BlockPos(6,23,39),
+                new BlockPos(7,23,39), new BlockPos(7,23,40), new BlockPos(7,23,41), new BlockPos(7,23,42)
+        );
+    }
+
+    private static @NotNull List<BlockPos> floodBTargetPositions() {
+        Map<Integer, int[]> rows = Map.of(
+                30, new int[]{22,23,24,25,26,27,28,29,30,31},
+                31, new int[]{22,25,28,29,31},
+                32, new int[]{22,23,24,25,26,27,28,29,30,31},
+                33, new int[]{22,23,24,25,27,28,29,30,31},
+                34, new int[]{23,24,25,26,27,28,29,30},
+                35, new int[]{22,23,24,25,26,27,28,29,30,31},
+                36, new int[]{22,23,24,25,26,27,29,30,31},
+                37, new int[]{24,25,26,27,28,30,31},
+                38, new int[]{21,22,23,24,25,26,27,28,29,30,31}
+        );
+        List<BlockPos> positions = new ArrayList<>();
+        rows.entrySet().stream().sorted(Map.Entry.comparingByKey()).forEach(entry -> {
+            for (int z : entry.getValue())
+                positions.add(new BlockPos(entry.getKey(), 43, z));
+        });
+        return List.copyOf(positions);
+    }
+
     private static void addRectangle(
             @NotNull List<BlockPos> positions,
             int minX, int maxX, int y, int minZ, int maxZ

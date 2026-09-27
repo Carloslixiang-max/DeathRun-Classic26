@@ -1003,3 +1003,38 @@ walkable support components around the still-unresolved Random Wall, Flood,
 Minefield, Fire Snake and Floor Fall warnings. This does not auto-create
 targets; it prints exact material components and coordinates so the next
 runtime conversions can use original route geometry rather than guessed cuboids.
+
+
+### Floor Fall A, Minefield and high-stage Flood promoted
+
+Run #310 consumes the first route-surface report and promotes three unusually
+clear physical structures, raising the To Bee runtime subset to **13 traps**.
+
+**Floor Fall A** (`33,25,-28 -> 28,29,-17`):
+
+- exact target: **82 `light_blue_stained_glass` floor cells** at `y=24`
+- the component begins one block from the warning and forms the obvious route
+  platform
+- reconstructed control: nearest preserved button `24,35,-15`
+- runtime: `TrapDisappearingBlocks`
+
+**Minefield** (`6,25,46 -> 11,29,40`):
+
+- the archive preserves **32 exposed TNT support cells** under the route
+- reconstructed control: nearest preserved button `15,35,39`
+- runtime: `TrapMinefield`; the trap uses the air cell directly above each
+  preserved TNT block as a mine spawn candidate, so primed TNT is never spawned
+  inside a solid block
+- the generic Classic26 minefield still selects at most 12 mines per activation
+
+**Flood B** (`36,45,21 -> 27,44,21`):
+
+- exact target: **79 connected `stone_bricks` floor cells** at `y=43`
+- this component is flanked by the preserved east/west dispenser geometry
+  already associated with the flood warning
+- reconstructed control: nearest panel button `26,48,23`
+- runtime: `TrapFlood`, replacing only those exact archive floor cells with
+  water and restoring their original BlockData afterward
+
+These are still playability reconstructions for control binding and duration;
+the physical target geometry itself comes directly from the archived Java map.

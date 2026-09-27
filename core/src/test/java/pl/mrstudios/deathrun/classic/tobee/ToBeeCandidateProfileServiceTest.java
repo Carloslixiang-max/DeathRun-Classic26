@@ -21,7 +21,7 @@ class ToBeeCandidateProfileServiceTest {
         assertEquals(726, ToBeeCandidateProfileService.startSearchColumnCount());
         assertEquals(14, ToBeeCandidateProfileService.startBarrierPositions().size());
         assertEquals(3, ToBeeCandidateProfileService.fireArrowTrapCount());
-        assertEquals(10, ToBeeCandidateProfileService.implementedTrapCount());
+        assertEquals(13, ToBeeCandidateProfileService.implementedTrapCount());
         assertEquals(366, ToBeeCandidateProfileService.expectedPortalBlockTotal());
         assertEquals(7, new HashSet<>(ToBeeCandidateProfileService.routeGateIds()).size());
     }
@@ -120,6 +120,27 @@ class ToBeeCandidateProfileServiceTest {
     }
 
     @Test
+    void surfaceEvidencePromotesFloorMinefieldAndFloodTargets() {
+        var floor = ToBeeCandidateProfileService.floorFallEvidence();
+        assertEquals("pair-016-floor-fall-A", floor.id());
+        assertEquals("LIGHT_BLUE_STAINED_GLASS", floor.expectedMaterialName());
+        assertEquals(82, floor.targets().size());
+        assertEquals(82, new HashSet<>(floor.targets()).size());
+
+        var minefield = ToBeeCandidateProfileService.minefieldEvidence();
+        assertEquals("pair-009-minefield", minefield.id());
+        assertEquals("TNT", minefield.expectedMaterialName());
+        assertEquals(32, minefield.targets().size());
+        assertEquals(32, new HashSet<>(minefield.targets()).size());
+
+        var flood = ToBeeCandidateProfileService.floodEvidence();
+        assertEquals("pair-017-flood-B", flood.id());
+        assertEquals("STONE_BRICKS", flood.expectedMaterialName());
+        assertEquals(79, flood.targets().size());
+        assertEquals(79, new HashSet<>(flood.targets()).size());
+    }
+
+    @Test
     void deathControlStartAnchorsStayPinnedToUniqueArchiveCandidate() {
         assertEquals(new ToBeeCandidateProfileService.BlockPos(76, 25, 47),
                 ToBeeCandidateProfileService.deathControlButtonCandidate());
@@ -150,7 +171,7 @@ class ToBeeCandidateProfileServiceTest {
                 "runner-start-layout-generated-from-safe-archive-geometry-not-original",
                 "death-spawns-generated-from-first-stage-control-geometry-not-original",
                 "death-button-to-trap-bindings-partially-reconstructed-runtime-subset",
-                "trap-target-geometry-recovered-10-runtime-traps",
+                "trap-target-geometry-recovered-13-runtime-traps",
                 "remaining-trap-targets-and-original-reset-parameters-not-recovered",
                 "start-barrier-generated-outside-gate-006-not-original",
                 "original-checkpoint-score-values-not-recovered"
