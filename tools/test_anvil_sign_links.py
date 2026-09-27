@@ -10,10 +10,20 @@ from anvil_sign_links import (
     parse_probe_report,
     render_report,
     sign_front_vector,
+    sign_kind,
 )
 
 
 class AnvilSignLinksTest(unittest.TestCase):
+
+    def test_beware_prefix_is_warning(self):
+        fixture = """SIGN\tminecraft:sign\t70\t25\t53\tregion=r.0.0.mca\tchunk=4,3\ttext=Beware! | Fire Snake is | waiting for | launch!
+"""
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "probe.txt"
+            path.write_text(fixture, encoding="utf-8")
+            _buttons, signs = parse_probe_report(path)
+            self.assertEqual("WARNING", sign_kind(signs[0]))
 
     def test_panel_facing_reduces_nearby_buttons(self):
         fixture = """# fixture

@@ -154,6 +154,7 @@ def sign_kind(sign: Sign) -> str:
         "caution",
         "watch out",
         "look out",
+        "beware",
         "high risk",
     )
     if lowered.startswith(warning_prefixes):

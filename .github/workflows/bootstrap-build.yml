@@ -123,7 +123,7 @@ jobs:
             "$ROOT/to-bee-or-not-to-bee-probe.txt" \
             --output "$ROOT/to-bee-or-not-to-bee-trap-evidence.txt" \
             --top-candidates 3 --nearby-distance 30 \
-            --min-actions 1 --min-warnings 1
+            --min-actions 1 --min-warnings 21
           python3 tools/anvil_trap_evidence.py \
             "$ROOT/toxic-factory-probe.txt" \
             --output "$ROOT/toxic-factory-trap-evidence.txt" \
