@@ -52,6 +52,7 @@ jobs:
           python3 tools/test_leveldat_probe.py
           python3 tools/test_anvil_topology.py
           python3 tools/test_anvil_route_portal_evidence.py
+          python3 tools/test_anvil_pressure_route_evidence.py
           python3 tools/test_anvil_sign_links.py
           python3 tools/test_anvil_trap_evidence.py
           python3 tools/test_anvil_route_evidence.py
@@ -237,6 +238,14 @@ jobs:
             --min-portals-with-hint 1
           echo '--- To Bee portal/warning route geometry ---'
           cat "$ROOT/to-bee-or-not-to-bee-route-portals.txt"
+
+          python3 tools/anvil_pressure_route_evidence.py \
+            "$ROOT/to-bee-or-not-to-bee-probe.txt" \
+            --material minecraft:heavy_weighted_pressure_plate \
+            --output "$ROOT/to-bee-or-not-to-bee-heavy-pressure-route.txt" \
+            --min-plates 2
+          echo '--- To Bee heavy pressure-plate route context ---'
+          cat "$ROOT/to-bee-or-not-to-bee-heavy-pressure-route.txt"
 
           for report in "$ROOT/toxic-factory-probe.txt" "$ROOT/to-bee-or-not-to-bee-probe.txt"; do
             grep -Eq '^summary regions=[1-9][0-9]* chunks=[1-9][0-9]* .*candidate_blocks=[1-9][0-9]*' "$report"
