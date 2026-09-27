@@ -37,6 +37,7 @@ CASES = (
     TargetCase("018", "Remove red blocks C", (37, 34, 85), ("RED_STRUCTURAL",)),
     TargetCase("021", "Remove red blocks D", (93, 25, 56), ("RED_STRUCTURAL",)),
     TargetCase("sea-lantern", "Remove Sea Lanterns", (72, 25, 76), ("SEA_LANTERN",)),
+    TargetCase("drop-tnt", "Drop TNT", (29, 44, 9), ("TNT",)),
 )
 
 
@@ -78,6 +79,8 @@ def semantic_family(name: str) -> str | None:
         return "COAL"
     if normalized == "minecraft:sea_lantern":
         return "SEA_LANTERN"
+    if normalized == "minecraft:tnt":
+        return "TNT"
     return None
 
 
@@ -182,11 +185,14 @@ def render_report(
         for rank, (family, component, distance, materials) in enumerate(items[:top], 1):
             material_text = ";".join(f"{name}:{count}" for name, count in sorted(materials.items()))
             positions_text = ";".join(f"{x},{y},{z}" for x, y, z in sorted(component)) if len(component) <= 80 else "omitted"
+            position_materials = ";" .join(
+                f"{x},{y},{z}={blocks[(x, y, z)]}" for x, y, z in sorted(component)
+            ) if len(component) <= 80 else "omitted"
             lines.append(
                 "TARGET_COMPONENT\t"
                 f"case={case.id}\trank={rank}\tfamily={family}\tsize={len(component)}\t"
                 f"min_distance={distance:.2f}\tbbox={_bbox(component)}\tmaterials={material_text}\t"
-                f"positions={positions_text}"
+                f"positions={positions_text}\tposition_materials={position_materials}"
             )
 
     return "\n".join(lines) + "\n", {
