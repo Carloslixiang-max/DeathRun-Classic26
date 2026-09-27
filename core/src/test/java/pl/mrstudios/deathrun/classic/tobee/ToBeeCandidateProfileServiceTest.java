@@ -21,7 +21,7 @@ class ToBeeCandidateProfileServiceTest {
         assertEquals(726, ToBeeCandidateProfileService.startSearchColumnCount());
         assertEquals(14, ToBeeCandidateProfileService.startBarrierPositions().size());
         assertEquals(3, ToBeeCandidateProfileService.fireArrowTrapCount());
-        assertEquals(16, ToBeeCandidateProfileService.implementedTrapCount());
+        assertEquals(18, ToBeeCandidateProfileService.implementedTrapCount());
         assertEquals(366, ToBeeCandidateProfileService.expectedPortalBlockTotal());
         assertEquals(7, new HashSet<>(ToBeeCandidateProfileService.routeGateIds()).size());
     }
@@ -89,11 +89,12 @@ class ToBeeCandidateProfileServiceTest {
     @Test
     void disappearingMaterialTrapsPinArchiveRouteGeometry() {
         var reds = ToBeeCandidateProfileService.redBlockEvidence();
-        assertEquals(List.of("pair-006-red-A", "pair-012-red-B", "pair-021-red-D"),
+        assertEquals(List.of("pair-006-red-A", "pair-012-red-B", "pair-018-red-C", "pair-021-red-D"),
                 reds.stream().map(ToBeeCandidateProfileService.MaterialTrapEvidence::id).toList());
-        assertEquals(List.of(7, 15, 21), reds.stream().map(item -> item.targets().size()).toList());
+        assertEquals(List.of(7, 15, 6, 21), reds.stream().map(item -> item.targets().size()).toList());
         assertTrue(reds.stream().allMatch(item -> item.expectedMaterialName().equals("RED_TERRACOTTA")));
-        assertEquals(43, reds.stream().mapToInt(item -> item.targets().size()).sum());
+        assertEquals(49, reds.stream().mapToInt(item -> item.targets().size()).sum());
+        assertEquals(new ToBeeCandidateProfileService.BlockPos(15, 35, 60), reds.get(2).button());
 
         var sea = ToBeeCandidateProfileService.seaLanternEvidence();
         assertEquals("action-021-sea-lantern", sea.id());
@@ -138,6 +139,13 @@ class ToBeeCandidateProfileServiceTest {
         assertEquals("STONE_BRICKS", flood.expectedMaterialName());
         assertEquals(79, flood.targets().size());
         assertEquals(79, new HashSet<>(flood.targets()).size());
+
+        var floods = ToBeeCandidateProfileService.floodEvidenceAll();
+        assertEquals(List.of("pair-004-flood-A", "pair-017-flood-B"),
+                floods.stream().map(ToBeeCandidateProfileService.MaterialTrapEvidence::id).toList());
+        assertEquals(List.of(90, 79), floods.stream().map(item -> item.targets().size()).toList());
+        assertEquals("GRASS_BLOCK", floods.get(0).expectedMaterialName());
+        assertEquals(new ToBeeCandidateProfileService.BlockPos(-39, 35, 6), floods.get(0).button());
     }
 
     @Test
@@ -232,8 +240,8 @@ class ToBeeCandidateProfileServiceTest {
                 "runner-start-layout-generated-from-safe-archive-geometry-not-original",
                 "death-spawns-generated-from-first-stage-control-geometry-not-original",
                 "death-button-to-trap-bindings-partially-reconstructed-runtime-subset",
-                "trap-target-geometry-recovered-16-runtime-traps",
-                "remaining-trap-targets-and-original-reset-parameters-not-recovered",
+                "trap-target-geometry-recovered-18-runtime-traps",
+                "remaining-5-action-traps-random-wall-3-dark-wood-B-drop-TNT",
                 "start-barrier-generated-outside-gate-006-not-original",
                 "original-checkpoint-score-values-not-recovered"
         ), ToBeeCandidateProfileService.knownRemainingBlockers());

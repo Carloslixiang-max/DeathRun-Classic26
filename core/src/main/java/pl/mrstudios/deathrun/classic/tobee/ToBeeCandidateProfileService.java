@@ -153,6 +153,25 @@ public final class ToBeeCandidateProfileService {
             "TrapDisappearingBlocks: remove the three route-level five-block runs",
             "target geometry archive-backed; nearest-button reconstruction"
     );
+    private static final MaterialTrapEvidence RED_C_TRAP = new MaterialTrapEvidence(
+            "pair-018-red-C",
+            new BlockPos(32, 25, 76),
+            new BlockPos(15, 35, 60),
+            redCTargetPositions(),
+            "RED_TERRACOTTA",
+            "TrapDisappearingBlocks: remove six isolated archive red-terracotta route cells",
+            "target geometry archive-backed; distinct existing high-stage panel button reconstruction"
+    );
+
+    private static final MaterialTrapEvidence FLOOD_A_TRAP = new MaterialTrapEvidence(
+            "pair-004-flood-A",
+            new BlockPos(-41, 29, 10),
+            new BlockPos(-39, 35, 6),
+            floodATargetPositions(),
+            "GRASS_BLOCK",
+            "TrapFlood: replace exact 90-cell walkable grass route component with water",
+            "target geometry archive-backed; nearest-button/effect-duration reconstruction"
+    );
     private static final MaterialTrapEvidence DARK_WOOD_A_TRAP = new MaterialTrapEvidence(
             "pair-002-dark-wood-A",
             new BlockPos(-45, 29, -18),
@@ -330,9 +349,11 @@ public final class ToBeeCandidateProfileService {
         addFloodTrap(map, world, FLOOD_B_TRAP);
         addFireArrowTrap(map, world, FIRE_ARROW_TRAPS.get(0));
         addFireSnakeTrap(map, world, FIRE_SNAKE_A_TRAP);
+        addDisappearingTrap(map, world, RED_C_TRAP);
         addMinefieldTrap(map, world);
         addFireArrowTrap(map, world, FIRE_ARROW_TRAPS.get(1));
         addDisappearingTrap(map, world, DARK_WOOD_A_TRAP);
+        addFloodTrap(map, world, FLOOD_A_TRAP);
         addIceMeltTrap(map, world);
         addFireArrowTrap(map, world, FIRE_ARROW_TRAPS.get(2));
         addDisappearingTrap(map, world, RED_A_TRAP);
@@ -449,8 +470,8 @@ public final class ToBeeCandidateProfileService {
 
         for (MaterialTrapEvidence evidence : List.of(
                 ICE_MELT_TRAP, COAL_FIRE_TRAP,
-                RED_A_TRAP, RED_B_TRAP, RED_D_TRAP, SEA_LANTERN_TRAP, DARK_WOOD_A_TRAP,
-                FLOOR_FALL_A_TRAP, FLOOR_FALL_B_TRAP, MINEFIELD_TRAP, FLOOD_B_TRAP
+                RED_A_TRAP, RED_B_TRAP, RED_C_TRAP, RED_D_TRAP, SEA_LANTERN_TRAP, DARK_WOOD_A_TRAP,
+                FLOOR_FALL_A_TRAP, FLOOR_FALL_B_TRAP, MINEFIELD_TRAP, FLOOD_A_TRAP, FLOOD_B_TRAP
         )) {
             if (!world.getBlockAt(evidence.actionSign().x(), evidence.actionSign().y(), evidence.actionSign().z())
                     .getType().name().endsWith("_SIGN"))
@@ -567,7 +588,7 @@ public final class ToBeeCandidateProfileService {
     }
 
     public static int implementedTrapCount() {
-        return FIRE_ARROW_TRAPS.size() + 13;
+        return FIRE_ARROW_TRAPS.size() + 15;
     }
 
     public static @NotNull MaterialTrapEvidence iceMeltEvidence() {
@@ -579,7 +600,7 @@ public final class ToBeeCandidateProfileService {
     }
 
     public static @NotNull List<MaterialTrapEvidence> redBlockEvidence() {
-        return List.of(RED_A_TRAP, RED_B_TRAP, RED_D_TRAP);
+        return List.of(RED_A_TRAP, RED_B_TRAP, RED_C_TRAP, RED_D_TRAP);
     }
 
     public static @NotNull MaterialTrapEvidence seaLanternEvidence() {
@@ -602,6 +623,10 @@ public final class ToBeeCandidateProfileService {
 
     public static @NotNull MaterialTrapEvidence floodEvidence() {
         return FLOOD_B_TRAP;
+    }
+
+    public static @NotNull List<MaterialTrapEvidence> floodEvidenceAll() {
+        return List.of(FLOOD_A_TRAP, FLOOD_B_TRAP);
     }
 
 
@@ -637,8 +662,8 @@ public final class ToBeeCandidateProfileService {
                 "runner-start-layout-generated-from-safe-archive-geometry-not-original",
                 "death-spawns-generated-from-first-stage-control-geometry-not-original",
                 "death-button-to-trap-bindings-partially-reconstructed-runtime-subset",
-                "trap-target-geometry-recovered-16-runtime-traps",
-                "remaining-trap-targets-and-original-reset-parameters-not-recovered",
+                "trap-target-geometry-recovered-18-runtime-traps",
+                "remaining-5-action-traps-random-wall-3-dark-wood-B-drop-TNT",
                 "start-barrier-generated-outside-gate-006-not-original",
                 "original-checkpoint-score-values-not-recovered"
         );
@@ -769,6 +794,39 @@ public final class ToBeeCandidateProfileService {
             positions.add(new BlockPos(13, 24, z));
         for (int x = 14; x <= 18; x++)
             positions.add(new BlockPos(x, 24, -40));
+        return List.copyOf(positions);
+    }
+
+    private static @NotNull List<BlockPos> redCTargetPositions() {
+        return List.of(
+                new BlockPos(34, 32, 84),
+                new BlockPos(31, 33, 83),
+                new BlockPos(35, 33, 79),
+                new BlockPos(29, 33, 85),
+                new BlockPos(29, 33, 81),
+                new BlockPos(27, 33, 79)
+        );
+    }
+
+    private static @NotNull List<BlockPos> floodATargetPositions() {
+        Map<Integer, int[]> rows = new LinkedHashMap<>();
+        rows.put(-46, new int[]{19,21,22,23,24,25,26,27});
+        rows.put(-45, new int[]{19,20,21,22,23,24,25,26,27});
+        rows.put(-44, new int[]{19,20,21,22,23,24,25,26});
+        rows.put(-43, new int[]{19,20,21,22,23,24,25,26});
+        rows.put(-42, new int[]{19,20,21,22,23,24,25,26,27});
+        rows.put(-41, new int[]{19,20,21,22,23,24,25,26});
+        rows.put(-40, new int[]{20,21,22,23,24,25,26,27});
+        rows.put(-39, new int[]{19,20,21,22,23,24,25,27});
+        rows.put(-38, new int[]{20,21,22,23,24,25,26,27});
+        rows.put(-37, new int[]{19,20,21,22,23,24,25,26});
+        rows.put(-36, new int[]{19,21,22,23,24,25,26,27});
+
+        List<BlockPos> positions = new ArrayList<>();
+        rows.forEach((x, zs) -> {
+            for (int z : zs)
+                positions.add(new BlockPos(x, 24, z));
+        });
         return List.copyOf(positions);
     }
 
