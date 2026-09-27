@@ -58,6 +58,7 @@ jobs:
           python3 tools/test_anvil_warning_facing_evidence.py
           python3 tools/test_anvil_route_direction_hypothesis.py
           python3 tools/test_anvil_portal_route_side_evidence.py
+          python3 tools/test_anvil_portal7_transition_evidence.py
           python3 tools/test_anvil_stage_direction_evidence.py
           python3 tools/test_anvil_endpoint_context.py
           python3 tools/test_anvil_pressure_route_evidence.py
@@ -271,6 +272,14 @@ jobs:
             --require-best-stage-compatible
           echo '--- To Bee stage-control / warning-direction cross-check ---'
           cat "$ROOT/to-bee-or-not-to-bee-stage-direction.txt"
+
+          python3 tools/anvil_portal7_transition_evidence.py \
+            "$ROOT/to-bee-or-not-to-bee-probe.txt" \
+            "$ROOT/to-bee-or-not-to-bee-entity-evidence.txt" \
+            --output "$ROOT/to-bee-or-not-to-bee-portal7-transition.txt" \
+            --high-tolerance 3 --min-pairs 3 --require-resolved-side
+          echo '--- To Bee Portal #007 local transition evidence ---'
+          cat "$ROOT/to-bee-or-not-to-bee-portal7-transition.txt"
 
           python3 tools/anvil_endpoint_context.py \
             "$ROOT/to-bee-or-not-to-bee-probe.txt" \
