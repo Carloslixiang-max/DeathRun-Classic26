@@ -349,6 +349,30 @@ This is still not promoted to confirmed checkpoint order until an independent
 gameplay/route signal corroborates it.
 
 
+Run #287 / commit `1456b850ae3e5d8286d2bbbe0e316d2409348d37`
+adds that independent cross-check and passes the full Java 25 / Paper 26.2
+restart smoke. The two named Death stage controls map to:
+
+- `Next Stage` → Portal **#007**
+- `Previous Stage` → Portal **#003**
+
+Only one of the two MST directions places the Next-stage side before the
+Previous-stage side, and it is the **same** direction preferred by the warning
+front score:
+
+`#006 → #007 → #002 → #001 → #004 → #005 → #003`
+
+The reverse direction fails both the warning-facing score and the stage-order
+semantic check. This materially upgrades the chain from a pure coordinate
+hypothesis to a **cross-corroborated route-order candidate**. The #006↔#007
+local warning-facing anomaly remains explicit; it is not erased by the stage
+check.
+
+The order is still kept at candidate status because the original server-side
+checkpoint/spawn configuration is absent from the archive. In particular, this
+does not authorize using portal centers as respawn positions.
+
+
 Run #281 / commit `1e0c3506b86d4e185cdc6c424a772640491aeb1c`
 adds a deliberately narrow static route-structure family
 (`barrier`, `iron_bars`, fence gates) to test whether one MST endpoint has a
