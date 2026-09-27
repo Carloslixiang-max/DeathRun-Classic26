@@ -21,7 +21,7 @@ class ToBeeCandidateProfileServiceTest {
         assertEquals(726, ToBeeCandidateProfileService.startSearchColumnCount());
         assertEquals(14, ToBeeCandidateProfileService.startBarrierPositions().size());
         assertEquals(3, ToBeeCandidateProfileService.fireArrowTrapCount());
-        assertEquals(18, ToBeeCandidateProfileService.implementedTrapCount());
+        assertEquals(21, ToBeeCandidateProfileService.implementedTrapCount());
         assertEquals(366, ToBeeCandidateProfileService.expectedPortalBlockTotal());
         assertEquals(7, new HashSet<>(ToBeeCandidateProfileService.routeGateIds()).size());
     }
@@ -149,6 +149,20 @@ class ToBeeCandidateProfileServiceTest {
     }
 
     @Test
+    void randomWallReconstructionsUseArchiveStandingSeams() {
+        var walls = ToBeeCandidateProfileService.randomWallEvidence();
+        assertEquals(List.of("pair-003-random-wall-A", "pair-008-random-wall-B", "pair-013-random-wall-C"),
+                walls.stream().map(ToBeeCandidateProfileService.MaterialTrapEvidence::id).toList());
+        assertEquals(List.of(12, 18, 10), walls.stream().map(item -> item.targets().size()).toList());
+        assertTrue(walls.stream().allMatch(item -> item.expectedMaterialName().equals("AIR")));
+        assertEquals(40, walls.stream().mapToInt(item -> item.targets().size()).sum());
+        assertEquals(40, new HashSet<>(walls.stream().flatMap(item -> item.targets().stream()).toList()).size());
+        assertEquals(new ToBeeCandidateProfileService.BlockPos(-41, 35, 1), walls.get(0).button());
+        assertEquals(new ToBeeCandidateProfileService.BlockPos(-6, 35, 6), walls.get(1).button());
+        assertEquals(new ToBeeCandidateProfileService.BlockPos(22, 35, -15), walls.get(2).button());
+    }
+
+    @Test
     void secondFloorFallCompletesLowStagePanelWithoutButtonReuse() {
         var floor = ToBeeCandidateProfileService.floorFallBEvidence();
         assertEquals("pair-019-floor-fall-B", floor.id());
@@ -240,8 +254,8 @@ class ToBeeCandidateProfileServiceTest {
                 "runner-start-layout-generated-from-safe-archive-geometry-not-original",
                 "death-spawns-generated-from-first-stage-control-geometry-not-original",
                 "death-button-to-trap-bindings-partially-reconstructed-runtime-subset",
-                "trap-target-geometry-recovered-18-runtime-traps",
-                "remaining-5-action-traps-random-wall-3-dark-wood-B-drop-TNT",
+                "trap-target-geometry-recovered-21-runtime-traps",
+                "remaining-2-action-traps-dark-wood-B-drop-TNT",
                 "start-barrier-generated-outside-gate-006-not-original",
                 "original-checkpoint-score-values-not-recovered"
         ), ToBeeCandidateProfileService.knownRemainingBlockers());
