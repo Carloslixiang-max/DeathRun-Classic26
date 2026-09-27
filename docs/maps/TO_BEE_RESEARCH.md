@@ -101,9 +101,16 @@ radius around each of the 7 physical Nether Portal components. It is intended
 only to identify route-structure candidates, not to relabel portals as
 checkpoints. The current archive has **6/7** portal components near at least one
 Runner warning sign and **1/7** portal component with no warning inside that
-radius. The warning-free component therefore becomes a useful visual/video
-review target for possible route-transition, start/finish, or decorative
-geometry, but no gameplay role is assigned from proximity alone.
+radius. The warning-free component is Portal #006, centered at
+`83.00,28.76,81.91` with bbox `83,25,79:83,32,85`.
+
+Run #263 / commit `8b8d867de883bbc53e44b2541f4aa8bfa322a6cd`
+adds independent Hint-sign correlation. The archive has exactly one remaining
+unclassified non-empty Hint sign, `Hint: Look down!` at `77,25,80`, and it
+lies **7.34 blocks** from Portal #006. This makes the warning-free portal a
+stronger route-transition / vertical-movement review target and reduces the
+case for treating it as an unexplained finish candidate. The hint still does
+**not** prove checkpoint, start, finish, teleport, drop target, or route order.
 
 ## Archived redstone/control-chain evidence
 
@@ -149,9 +156,9 @@ The world contains:
 
 - **23** directional action signs
 - **12** unique cleaned action labels
-- **20** Runner warning signs
-- all **20/20** warnings have at least one shared-text action candidate
-- all **20/20** warnings have an action sign within 30 blocks
+- **21** Runner warning signs
+- all **21/21** warnings have at least one shared-text action candidate
+- all **21/21** warnings have an action sign within 30 blocks
 
 Exact surviving action-label catalog:
 
@@ -182,11 +189,17 @@ An edge requires at least one shared normalized word and a distance of at most
 
 Real archive result:
 
-- **20** pair candidates
+- **21** pair candidates
 - **0** unmatched warning signs
-- **3** unmatched action signs
+- **2** unmatched action signs
 
-The 20 candidates are:
+Run #262 / commit `2b633b5f3af0fb705d96804d8907597f464de34a`
+recovered a previously missed warning prefix, `Beware!`. The sign at
+`70,25,53` reads `Beware! Fire Snake is waiting for launch!` and pairs with
+`Release fire snake` at `76,25,56` using the independent shared tokens
+`fire + snake` at distance **6.71**.
+
+The 21 candidates are:
 
 | Warning coordinate | Candidate action | Action coordinate | Shared evidence | Distance |
 | --- | --- | --- | --- | ---: |
@@ -209,13 +222,13 @@ The 20 candidates are:
 | `36,45,21` | Flood the floor | `27,44,21` | flood | 9.06 |
 | `37,34,85` | Remove red blocks | `32,25,76` | block, red | 13.67 |
 | `50,25,53` | Make the floor fall | `52,25,56` | floor | 3.61 |
+| `70,25,53` | Release fire snake | `76,25,56` | fire, snake | 6.71 |
 | `93,25,56` | Remove red blocks | `89,25,65` | block, red | 9.85 |
 
-The three action signs left unmatched by that review heuristic are:
+The two action signs left unmatched by that review heuristic are:
 
 - `Drop TNT` at `29,44,9`
 - `Remove Sea Lanterns` at `72,25,76`
-- `Release fire snake` at `76,25,56`
 
 These are **candidate pairings, not confirmed trap assignments**. In particular,
 single generic words such as `fire`, `block`, or `floor` are weaker evidence
@@ -243,9 +256,13 @@ Current unique control-button candidate:
 
 - action sign: `Release fire snake` at `76,25,56`
 - candidate button: `76,25,47` (`minecraft:oak_button`, wall-facing south)
+- independent Runner-side warning: `70,25,53`, explicitly naming the Fire
+  Snake and pairing to the action at distance **6.71**
 
-Even this remains a **candidate** until visual or behavioral evidence confirms
-it. Three other signs reduce to small multi-button panel sets; most do not.
+The recovered warning strengthens the action-instance identification, but the
+button remains only a **candidate binding** until visual or behavioral evidence
+confirms it. Three other signs reduce to small multi-button panel sets; most do
+not.
 
 ## Death stage-control evidence
 
@@ -304,12 +321,12 @@ Run #252 / commit `413b706f0e1a6f75826daecea04f4fb6d74f37a7`
 passed the research suite, Java 25 build and full Paper 26.2 smoke with
 `tools/anvil_mechanism_evidence.py`.
 
-Using the same 20 warning/action candidates and a 14-block mechanism review
+Using the current 21 warning/action candidates and a 14-block mechanism review
 radius:
 
-- **11/20** pairs have at least one nearby mechanism
-- **10/20** have at least one nearby dispenser
-- **6/20** have at least one dispenser whose preserved facing points
+- **11/21** pairs have at least one nearby mechanism
+- **10/21** have at least one nearby dispenser
+- **6/21** have at least one dispenser whose preserved facing points
   approximately toward the Runner warning-sign area
 - critically, **3/3 Fire Arrows candidates** have facing-consistent dispenser
   evidence
@@ -326,9 +343,11 @@ geometry, and dispenser facing.
 
 Other mechanism-correlated candidates include both `Flood the floor` instances
 and the first `Release fire snake` instance, but a nearby/facing mechanism is
-not by itself proof of the original effect. For example, the minefield area has
-a dense dispenser row whose facing does not point at the warning sign under the
-current conservative rule.
+not by itself proof of the original effect. The newly recovered second Fire
+Snake pair at `70,25,53 -> 76,25,56` has **0** mechanisms inside the
+conservative 14-block warning review radius, so no mechanism geometry is
+invented for it. For example, the minefield area has a dense dispenser row whose
+facing does not point at the warning sign under the current conservative rule.
 
 CI now requires all **3 Fire Arrows** candidates to retain facing-consistent
 dispenser evidence. This protects the evidence pipeline from silent regression.
@@ -354,7 +373,7 @@ duration, payload, or reset behavior.
 1. Keep the pinned archive immutable and use it only as source evidence.
 2. Ignore the placeholder `level.dat` spawn.
 3. Use action/warning signs as the strongest surviving trap-concept evidence.
-4. Treat the 20 one-to-one pairs as a review queue, not as authoritative trap
+4. Treat the 21 one-to-one pairs as a review queue, not as authoritative trap
    definitions.
 5. Use button-facing evidence only to reduce candidates; do not guess remaining
    button bindings.
@@ -386,5 +405,5 @@ duration, payload, or reset behavior.
 - Exact form of the original server-side control logic that is absent from the archive
 
 The archive is now strong enough to recover the **trap concept catalog and a
-20-instance warning/action review set**, but not yet strong enough to claim a
+21-instance warning/action review set**, but not yet strong enough to claim a
 faithful formal Classic26 map configuration.
