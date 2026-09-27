@@ -384,6 +384,18 @@ public final class ToBeeCandidateProfileService {
         return FIRE_ARROW_TRAPS;
     }
 
+    public static int implementedTrapCount() {
+        return FIRE_ARROW_TRAPS.size() + 2;
+    }
+
+    public static @NotNull MaterialTrapEvidence iceMeltEvidence() {
+        return ICE_MELT_TRAP;
+    }
+
+    public static @NotNull MaterialTrapEvidence coalFireEvidence() {
+        return COAL_FIRE_TRAP;
+    }
+
     public static int expectedPortalBlockTotal() {
         return GATES.values().stream().mapToInt(GateEvidence::expectedPortalBlocks).sum();
     }
