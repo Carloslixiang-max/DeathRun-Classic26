@@ -810,3 +810,22 @@ This removes the production preflight blocker for insufficient Runner spawn
 capacity at a 22-player / 2-Death Classic room. It does **not** claim these 20
 positions are the exact original Hive spawn coordinates; they are a safe
 geometry-derived reconstruction.
+
+
+### Death start capacity resolved as a control-side reconstruction
+
+Run #299 adds two distinct Death start positions selected at bootstrap time from
+safe standing columns inside the first-stage control corridor bounded by:
+
+- the unique axis/panel candidate button at `76,25,47`
+- its independently identified `Release fire snake` action sign at
+  `76,25,56`
+
+Bootstrap now validates that the button and action sign still exist in the
+imported world and refuses to create the profile if fewer than two safe standing
+columns survive in that corridor.
+
+This removes the missing/insufficient Death-spawn capacity blocker for a full
+22-player room. As with the reconstructed Runner grid, these are deliberately
+tagged as **geometry-derived playability positions**, not claimed as original
+Hive server spawn coordinates.

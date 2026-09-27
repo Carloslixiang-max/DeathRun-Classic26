@@ -32,6 +32,9 @@ public final class ToBeeCandidateProfileService {
     private static final List<Integer> CHECKPOINT_GATE_IDS = List.of(7, 2, 1, 4, 5, 3);
 
     private static final Map<Integer, GateEvidence> GATES = buildGates();
+    private static final BlockPos DEATH_CONTROL_BUTTON = new BlockPos(76, 25, 47);
+    private static final BlockPos DEATH_CONTROL_ACTION = new BlockPos(76, 25, 56);
+
     private static final Map<Integer, BlockPos> SAFE_ROUTE_SIDE_CANDIDATES = Map.of(
             6, new BlockPos(84, 25, 81),
             7, new BlockPos(33, 45, 35),
@@ -80,6 +83,15 @@ public final class ToBeeCandidateProfileService {
         runnerStarts.stream()
                 .map(pos -> feetLocation(world, pos))
                 .forEach(map.arenaRunnerSpawnLocations::add);
+
+        List<BlockPos> deathStarts = deathStartCandidates(world, 2);
+        if (deathStarts.size() < 2)
+            return new Result(false, "insufficient-safe-death-starts",
+                    List.of(deathStarts.size() + "/2"));
+
+        deathStarts.stream()
+                .map(pos -> feetLocation(world, pos))
+                .forEach(map.arenaDeathSpawnLocations::add);
 
         int checkpointId = 1;
         for (int gateId : CHECKPOINT_GATE_IDS) {
@@ -134,6 +146,8 @@ public final class ToBeeCandidateProfileService {
                 issues.add("candidate-profile-unexpectedly-promoted");
             if (map.arenaRunnerSpawnLocations.size() != 20)
                 issues.add("runner-spawn-count:" + map.arenaRunnerSpawnLocations.size());
+            if (map.arenaDeathSpawnLocations.size() != 2)
+                issues.add("death-spawn-count:" + map.arenaDeathSpawnLocations.size());
             if (map.arenaCheckpoints.size() != CHECKPOINT_GATE_IDS.size())
                 issues.add("checkpoint-count:" + map.arenaCheckpoints.size());
             if (map.arenaFinishCheckpointId == null
@@ -167,6 +181,18 @@ public final class ToBeeCandidateProfileService {
         if (runnerStartCount < 20)
             issues.add("safe-runner-start-capacity:" + runnerStartCount + "/20");
 
+        if (!world.getBlockAt(DEATH_CONTROL_BUTTON.x(), DEATH_CONTROL_BUTTON.y(), DEATH_CONTROL_BUTTON.z())
+                .getType().name().endsWith("_BUTTON"))
+            issues.add("death-control-button-missing:" + DEATH_CONTROL_BUTTON.compact());
+
+        if (!world.getBlockAt(DEATH_CONTROL_ACTION.x(), DEATH_CONTROL_ACTION.y(), DEATH_CONTROL_ACTION.z())
+                .getType().name().endsWith("_SIGN"))
+            issues.add("death-control-action-sign-missing:" + DEATH_CONTROL_ACTION.compact());
+
+        int deathStartCount = deathStartCandidates(world, 2).size();
+        if (deathStartCount < 2)
+            issues.add("safe-death-start-capacity:" + deathStartCount + "/2");
+
         return issues;
     }
 
@@ -184,6 +210,18 @@ public final class ToBeeCandidateProfileService {
 
     public static int runnerSpawnTarget() {
         return 20;
+    }
+
+    public static int deathSpawnTarget() {
+        return 2;
+    }
+
+    public static @NotNull BlockPos deathControlButtonCandidate() {
+        return DEATH_CONTROL_BUTTON;
+    }
+
+    public static @NotNull BlockPos deathControlActionAnchor() {
+        return DEATH_CONTROL_ACTION;
     }
 
     public static int startSearchColumnCount() {
@@ -216,12 +254,52 @@ public final class ToBeeCandidateProfileService {
         return List.of(
                 "original-waiting-lobby-not-recovered",
                 "runner-start-layout-generated-from-safe-archive-geometry-not-original",
-                "death-spawns-not-recovered",
+                "death-spawns-generated-from-first-stage-control-geometry-not-original",
                 "death-button-to-trap-bindings-not-recovered",
                 "trap-target-cuboids-and-reset-parameters-not-recovered",
                 "start-barrier-not-recovered",
                 "original-checkpoint-score-values-not-recovered"
         );
+    }
+
+    private static @NotNull List<BlockPos> deathStartCandidates(
+            @NotNull World world,
+            int limit
+    ) {
+        List<BlockPos> candidates = new ArrayList<>();
+
+        // The only action/button pair that independently collapses to one
+        // panel/axis candidate is Release fire snake:
+        // action sign 76,25,56 -> button 76,25,47. Search only the corridor
+        // between those two archive-backed control anchors.
+        for (int x = 74; x <= 78; x++) {
+            for (int z = 48; z <= 55; z++) {
+                for (int y = 23; y <= 28; y++) {
+                    BlockPos pos = new BlockPos(x, y, z);
+                    if (safeStandingColumn(world, pos))
+                        candidates.add(pos);
+                }
+            }
+        }
+
+        final double centerX = 76.5;
+        final double centerY = 25.0;
+        final double centerZ = 51.5;
+        candidates.sort(
+                Comparator.comparingDouble((BlockPos pos) -> {
+                            double dx = pos.x() + 0.5 - centerX;
+                            double dy = pos.y() - centerY;
+                            double dz = pos.z() + 0.5 - centerZ;
+                            return dx * dx + dy * dy + dz * dz;
+                        })
+                        .thenComparingInt(BlockPos::x)
+                        .thenComparingInt(BlockPos::y)
+                        .thenComparingInt(BlockPos::z)
+        );
+
+        if (candidates.size() <= limit)
+            return List.copyOf(candidates);
+        return List.copyOf(candidates.subList(0, limit));
     }
 
     private static @NotNull List<BlockPos> runnerStartCandidates(

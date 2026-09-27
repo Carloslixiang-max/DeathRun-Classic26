@@ -16,6 +16,7 @@ class ToBeeCandidateProfileServiceTest {
         assertEquals(List.of(7, 2, 1, 4, 5, 3), ToBeeCandidateProfileService.checkpointGateIds());
         assertEquals(3, ToBeeCandidateProfileService.finishGateId());
         assertEquals(20, ToBeeCandidateProfileService.runnerSpawnTarget());
+        assertEquals(2, ToBeeCandidateProfileService.deathSpawnTarget());
         assertEquals(396, ToBeeCandidateProfileService.startSearchColumnCount());
         assertEquals(366, ToBeeCandidateProfileService.expectedPortalBlockTotal());
         assertEquals(7, new HashSet<>(ToBeeCandidateProfileService.routeGateIds()).size());
@@ -40,6 +41,14 @@ class ToBeeCandidateProfileServiceTest {
     }
 
     @Test
+    void deathControlStartAnchorsStayPinnedToUniqueArchiveCandidate() {
+        assertEquals(new ToBeeCandidateProfileService.BlockPos(76, 25, 47),
+                ToBeeCandidateProfileService.deathControlButtonCandidate());
+        assertEquals(new ToBeeCandidateProfileService.BlockPos(76, 25, 56),
+                ToBeeCandidateProfileService.deathControlActionAnchor());
+    }
+
+    @Test
     void portalComponentBoundsStayPinnedToArchiveEvidence() {
         var start = ToBeeCandidateProfileService.gateEvidence(6);
         assertEquals(new ToBeeCandidateProfileService.BlockPos(83, 25, 79), start.min());
@@ -60,7 +69,7 @@ class ToBeeCandidateProfileServiceTest {
         assertEquals(List.of(
                 "original-waiting-lobby-not-recovered",
                 "runner-start-layout-generated-from-safe-archive-geometry-not-original",
-                "death-spawns-not-recovered",
+                "death-spawns-generated-from-first-stage-control-geometry-not-original",
                 "death-button-to-trap-bindings-not-recovered",
                 "trap-target-cuboids-and-reset-parameters-not-recovered",
                 "start-barrier-not-recovered",
