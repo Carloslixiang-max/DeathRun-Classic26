@@ -50,6 +50,7 @@ jobs:
           python3 tools/test_anvil_probe.py
           python3 tools/test_anvil_cluster.py
           python3 tools/test_leveldat_probe.py
+          python3 tools/test_anvil_camera_route_evidence.py
           python3 tools/test_anvil_topology.py
           python3 tools/test_anvil_route_portal_evidence.py
           python3 tools/test_anvil_portal_segment_evidence.py
@@ -228,6 +229,14 @@ jobs:
           python3 tools/leveldat_probe.py --require-spawn "$ROOT/to-bee-or-not-to-bee-level.dat" --output "$ROOT/to-bee-or-not-to-bee-leveldat.txt"
           cat "$ROOT/toxic-factory-leveldat.txt"
           cat "$ROOT/to-bee-or-not-to-bee-leveldat.txt"
+
+          python3 tools/anvil_camera_route_evidence.py \
+            "$ROOT/to-bee-or-not-to-bee-level.dat" \
+            "$ROOT/to-bee-or-not-to-bee-probe.txt" \
+            --output "$ROOT/to-bee-or-not-to-bee-camera-route.txt" \
+            --min-portals 7 --max-best-portal-angle 10
+          echo '--- To Bee archived save-camera / route evidence ---'
+          cat "$ROOT/to-bee-or-not-to-bee-camera-route.txt"
 
           python3 tools/anvil_cluster.py \
             "$ROOT/to-bee-or-not-to-bee-probe.txt" \
