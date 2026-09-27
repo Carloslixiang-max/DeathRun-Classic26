@@ -52,6 +52,7 @@ jobs:
           python3 tools/test_leveldat_probe.py
           python3 tools/test_anvil_topology.py
           python3 tools/test_anvil_route_portal_evidence.py
+          python3 tools/test_anvil_portal_segment_evidence.py
           python3 tools/test_anvil_pressure_route_evidence.py
           python3 tools/test_anvil_portal_shape_evidence.py
           python3 tools/test_anvil_sign_links.py
@@ -134,6 +135,13 @@ jobs:
             --min-actions 0 --min-warnings 1
           cat "$ROOT/to-bee-or-not-to-bee-trap-evidence.txt"
           grep '^trap_evidence_summary ' "$ROOT/toxic-factory-trap-evidence.txt"
+
+          python3 tools/anvil_portal_segment_evidence.py \
+            "$ROOT/to-bee-or-not-to-bee-probe.txt" \
+            --output "$ROOT/to-bee-or-not-to-bee-portal-segments.txt" \
+            --pair-distance 30 --min-pairs 21 --min-portals 7
+          echo '--- To Bee warning/action pair -> portal segment evidence ---'
+          cat "$ROOT/to-bee-or-not-to-bee-portal-segments.txt"
 
           python3 tools/anvil_mechanism_evidence.py \
             "$ROOT/to-bee-or-not-to-bee-probe.txt" \
