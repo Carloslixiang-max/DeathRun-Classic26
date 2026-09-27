@@ -106,6 +106,22 @@ around y≈18–45 and is therefore treated only as an **author/save-camera
 anchor**. It is useful for screenshot/orientation reconstruction, not as
 Runner/Death spawn evidence.
 
+
+Run #275 / commit `1c01009d3f03c89bbc723a57ee75e92aac876f44`
+uses Minecraft yaw/pitch semantics to compare that saved camera direction with
+all seven portal-gate centers and the surviving title sign. The full Java 25
+build and Paper 26.2 restart smoke pass with:
+
+- best-aligned portal: **#004**, center `-58.00,28.37,6.00`
+- camera → Portal #004 angle: **6.99°**, distance **96.98**
+- camera → next-best Portal #001 angle: **28.41°**
+- camera → title sign `26,35,51` angle: **83.68°**, distance **36.81**
+
+Therefore the archived save camera is not looking toward the nearby title sign;
+it is strongly aimed toward the **Portal #004 / western route area**. This is
+useful orientation/screenshot evidence only. It does **not** make Portal #004 a
+start, finish, first checkpoint, or player spawn.
+
 ## Physical topology evidence
 
 `tools/anvil_topology.py` groups only physically adjacent pressure plates and
