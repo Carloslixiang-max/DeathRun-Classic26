@@ -18,17 +18,33 @@ Pinned original-world evidence currently comes from:
   Actions storage. They are not committed to or uploaded as artifacts by this
   project.
 
-## Confirmed gameplay metadata
+## Version-sensitive gameplay metadata
 
-Public Hive community evidence identifies **Gardens / To Bee Or Not To Bee** as
-one of the Hive DeathRun maps with **9 checkpoints**:
+The archived source repository describes itself as an **archive of HiveMC Java
+maps**, and this world is the Java map `To Bee Or Not To Bee`
+(`DR2BORNOT2B`).
+
+External community/speedrun sources merge or associate the names
+`To Bee Or Not To Bee / Gardens` and expose both Java and Bedrock categories.
+A 2021 Hive forum post describes Gardens / To Bee Or Not To Bee as having
+**9 checkpoints**, but that statement is not treated as an archive-specific
+Java geometry fact:
 
 - https://forum.playhive.com/t/a-map-with-ten-checkpoints/37294
 - https://www.speedrun.com/mcm_hivemc/levels
+- https://www.speedrun.com/mcm_hivemc/runs/m35jppgy
 
-This confirms the checkpoint count and the Gardens/To Bee naming association.
-It does **not** establish checkpoint coordinates, checkpoint point values,
-Runner/Death spawns, finish region, or trap definitions.
+Current Bedrock DeathRun documentation also describes checkpoints as Nether
+Portal blocks, but the page explicitly documents the Bedrock-era game. It is
+useful comparative context, not direct proof of the Java implementation:
+
+- https://hivemc.wiki.gg/wiki/Death_Run
+
+Therefore **9 checkpoints is no longer a hard Classic26 import gate for this
+Java archive**. The Java world evidence itself takes priority. The archive must
+first establish how many checkpoint gates survive, their order, respawn
+locations, and whether any gates were stripped or changed between Java and
+Bedrock versions.
 
 ## Archived Anvil evidence
 
@@ -106,8 +122,10 @@ portal blocks. Real archive results:
 - portal physical components: **7**
 - largest portal component: **70**
 
-This is strong negative evidence against treating either surviving pressure
-plates or portal components as a direct 9-checkpoint encoding.
+This remains strong negative evidence against treating pressure plates as a
+direct checkpoint encoding. Portal blocks are now handled separately because
+their surviving geometry is strongly gate-like and the associated Bedrock-era
+gameplay documentation uses Nether Portal checkpoint gates.
 
 Run #266 / commit `76c9823ef14850168d85a2cfc06270cc58283733`
 adds a route-context probe for the two rare heavy weighted pressure plates:
@@ -139,6 +157,29 @@ lies **7.34 blocks** from Portal #006. This makes the warning-free portal a
 stronger route-transition / vertical-movement review target and reduces the
 case for treating it as an unexplained finish candidate. The hint still does
 **not** prove checkpoint, start, finish, teleport, drop target, or route order.
+
+
+Run #269 / commit `056802faa146245f0f1c763c00af691c41e14b23`
+adds a shape pass over all 7 surviving portal components. **7/7 are single-plane
+vertical gate/wall structures**, and all 7 fill at least 80% of their minimal
+rectangular plane:
+
+| Portal | BBox | Plane | Size | Filled / rectangle | Fill |
+| --- | --- | --- | ---: | ---: | ---: |
+| #001 | `-13,25,19:-13,32,27` | x=-13 | 70 | 70/72 | 97.2% |
+| #002 | `8,25,79:8,34,84` | x=8 | 56 | 56/60 | 93.3% |
+| #003 | `31,25,-10:37,33,-10` | z=-10 | 55 | 55/63 | 87.3% |
+| #004 | `-61,25,6:-55,32,6` | z=6 | 54 | 54/56 | 96.4% |
+| #005 | `-6,18,-40:-6,24,-34` | x=-6 | 47 | 47/49 | 95.9% |
+| #006 | `83,25,79:83,32,85` | x=83 | 46 | 46/56 | 82.1% |
+| #007 | `32,45,36:36,52,36` | z=36 | 38 | 38/40 | 95.0% |
+
+This is strong **Java-world structural evidence for seven surviving checkpoint-
+gate candidates**. It still does not prove checkpoint numbering, route order,
+respawn coordinates, or that exactly seven checkpoints existed in the live Java
+version. The outstanding question is now whether the Java layout truly used
+seven gates or whether additional gates/configuration were stripped or changed
+in later Gardens/Bedrock revisions.
 
 ## Archived redstone/control-chain evidence
 
@@ -408,22 +449,26 @@ duration, payload, or reset behavior.
 6. Use dispenser facing/bank geometry as target-lane corroboration for Fire
    Arrows and other mechanism-backed candidates; do not turn it into an exact
    cuboid without independent geometry/behavior evidence.
-7. Establish all **9 checkpoint** trigger regions from independent evidence.
-8. Establish Runner/Death spawns, start barrier and finish region independently.
-9. For every trap selected for implementation, confirm:
+7. Reconstruct the surviving **7 Java portal-gate candidates** from independent
+   evidence and determine their route order / respawn points.
+8. Treat the external **9-checkpoint Gardens** claim as version-sensitive until
+   Java-specific evidence explains the 7-vs-9 difference.
+9. Establish Runner/Death spawns, start barrier and finish region independently.
+10. For every trap selected for implementation, confirm:
    - control button
    - target cuboid/geometry
    - activation behavior
    - active duration
    - restoration/reset behavior
-10. Run `/dr map check`, `/dr map manifest`, backup/restore verification and
+11. Run `/dr map check`, `/dr map manifest`, backup/restore verification and
    the human acceptance trace before considering the imported map playable.
 
 ## Still unknown / blockers
 
 - Exact Runner spawn(s)
 - Exact Death spawn(s)
-- Exact 9 checkpoint trigger regions and checkpoint spawn points
+- Exact Java checkpoint count/order; 7 dense portal-gate candidates survive
+- Exact checkpoint trigger regions and checkpoint respawn points
 - Checkpoint point values
 - Exact finish trigger
 - Exact control button for 22/23 action-sign instances
