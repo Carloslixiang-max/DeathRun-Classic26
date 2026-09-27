@@ -350,7 +350,7 @@ jobs:
           python3 tools/anvil_semantic_target_evidence.py \
             "$ROOT/to-bee-or-not-to-bee" \
             --output "$ROOT/to-bee-or-not-to-bee-semantic-targets.txt" \
-            --radius 18 --vertical-radius 8 --top 8
+            --radius 18 --vertical-radius 8 --top 40
           echo '--- To Bee semantic trap-target material evidence ---'
           cat "$ROOT/to-bee-or-not-to-bee-semantic-targets.txt"
 

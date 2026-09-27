@@ -21,6 +21,7 @@ class ToBeeCandidateProfileServiceTest {
         assertEquals(726, ToBeeCandidateProfileService.startSearchColumnCount());
         assertEquals(14, ToBeeCandidateProfileService.startBarrierPositions().size());
         assertEquals(3, ToBeeCandidateProfileService.fireArrowTrapCount());
+        assertEquals(5, ToBeeCandidateProfileService.implementedTrapCount());
         assertEquals(366, ToBeeCandidateProfileService.expectedPortalBlockTotal());
         assertEquals(7, new HashSet<>(ToBeeCandidateProfileService.routeGateIds()).size());
     }
@@ -67,6 +68,25 @@ class ToBeeCandidateProfileServiceTest {
     }
 
     @Test
+    void semanticMaterialTrapsPinCleanArchiveTargets() {
+        var ice = ToBeeCandidateProfileService.iceMeltEvidence();
+        assertEquals("pair-001-melt-ice", ice.id());
+        assertEquals(org.bukkit.Material.PACKED_ICE, ice.expectedMaterial());
+        assertEquals(12, ice.targets().size());
+        assertEquals(12, new HashSet<>(ice.targets()).size());
+        assertEquals(new ToBeeCandidateProfileService.BlockPos(-45, 29, 7), ice.actionSign());
+        assertEquals(new ToBeeCandidateProfileService.BlockPos(-41, 35, 3), ice.button());
+
+        var coal = ToBeeCandidateProfileService.coalFireEvidence();
+        assertEquals("pair-015-coal-fire", coal.id());
+        assertEquals(org.bukkit.Material.COAL_BLOCK, coal.expectedMaterial());
+        assertEquals(35, coal.targets().size());
+        assertEquals(35, new HashSet<>(coal.targets()).size());
+        assertEquals(new ToBeeCandidateProfileService.BlockPos(30, 44, 15), coal.actionSign());
+        assertEquals(new ToBeeCandidateProfileService.BlockPos(31, 48, 14), coal.button());
+    }
+
+    @Test
     void deathControlStartAnchorsStayPinnedToUniqueArchiveCandidate() {
         assertEquals(new ToBeeCandidateProfileService.BlockPos(76, 25, 47),
                 ToBeeCandidateProfileService.deathControlButtonCandidate());
@@ -96,9 +116,9 @@ class ToBeeCandidateProfileServiceTest {
                 "original-waiting-lobby-not-recovered",
                 "runner-start-layout-generated-from-safe-archive-geometry-not-original",
                 "death-spawns-generated-from-first-stage-control-geometry-not-original",
-                "death-button-to-trap-bindings-partially-reconstructed-fire-arrows-3",
-                "trap-target-geometry-partially-recovered-fire-arrows-3",
-                "remaining-trap-target-cuboids-and-reset-parameters-not-recovered",
+                "death-button-to-trap-bindings-partially-reconstructed-5-of-21",
+                "trap-target-geometry-recovered-fire-arrows-3-ice-1-coal-1",
+                "remaining-16-trap-targets-and-original-reset-parameters-not-recovered",
                 "start-barrier-generated-outside-gate-006-not-original",
                 "original-checkpoint-score-values-not-recovered"
         ), ToBeeCandidateProfileService.knownRemainingBlockers());

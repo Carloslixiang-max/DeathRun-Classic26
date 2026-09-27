@@ -7,6 +7,8 @@ import org.jetbrains.annotations.NotNull;
 import pl.mrstudios.deathrun.arena.ArenaManager;
 import pl.mrstudios.deathrun.arena.checkpoint.Checkpoint;
 import pl.mrstudios.deathrun.arena.trap.impl.TrapArrows;
+import pl.mrstudios.deathrun.arena.trap.impl.TrapFireFloor;
+import pl.mrstudios.deathrun.arena.trap.impl.TrapFlood;
 import pl.mrstudios.deathrun.config.Configuration;
 import pl.mrstudios.deathrun.config.impl.MapConfiguration;
 
@@ -85,6 +87,26 @@ public final class ToBeeCandidateProfileService {
                     ),
                     "nearest-button reconstruction; single surviving south-facing archive bank"
             )
+    );
+
+    private static final MaterialTrapEvidence ICE_MELT_TRAP = new MaterialTrapEvidence(
+            "pair-001-melt-ice",
+            new BlockPos(-45, 29, 7),
+            new BlockPos(-41, 35, 3),
+            iceTargetPositions(),
+            Material.PACKED_ICE,
+            "TrapFlood: replace packed ice with water for Classic26 active duration",
+            "target geometry archive-backed; nearest-button/effect-duration reconstruction"
+    );
+
+    private static final MaterialTrapEvidence COAL_FIRE_TRAP = new MaterialTrapEvidence(
+            "pair-015-coal-fire",
+            new BlockPos(30, 44, 15),
+            new BlockPos(31, 48, 14),
+            coalTargetPositions(),
+            Material.COAL_BLOCK,
+            "TrapFireFloor: replace coal with magma and use active trap contact",
+            "target geometry archive-backed; nearest-button/effect-duration reconstruction"
     );
 
     private static final int START_BARRIER_X = 84;
@@ -174,14 +196,13 @@ public final class ToBeeCandidateProfileService {
         }
         map.arenaFinishCheckpointId = map.arenaCheckpoints.size();
 
-        for (FireArrowEvidence evidence : FIRE_ARROW_TRAPS) {
-            TrapArrows trap = new TrapArrows();
-            trap.setButton(blockLocation(world, evidence.button()));
-            trap.setLocations(evidence.dispensers().stream()
-                    .map(pos -> blockLocation(world, pos))
-                    .toList());
-            map.arenaTraps.add(trap);
-        }
+        // Keep implemented controls in recovered route order so Death navigation
+        // advances through the map rather than through trap-class insertion order.
+        addCoalFireTrap(map, world);
+        addFireArrowTrap(map, world, FIRE_ARROW_TRAPS.get(0));
+        addFireArrowTrap(map, world, FIRE_ARROW_TRAPS.get(1));
+        addIceMeltTrap(map, world);
+        addFireArrowTrap(map, world, FIRE_ARROW_TRAPS.get(2));
 
         map.arenaMaxPlayers = 22;
         map.arenaRequiredPlayersToStart = 11;
@@ -223,8 +244,8 @@ public final class ToBeeCandidateProfileService {
                 issues.add("start-barrier-count:" + map.arenaStartBarrierBlocks.size());
             if (map.arenaStartBarrierRestoreMaterials.size() != startBarrierPositions().size())
                 issues.add("start-barrier-restore-count:" + map.arenaStartBarrierRestoreMaterials.size());
-            if (map.arenaTraps.size() != FIRE_ARROW_TRAPS.size())
-                issues.add("fire-arrow-trap-count:" + map.arenaTraps.size());
+            if (map.arenaTraps.size() != implementedTrapCount())
+                issues.add("implemented-trap-count:" + map.arenaTraps.size() + "/" + implementedTrapCount());
             if (map.arenaCheckpoints.size() != CHECKPOINT_GATE_IDS.size())
                 issues.add("checkpoint-count:" + map.arenaCheckpoints.size());
             if (map.arenaFinishCheckpointId == null
@@ -288,6 +309,23 @@ public final class ToBeeCandidateProfileService {
             for (BlockPos dispenser : evidence.dispensers()) {
                 if (world.getBlockAt(dispenser.x(), dispenser.y(), dispenser.z()).getType() != Material.DISPENSER)
                     issues.add("fire-arrow-dispenser-missing:" + evidence.id() + ":" + dispenser.compact());
+            }
+        }
+
+        for (MaterialTrapEvidence evidence : List.of(ICE_MELT_TRAP, COAL_FIRE_TRAP)) {
+            if (!world.getBlockAt(evidence.actionSign().x(), evidence.actionSign().y(), evidence.actionSign().z())
+                    .getType().name().endsWith("_SIGN"))
+                issues.add("material-trap-action-missing:" + evidence.id() + ":" + evidence.actionSign().compact());
+
+            if (!world.getBlockAt(evidence.button().x(), evidence.button().y(), evidence.button().z())
+                    .getType().name().endsWith("_BUTTON"))
+                issues.add("material-trap-button-missing:" + evidence.id() + ":" + evidence.button().compact());
+
+            for (BlockPos target : evidence.targets()) {
+                Material actual = world.getBlockAt(target.x(), target.y(), target.z()).getType();
+                if (actual != evidence.expectedMaterial())
+                    issues.add("material-trap-target-missing:" + evidence.id() + ":"
+                            + target.compact() + ":" + actual.name() + "/" + evidence.expectedMaterial().name());
             }
         }
 
@@ -369,12 +407,72 @@ public final class ToBeeCandidateProfileService {
                 "original-waiting-lobby-not-recovered",
                 "runner-start-layout-generated-from-safe-archive-geometry-not-original",
                 "death-spawns-generated-from-first-stage-control-geometry-not-original",
-                "death-button-to-trap-bindings-partially-reconstructed-fire-arrows-3",
-                "trap-target-geometry-partially-recovered-fire-arrows-3",
-                "remaining-trap-target-cuboids-and-reset-parameters-not-recovered",
+                "death-button-to-trap-bindings-partially-reconstructed-5-of-21",
+                "trap-target-geometry-recovered-fire-arrows-3-ice-1-coal-1",
+                "remaining-16-trap-targets-and-original-reset-parameters-not-recovered",
                 "start-barrier-generated-outside-gate-006-not-original",
                 "original-checkpoint-score-values-not-recovered"
         );
+    }
+
+    private static void addFireArrowTrap(
+            @NotNull MapConfiguration.MapDefinition map,
+            @NotNull World world,
+            @NotNull FireArrowEvidence evidence
+    ) {
+        TrapArrows trap = new TrapArrows();
+        trap.setButton(blockLocation(world, evidence.button()));
+        trap.setLocations(evidence.dispensers().stream()
+                .map(pos -> blockLocation(world, pos))
+                .toList());
+        map.arenaTraps.add(trap);
+    }
+
+    private static void addIceMeltTrap(
+            @NotNull MapConfiguration.MapDefinition map,
+            @NotNull World world
+    ) {
+        TrapFlood trap = new TrapFlood();
+        trap.setButton(blockLocation(world, ICE_MELT_TRAP.button()));
+        trap.setLocations(ICE_MELT_TRAP.targets().stream()
+                .map(pos -> blockLocation(world, pos))
+                .toList());
+        map.arenaTraps.add(trap);
+    }
+
+    private static void addCoalFireTrap(
+            @NotNull MapConfiguration.MapDefinition map,
+            @NotNull World world
+    ) {
+        TrapFireFloor trap = new TrapFireFloor();
+        trap.setButton(blockLocation(world, COAL_FIRE_TRAP.button()));
+        trap.setLocations(COAL_FIRE_TRAP.targets().stream()
+                .map(pos -> blockLocation(world, pos))
+                .toList());
+        map.arenaTraps.add(trap);
+    }
+
+    private static @NotNull List<BlockPos> iceTargetPositions() {
+        List<BlockPos> positions = new ArrayList<>();
+        addRectangle(positions, -65, -64, 24, 19, 20);
+        addRectangle(positions, -63, -62, 24, 15, 16);
+        addRectangle(positions, -61, -60, 24, 11, 12);
+        return List.copyOf(positions);
+    }
+
+    private static @NotNull List<BlockPos> coalTargetPositions() {
+        List<BlockPos> positions = new ArrayList<>();
+        addRectangle(positions, 32, 36, 43, 13, 19);
+        return List.copyOf(positions);
+    }
+
+    private static void addRectangle(
+            @NotNull List<BlockPos> positions,
+            int minX, int maxX, int y, int minZ, int maxZ
+    ) {
+        for (int x = minX; x <= maxX; x++)
+            for (int z = minZ; z <= maxZ; z++)
+                positions.add(new BlockPos(x, y, z));
     }
 
     private static @NotNull List<BlockPos> deathStartCandidates(
@@ -529,6 +627,16 @@ public final class ToBeeCandidateProfileService {
             @NotNull List<BlockPos> dispensers,
             @NotNull String confidence
     ) {}
+    public record MaterialTrapEvidence(
+            @NotNull String id,
+            @NotNull BlockPos actionSign,
+            @NotNull BlockPos button,
+            @NotNull List<BlockPos> targets,
+            @NotNull Material expectedMaterial,
+            @NotNull String behavior,
+            @NotNull String confidence
+    ) {}
+
 
     public record Result(
             boolean success,

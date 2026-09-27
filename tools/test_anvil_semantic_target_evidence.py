@@ -13,12 +13,15 @@ from anvil_semantic_target_evidence import (
 class SemanticTargetEvidenceTest(unittest.TestCase):
     def test_material_families_are_narrow(self):
         self.assertEqual("ICE", semantic_family("minecraft:packed_ice"))
-        self.assertEqual("DARK_WOOD", semantic_family("minecraft:dark_oak_planks"))
-        self.assertEqual("RED_COLOR", semantic_family("minecraft:red_concrete"))
+        self.assertEqual("WOODLIKE", semantic_family("minecraft:dark_oak_planks"))
+        self.assertEqual("WOODLIKE", semantic_family("minecraft:spruce_log"))
+        self.assertEqual("RED_STRUCTURAL", semantic_family("minecraft:red_concrete"))
+        self.assertEqual("RED_STRUCTURAL", semantic_family("minecraft:red_terracotta"))
         self.assertEqual("COAL", semantic_family("minecraft:coal_block"))
         self.assertEqual("SEA_LANTERN", semantic_family("minecraft:sea_lantern"))
         self.assertIsNone(semantic_family("minecraft:redstone_block"))
-        self.assertIsNone(semantic_family("minecraft:spruce_planks"))
+        self.assertIsNone(semantic_family("minecraft:red_tulip"))
+        self.assertIsNone(semantic_family("minecraft:oak_leaves"))
 
     def test_connected_components_use_face_adjacency(self):
         points = {(0, 0, 0), (1, 0, 0), (1, 1, 0), (5, 0, 0)}
@@ -26,7 +29,7 @@ class SemanticTargetEvidenceTest(unittest.TestCase):
         self.assertEqual([3, 1], [len(component) for component in components])
 
     def test_case_analysis_filters_family_and_radius(self):
-        case = TargetCase("x", "red", (0, 0, 0), ("RED_COLOR",))
+        case = TargetCase("x", "red", (0, 0, 0), ("RED_STRUCTURAL",))
         blocks = {
             (1, 0, 0): "minecraft:red_wool",
             (2, 0, 0): "minecraft:red_concrete",
@@ -36,7 +39,7 @@ class SemanticTargetEvidenceTest(unittest.TestCase):
         result = analyze_case(blocks, case, radius=3, vertical_radius=1)
         self.assertEqual(1, len(result))
         family, component, distance, materials = result[0]
-        self.assertEqual("RED_COLOR", family)
+        self.assertEqual("RED_STRUCTURAL", family)
         self.assertEqual(2, len(component))
         self.assertEqual(1.0, distance)
         self.assertEqual(1, materials["minecraft:red_wool"])

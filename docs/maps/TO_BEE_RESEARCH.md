@@ -908,3 +908,46 @@ The pass groups matching blocks into face-connected components and reports
 component size, bounding box, material mix and distance from the text anchor.
 It is evidence-only: no component becomes a runtime trap target until the real
 archive output is reviewed.
+
+
+### Ice and coal traps promoted into the runtime candidate profile
+
+Run #303 converts the two cleanest semantic-material results from run #302
+into actual To Bee runtime traps while preserving the evidence/reconstruction
+boundary.
+
+**Melt the ice**:
+
+- action sign: `-45,29,7`
+- reconstructed nearest control button: `-41,35,3`
+- exact archive target: **12 packed-ice blocks** in three 2x2 groups:
+  - `x=-65..-64, y=24, z=19..20`
+  - `x=-63..-62, y=24, z=15..16`
+  - `x=-61..-60, y=24, z=11..12`
+- runtime reconstruction: `TrapFlood`, temporarily replacing those exact
+  packed-ice cells with water and then restoring their original BlockData
+
+**Set the coals on fire**:
+
+- action sign: `30,44,15`
+- reconstructed nearest control button: `31,48,14`
+- exact archive target: **35 coal blocks**, one full `5 x 7` component at
+  `x=32..36, y=43, z=13..19`
+- runtime reconstruction: `TrapFireFloor`, temporarily replacing those exact
+  coal cells with magma and using the existing Classic26 trap-contact kill
+  attribution
+
+These target cells are archive-backed. The selected buttons and active
+durations/effect implementations are explicitly playability reconstructions
+because the original Hive server-side logic is absent.
+
+The implemented subset is now kept in route order for Death navigation:
+`coal -> arrows(011) -> arrows(007) -> ice -> arrows(005)`.
+
+Run #303 also tightens semantic research for the remaining traps:
+
+- red targets now use a structural whitelist, excluding red tulips and redstone
+- `dark wood` now scans generic structural wood families instead of assuming
+  Minecraft's `dark_oak` namespace
+- components of up to 80 blocks print exact positions, enabling later direct
+  import of red/wood/sea-lantern targets without invented cuboids

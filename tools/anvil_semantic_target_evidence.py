@@ -29,10 +29,10 @@ class TargetCase:
 
 CASES = (
     TargetCase("001", "Melt the ice", (-62, 25, 24), ("ICE",)),
-    TargetCase("002", "Remove dark wood A", (-57, 25, -14), ("DARK_WOOD",)),
-    TargetCase("006", "Remove red blocks A", (-25, 18, -34), ("RED_COLOR",)),
+    TargetCase("002", "Remove dark wood A", (-57, 25, -14), ("WOODLIKE",)),
+    TargetCase("006", "Remove red blocks A", (-25, 18, -34), ("RED_STRUCTURAL",)),
     TargetCase("012", "Remove red blocks B", (7, 25, -36), ("RED_COLOR",)),
-    TargetCase("014", "Remove dark wood B", (24, 35, 79), ("DARK_WOOD",)),
+    TargetCase("014", "Remove dark wood B", (24, 35, 79), ("WOODLIKE",)),
     TargetCase("015", "Set the coals on fire", (32, 45, 11), ("COAL",)),
     TargetCase("018", "Remove red blocks C", (37, 34, 85), ("RED_COLOR",)),
     TargetCase("021", "Remove red blocks D", (93, 25, 56), ("RED_COLOR",)),
@@ -40,14 +40,29 @@ CASES = (
 )
 
 
+RED_STRUCTURAL = {
+    "minecraft:red_terracotta",
+    "minecraft:red_wool",
+    "minecraft:red_concrete",
+    "minecraft:red_concrete_powder",
+    "minecraft:red_stained_glass",
+    "minecraft:red_glazed_terracotta",
+}
+
+WOODLIKE_SUFFIXES = (
+    "_planks", "_log", "_wood", "_stem", "_hyphae",
+    "_slab", "_stairs", "_fence", "_fence_gate", "_trapdoor",
+)
+
+
 def semantic_family(name: str) -> str | None:
     normalized = name.lower()
     if normalized in {"minecraft:ice", "minecraft:packed_ice", "minecraft:blue_ice", "minecraft:frosted_ice"}:
         return "ICE"
-    if normalized.startswith("minecraft:dark_oak_"):
-        return "DARK_WOOD"
-    if normalized.startswith("minecraft:red_"):
-        return "RED_COLOR"
+    if normalized in RED_STRUCTURAL:
+        return "RED_STRUCTURAL"
+    if normalized.startswith("minecraft:") and normalized.endswith(WOODLIKE_SUFFIXES):
+        return "WOODLIKE"
     if normalized == "minecraft:coal_block":
         return "COAL"
     if normalized == "minecraft:sea_lantern":
@@ -141,7 +156,7 @@ def render_report(
             f"total_matching_blocks={total_matching} radius={radius} vertical_radius={vertical_radius}"
         ),
         "# Components are physical archive geometry only; they are not automatic trap targets.",
-        "# RED_COLOR intentionally excludes minecraft:redstone_block to avoid the known display panel.",
+        "# RED_STRUCTURAL is a whitelist and excludes flowers/redstone/decorative non-target noise.",
         "",
     ]
 
@@ -155,10 +170,12 @@ def render_report(
         )
         for rank, (family, component, distance, materials) in enumerate(items[:top], 1):
             material_text = ";".join(f"{name}:{count}" for name, count in sorted(materials.items()))
+            positions_text = ";".join(f"{x},{y},{z}" for x, y, z in sorted(component)) if len(component) <= 80 else "omitted"
             lines.append(
                 "TARGET_COMPONENT\t"
                 f"case={case.id}\trank={rank}\tfamily={family}\tsize={len(component)}\t"
-                f"min_distance={distance:.2f}\tbbox={_bbox(component)}\tmaterials={material_text}"
+                f"min_distance={distance:.2f}\tbbox={_bbox(component)}\tmaterials={material_text}\t"
+                f"positions={positions_text}"
             )
 
     return "\n".join(lines) + "\n", {
