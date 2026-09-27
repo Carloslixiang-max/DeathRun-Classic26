@@ -14,6 +14,7 @@ import pl.mrstudios.deathrun.arena.trap.impl.TrapFireFloor;
 import pl.mrstudios.deathrun.arena.trap.impl.TrapFireSnake;
 import pl.mrstudios.deathrun.arena.trap.impl.TrapFlood;
 import pl.mrstudios.deathrun.arena.trap.impl.TrapMinefield;
+import pl.mrstudios.deathrun.arena.trap.impl.TrapWallSpawn;
 import pl.mrstudios.deathrun.config.Configuration;
 import pl.mrstudios.deathrun.config.impl.MapConfiguration;
 
@@ -252,6 +253,22 @@ public final class ToBeeCandidateProfileService {
             FIRE_SNAKE_A_TRAP,
             FIRE_SNAKE_B_TRAP
     );
+
+    private static final MaterialTrapEvidence RANDOM_WALL_A_TRAP = new MaterialTrapEvidence(
+            "pair-003-random-wall-A", new BlockPos(-45, 29, 2), new BlockPos(-41, 35, 1),
+            randomWallATargetPositions(), "AIR",
+            "TrapWallSpawn: temporarily fill a six-wide two-high route seam",
+            "wall plane reconstructed from archive-backed standing-surface cross-section");
+    private static final MaterialTrapEvidence RANDOM_WALL_B_TRAP = new MaterialTrapEvidence(
+            "pair-008-random-wall-B", new BlockPos(-5, 29, 10), new BlockPos(-6, 35, 6),
+            randomWallBTargetPositions(), "AIR",
+            "TrapWallSpawn: temporarily fill a nine-wide two-high route seam",
+            "wall plane reconstructed above the archive spruce-stair route threshold");
+    private static final MaterialTrapEvidence RANDOM_WALL_C_TRAP = new MaterialTrapEvidence(
+            "pair-013-random-wall-C", new BlockPos(23, 29, -19), new BlockPos(22, 35, -15),
+            randomWallCTargetPositions(), "AIR",
+            "TrapWallSpawn: temporarily fill a five-wide two-high route seam",
+            "wall plane reconstructed above the archive stone-brick-slab threshold");
     private static final int START_BARRIER_X = 84;
     private static final int START_BARRIER_MIN_Y = 25;
     private static final int START_BARRIER_MAX_Y = 26;
@@ -351,13 +368,16 @@ public final class ToBeeCandidateProfileService {
         addFireSnakeTrap(map, world, FIRE_SNAKE_A_TRAP);
         addDisappearingTrap(map, world, RED_C_TRAP);
         addMinefieldTrap(map, world);
+        addWallTrap(map, world, RANDOM_WALL_B_TRAP);
         addFireArrowTrap(map, world, FIRE_ARROW_TRAPS.get(1));
         addDisappearingTrap(map, world, DARK_WOOD_A_TRAP);
+        addWallTrap(map, world, RANDOM_WALL_A_TRAP);
         addFloodTrap(map, world, FLOOD_A_TRAP);
         addIceMeltTrap(map, world);
         addFireArrowTrap(map, world, FIRE_ARROW_TRAPS.get(2));
         addDisappearingTrap(map, world, RED_A_TRAP);
         addDisappearingTrap(map, world, RED_B_TRAP);
+        addWallTrap(map, world, RANDOM_WALL_C_TRAP);
         addDisappearingTrap(map, world, FLOOR_FALL_A_TRAP);
 
         map.arenaMaxPlayers = 22;
@@ -471,7 +491,8 @@ public final class ToBeeCandidateProfileService {
         for (MaterialTrapEvidence evidence : List.of(
                 ICE_MELT_TRAP, COAL_FIRE_TRAP,
                 RED_A_TRAP, RED_B_TRAP, RED_C_TRAP, RED_D_TRAP, SEA_LANTERN_TRAP, DARK_WOOD_A_TRAP,
-                FLOOR_FALL_A_TRAP, FLOOR_FALL_B_TRAP, MINEFIELD_TRAP, FLOOD_A_TRAP, FLOOD_B_TRAP
+                FLOOR_FALL_A_TRAP, FLOOR_FALL_B_TRAP, MINEFIELD_TRAP, FLOOD_A_TRAP, FLOOD_B_TRAP,
+                RANDOM_WALL_A_TRAP, RANDOM_WALL_B_TRAP, RANDOM_WALL_C_TRAP
         )) {
             if (!world.getBlockAt(evidence.actionSign().x(), evidence.actionSign().y(), evidence.actionSign().z())
                     .getType().name().endsWith("_SIGN"))
@@ -588,7 +609,7 @@ public final class ToBeeCandidateProfileService {
     }
 
     public static int implementedTrapCount() {
-        return FIRE_ARROW_TRAPS.size() + 15;
+        return FIRE_ARROW_TRAPS.size() + 18;
     }
 
     public static @NotNull MaterialTrapEvidence iceMeltEvidence() {
@@ -629,6 +650,10 @@ public final class ToBeeCandidateProfileService {
         return List.of(FLOOD_A_TRAP, FLOOD_B_TRAP);
     }
 
+    public static @NotNull List<MaterialTrapEvidence> randomWallEvidence() {
+        return List.of(RANDOM_WALL_A_TRAP, RANDOM_WALL_B_TRAP, RANDOM_WALL_C_TRAP);
+    }
+
 
     public static @NotNull FireSnakeEvidence fireSnakeEvidence() {
         return FIRE_SNAKE_A_TRAP;
@@ -662,8 +687,8 @@ public final class ToBeeCandidateProfileService {
                 "runner-start-layout-generated-from-safe-archive-geometry-not-original",
                 "death-spawns-generated-from-first-stage-control-geometry-not-original",
                 "death-button-to-trap-bindings-partially-reconstructed-runtime-subset",
-                "trap-target-geometry-recovered-18-runtime-traps",
-                "remaining-5-action-traps-random-wall-3-dark-wood-B-drop-TNT",
+                "trap-target-geometry-recovered-21-runtime-traps",
+                "remaining-2-action-traps-dark-wood-B-drop-TNT",
                 "start-barrier-generated-outside-gate-006-not-original",
                 "original-checkpoint-score-values-not-recovered"
         );
@@ -732,6 +757,14 @@ public final class ToBeeCandidateProfileService {
         trap.setLocations(MINEFIELD_TRAP.targets().stream()
                 .map(pos -> blockLocation(world, new BlockPos(pos.x(), pos.y() + 1, pos.z())))
                 .toList());
+        map.arenaTraps.add(trap);
+    }
+
+    private static void addWallTrap(@NotNull MapConfiguration.MapDefinition map, @NotNull World world,
+                                    @NotNull MaterialTrapEvidence evidence) {
+        TrapWallSpawn trap = new TrapWallSpawn();
+        trap.setButton(blockLocation(world, evidence.button()));
+        trap.setLocations(evidence.targets().stream().map(pos -> blockLocation(world, pos)).toList());
         map.arenaTraps.add(trap);
     }
 
@@ -806,6 +839,22 @@ public final class ToBeeCandidateProfileService {
                 new BlockPos(29, 33, 81),
                 new BlockPos(27, 33, 79)
         );
+    }
+
+    private static @NotNull List<BlockPos> randomWallATargetPositions() {
+        List<BlockPos> p = new ArrayList<>();
+        for (int x = -61; x <= -56; x++) for (int y = 25; y <= 26; y++) p.add(new BlockPos(x, y, -5));
+        return List.copyOf(p);
+    }
+    private static @NotNull List<BlockPos> randomWallBTargetPositions() {
+        List<BlockPos> p = new ArrayList<>();
+        for (int x = -2; x <= 6; x++) for (int y = 25; y <= 26; y++) p.add(new BlockPos(x, y, 34));
+        return List.copyOf(p);
+    }
+    private static @NotNull List<BlockPos> randomWallCTargetPositions() {
+        List<BlockPos> p = new ArrayList<>();
+        for (int x = 28; x <= 32; x++) for (int y = 25; y <= 26; y++) p.add(new BlockPos(x, y, -29));
+        return List.copyOf(p);
     }
 
     private static @NotNull List<BlockPos> floodATargetPositions() {
