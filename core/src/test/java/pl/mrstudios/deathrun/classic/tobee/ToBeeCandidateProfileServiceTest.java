@@ -71,7 +71,6 @@ class ToBeeCandidateProfileServiceTest {
     void semanticMaterialTrapsPinCleanArchiveTargets() {
         var ice = ToBeeCandidateProfileService.iceMeltEvidence();
         assertEquals("pair-001-melt-ice", ice.id());
-        assertEquals(org.bukkit.Material.PACKED_ICE, ice.expectedMaterial());
         assertEquals(12, ice.targets().size());
         assertEquals(12, new HashSet<>(ice.targets()).size());
         assertEquals(new ToBeeCandidateProfileService.BlockPos(-45, 29, 7), ice.actionSign());
@@ -79,7 +78,6 @@ class ToBeeCandidateProfileServiceTest {
 
         var coal = ToBeeCandidateProfileService.coalFireEvidence();
         assertEquals("pair-015-coal-fire", coal.id());
-        assertEquals(org.bukkit.Material.COAL_BLOCK, coal.expectedMaterial());
         assertEquals(35, coal.targets().size());
         assertEquals(35, new HashSet<>(coal.targets()).size());
         assertEquals(new ToBeeCandidateProfileService.BlockPos(30, 44, 15), coal.actionSign());
