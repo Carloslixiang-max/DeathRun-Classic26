@@ -3,7 +3,11 @@
 import unittest
 
 from anvil_sign_links import Sign
-from anvil_vertical_hint_evidence import hint_drop_candidates
+from anvil_vertical_hint_evidence import (
+    hint_drop_candidates,
+    ladder_runs,
+    water_entry_candidates,
+)
 
 
 class AnvilVerticalHintEvidenceTest(unittest.TestCase):
@@ -25,6 +29,35 @@ class AnvilVerticalHintEvidenceTest(unittest.TestCase):
         self.assertEqual(5, match.landing_y)
         self.assertEqual(5, match.drop)
         self.assertEqual("minecraft:stone", match.support)
+
+    def test_finds_water_entry_below_open_source(self):
+        hint = Sign("minecraft:sign", 0, 10, 0, "Hint: | Look down!")
+        blocks = {
+            (1, 8, 0): "minecraft:water",
+            (1, 7, 0): "minecraft:water",
+            (1, 6, 0): "minecraft:water",
+        }
+        entries = water_entry_candidates(
+            blocks,
+            hint,
+            radius=2,
+            min_y=0,
+        )
+        match = next(item for item in entries if (item.x, item.z) == (1, 0))
+        self.assertEqual(8, match.water_top_y)
+        self.assertEqual(6, match.water_bottom_y)
+        self.assertEqual(3, match.water_depth)
+        self.assertEqual(1, match.drop_to_water)
+
+    def test_groups_contiguous_ladder_run(self):
+        runs = ladder_runs([
+            (3, 5, 7),
+            (3, 6, 7),
+            (3, 7, 7),
+            (3, 10, 7),
+        ])
+        self.assertEqual(2, len(runs))
+        self.assertEqual((5, 7, 3), (runs[0].min_y, runs[0].max_y, runs[0].blocks))
 
     def test_rejects_water_floor(self):
         hint = Sign("minecraft:sign", 0, 10, 0, "Hint: | Look down!")

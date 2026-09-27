@@ -57,6 +57,27 @@ class DropCandidate:
     horizontal_distance: float
 
 
+@dataclass(frozen=True)
+class WaterEntryCandidate:
+    x: int
+    z: int
+    source_y: int
+    water_top_y: int
+    water_bottom_y: int
+    water_depth: int
+    drop_to_water: int
+    horizontal_distance: float
+
+
+@dataclass(frozen=True)
+class LadderRun:
+    x: int
+    z: int
+    min_y: int
+    max_y: int
+    blocks: int
+
+
 def _hint_sign(signs: Sequence[Sign]) -> Sign | None:
     matches = [
         sign
@@ -175,6 +196,92 @@ def hint_drop_candidates(
     return result
 
 
+def water_entry_candidates(
+    blocks: Mapping[tuple[int, int, int], str],
+    hint: Sign,
+    radius: int,
+    min_y: int,
+) -> list[WaterEntryCandidate]:
+    result: list[WaterEntryCandidate] = []
+    source_y = hint.y
+    for x in range(hint.x - radius, hint.x + radius + 1):
+        for z in range(hint.z - radius, hint.z + radius + 1):
+            # The source level must be open; the water may begin directly below
+            # or after a short air gap.
+            if blocks.get((x, source_y, z), "minecraft:air") not in AIR:
+                continue
+            if blocks.get((x, source_y + 1, z), "minecraft:air") not in AIR:
+                continue
+
+            water_top = None
+            blocked = False
+            for y in range(source_y - 1, min_y - 1, -1):
+                name = blocks.get((x, y, z), "minecraft:air")
+                if name == "minecraft:water":
+                    water_top = y
+                    break
+                if name not in AIR:
+                    blocked = True
+                    break
+            if blocked or water_top is None:
+                continue
+
+            water_bottom = water_top
+            for y in range(water_top - 1, min_y - 1, -1):
+                if blocks.get((x, y, z), "minecraft:air") != "minecraft:water":
+                    break
+                water_bottom = y
+
+            result.append(
+                WaterEntryCandidate(
+                    x=x,
+                    z=z,
+                    source_y=source_y,
+                    water_top_y=water_top,
+                    water_bottom_y=water_bottom,
+                    water_depth=water_top - water_bottom + 1,
+                    drop_to_water=source_y - water_top - 1,
+                    horizontal_distance=math.hypot(x - hint.x, z - hint.z),
+                )
+            )
+
+    result.sort(
+        key=lambda item: (
+            item.horizontal_distance,
+            item.drop_to_water,
+            -item.water_depth,
+            item.x,
+            item.z,
+        )
+    )
+    return result
+
+
+def ladder_runs(
+    positions: Sequence[tuple[int, int, int]],
+) -> list[LadderRun]:
+    by_column: dict[tuple[int, int], list[int]] = {}
+    for x, y, z in positions:
+        by_column.setdefault((x, z), []).append(y)
+
+    runs: list[LadderRun] = []
+    for (x, z), ys in by_column.items():
+        ys = sorted(set(ys))
+        if not ys:
+            continue
+        start = previous = ys[0]
+        for y in ys[1:]:
+            if y == previous + 1:
+                previous = y
+                continue
+            runs.append(LadderRun(x, z, start, previous, previous - start + 1))
+            start = previous = y
+        runs.append(LadderRun(x, z, start, previous, previous - start + 1))
+
+    runs.sort(key=lambda item: (-item.blocks, item.x, item.z, item.min_y))
+    return runs
+
+
 def vertical_material_positions(
     blocks: Mapping[tuple[int, int, int], str],
 ) -> dict[str, list[tuple[int, int, int]]]:
@@ -209,6 +316,25 @@ def _drop_text(item: DropCandidate) -> str:
     )
 
 
+def _water_text(item: WaterEntryCandidate) -> str:
+    return (
+        f"{item.x},{item.water_top_y},{item.z}"
+        f"[source_y={item.source_y},drop_to_water={item.drop_to_water},"
+        f"water_bottom_y={item.water_bottom_y},depth={item.water_depth},"
+        f"horiz={item.horizontal_distance:.2f}]"
+    )
+
+
+def _distance_point_to_portal(
+    x: float,
+    y: float,
+    z: float,
+    portal: Component,
+) -> float:
+    cx, cy, cz = portal.center
+    return math.sqrt((x-cx)**2 + (y-cy)**2 + (z-cz)**2)
+
+
 def render_report(
     source: Path,
     hint: Sign,
@@ -216,17 +342,45 @@ def render_report(
     portal7: Component,
     blocks: Mapping[tuple[int, int,int], str],
     drops: Sequence[DropCandidate],
+    water_entries: Sequence[WaterEntryCandidate],
     top: int,
-) -> tuple[str, dict[str, int | float]]:
+) -> tuple[str, dict[str, int | float | str]]:
     materials = vertical_material_positions(blocks)
     counts = Counter({name: len(pos) for name, pos in materials.items()})
     p6 = _component_center(portal6)
     p7 = _component_center(portal7)
 
     nearby_drops = [item for item in drops if item.horizontal_distance <= 4.0]
-    stats: dict[str, int | float] = {
+    nearby_water = [item for item in water_entries if item.horizontal_distance <= 4.0]
+    ladders = ladder_runs(materials.get("minecraft:ladder", []))
+    best_ladder = ladders[0] if ladders else None
+    below_hint = blocks.get((hint.x, hint.y - 1, hint.z), "minecraft:air")
+    below_hint_2 = blocks.get((hint.x, hint.y - 2, hint.z), "minecraft:air")
+    ladder_hint_distance = (
+        math.sqrt(
+            (best_ladder.x - hint.x) ** 2
+            + (best_ladder.min_y - hint.y) ** 2
+            + (best_ladder.z - hint.z) ** 2
+        )
+        if best_ladder else -1.0
+    )
+    ladder_portal7_distance = (
+        _distance_point_to_portal(
+            best_ladder.x,
+            best_ladder.max_y,
+            best_ladder.z,
+            portal7,
+        )
+        if best_ladder else -1.0
+    )
+
+    stats: dict[str, int | float | str] = {
         "drop_candidates": len(drops),
         "drop_candidates_within4": len(nearby_drops),
+        "water_entry_candidates": len(water_entries),
+        "water_entry_candidates_within4": len(nearby_water),
+        "block_below_hint": below_hint,
+        "block_two_below_hint": below_hint_2,
         "vertical_material_blocks": sum(counts.values()),
         "ladder_blocks": counts.get("minecraft:ladder", 0),
         "vine_blocks": counts.get("minecraft:vine", 0),
@@ -235,6 +389,10 @@ def render_report(
         "portal6_center_y": p6[1],
         "portal7_center_y": p7[1],
         "portal_center_dy": p7[1] - p6[1],
+        "ladder_runs": len(ladders),
+        "best_ladder_blocks": best_ladder.blocks if best_ladder else 0,
+        "best_ladder_hint_distance": ladder_hint_distance,
+        "best_ladder_portal7_distance": ladder_portal7_distance,
     }
 
     lines = [
@@ -245,6 +403,10 @@ def render_report(
             f"hint={hint.x},{hint.y},{hint.z} "
             f"drop_candidates={stats['drop_candidates']} "
             f"drop_candidates_within4={stats['drop_candidates_within4']} "
+            f"water_entry_candidates={stats['water_entry_candidates']} "
+            f"water_entry_candidates_within4={stats['water_entry_candidates_within4']} "
+            f"block_below_hint={stats['block_below_hint']} "
+            f"block_two_below_hint={stats['block_two_below_hint']} "
             f"vertical_material_blocks={stats['vertical_material_blocks']} "
             f"ladder_blocks={stats['ladder_blocks']} "
             f"vine_blocks={stats['vine_blocks']} "
@@ -252,7 +414,11 @@ def render_report(
             f"water_blocks={stats['water_blocks']} "
             f"portal6_center_y={float(stats['portal6_center_y']):.2f} "
             f"portal7_center_y={float(stats['portal7_center_y']):.2f} "
-            f"portal_center_dy={float(stats['portal_center_dy']):.2f}"
+            f"portal_center_dy={float(stats['portal_center_dy']):.2f} "
+            f"ladder_runs={stats['ladder_runs']} "
+            f"best_ladder_blocks={stats['best_ladder_blocks']} "
+            f"best_ladder_hint_distance={float(stats['best_ladder_hint_distance']):.2f} "
+            f"best_ladder_portal7_distance={float(stats['best_ladder_portal7_distance']):.2f}"
         ),
         "# Drop candidates are open vertical air columns near the Hint with a conservative floor below.",
         "# Vertical materials are inventory only; vines/water may be decorative.",
@@ -264,6 +430,20 @@ def render_report(
         "HINT_DROP_TOP\t"
         + (";".join(_drop_text(item) for item in drops[:top]) or "none")
     )
+    lines.append(
+        "HINT_WATER_ENTRY_TOP\t"
+        + (";".join(_water_text(item) for item in water_entries[:top]) or "none")
+    )
+    for index, ladder in enumerate(ladders[:top], 1):
+        lines.append(
+            "LADDER_RUN\t"
+            f"id={index:03d}\t"
+            f"column={ladder.x},{ladder.z}\t"
+            f"y={ladder.min_y}..{ladder.max_y}\t"
+            f"blocks={ladder.blocks}\t"
+            f"hint_distance={math.sqrt((ladder.x-hint.x)**2 + (ladder.min_y-hint.y)**2 + (ladder.z-hint.z)**2):.2f}\t"
+            f"portal7_top_distance={_distance_point_to_portal(ladder.x,ladder.max_y,ladder.z,portal7):.2f}"
+        )
 
     for name in sorted(materials):
         positions = materials[name]
@@ -325,6 +505,12 @@ def main(argv: Sequence[str] | None = None) -> int:
         args.max_drop,
         args.min_y,
     )
+    water_entries = water_entry_candidates(
+        blocks,
+        hint,
+        args.hint_radius,
+        args.min_y,
+    )
     report, stats = render_report(
         args.probe_report,
         hint,
@@ -332,6 +518,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         portal7,
         blocks,
         drops,
+        water_entries,
         args.top,
     )
 
