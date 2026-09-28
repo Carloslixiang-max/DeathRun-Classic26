@@ -76,6 +76,59 @@ Disappearing Parkour, Knock Back, Arrow Dispenser, Fire Floor, Flood, Wall
 Spawn, Launch Players, Giant, Fire Trail, TNT, Glass Floor, Quicksand,
 Block Replace, Minefield, Appearing Blocks, Disappearing Blocks and Particles.
 
+## To Bee Or Not To Bee production profile
+
+`1.4.1-classic26.2` includes the production-candidate reconstruction for the
+archived HiveMC Java map **To Bee Or Not To Bee** (creator: **Timmetatsch**).
+The repository intentionally does not redistribute the third-party world
+binary; import a copy you are permitted to use as a normal Paper world first.
+
+The current archive-backed runtime contains:
+
+- 20 Runner starts and 2 Death starts;
+- 6 in-round checkpoint/finish gates, with Portal #006 used as the start side;
+- 23 surviving action-sign trap instances wired into the runtime;
+- a reconstructed 14-block start barrier;
+- full trap mutation/entity cleanup and restart acceptance gates.
+
+The cross-corroborated route candidate is:
+
+```text
+#006 -> #007 -> #002 -> #001 -> #004 -> #005 -> #003
+```
+
+After the imported world is loaded, run the production setup in this order
+(replace `<world>` with the imported world folder/name):
+
+```text
+/dr tobee bootstrap <world>
+/dr tobee verify <world>
+/dr map backup to-bee-or-not-to-bee
+/dr map disable to-bee-or-not-to-bee
+/dr map check to-bee-or-not-to-bee
+/dr map manifest to-bee-or-not-to-bee
+/dr tobee readiness <world>
+/dr tobee fingerprint <world>
+```
+
+`/dr map disable` is the promotion step: it refuses to finalize the map if the
+normal production preflight does not pass. `readiness` checks the promoted
+idle runtime, restored start barrier, trap-entity cleanup and trap runtime
+state. `fingerprint` hashes the loaded production definition (spawns,
+checkpoints, barrier and all trap buttons/targets) so configuration drift can
+be detected across trap runs and server restarts.
+
+For an invasive server-side verification with no active players,
+`/dr tobee runtimecheck <world>` activates all 23 traps on the real imported
+world, observes their expected mutation/entity effect, restores the surrounding
+BlockData envelope, removes trap entities, and reports PASS/FAIL.
+
+Important fidelity note: later public Gardens/To Bee material refers to a
+9-checkpoint version, while the pinned Java archive used by this reconstruction
+physically preserves seven dense Nether-portal gate components. Classic26 does
+not invent two extra gates or silently mix that later checkpoint/XP data into
+this archived Java reconstruction.
+
 ## Main commands
 
 ```text
@@ -87,6 +140,11 @@ Block Replace, Minefield, Appearing Blocks, Disappearing Blocks and Particles.
 /dr start [map]
 /dr stop [map]
 /dr reload
+/dr tobee bootstrap <world>
+/dr tobee verify <world>
+/dr tobee runtimecheck <world>
+/dr tobee readiness <world>
+/dr tobee fingerprint <world>
 /dr map list
 /dr map status <id>
 /dr map profile interstellar <id>
