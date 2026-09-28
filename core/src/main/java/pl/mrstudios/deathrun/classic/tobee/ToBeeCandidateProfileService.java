@@ -1212,15 +1212,18 @@ public final class ToBeeCandidateProfileService {
     }
 
     static boolean startBarrierOverlayReplaceable(@NotNull Material material) {
-        // The archived gate edge contains two SHORT_GRASS cells at foot level.
-        // Replacing non-structural vegetation with the temporary start barrier
-        // is safe; fluids, controls, signs and structural blocks remain rejected.
-        return material.isAir()
-                || material == Material.BARRIER
-                || material == Material.SHORT_GRASS
-                || material == Material.TALL_GRASS
-                || material == Material.FERN
-                || material == Material.LARGE_FERN;
+        return startBarrierOverlayReplaceableName(material.name());
+    }
+
+    static boolean startBarrierOverlayReplaceableName(@NotNull String materialName) {
+        // Keep this name-based so the pure unit-test source set does not need
+        // Paper/Bukkit on its compile classpath. Runtime still passes the real
+        // Bukkit Material enum name through this conservative allowlist.
+        return switch (materialName) {
+            case "AIR", "CAVE_AIR", "VOID_AIR", "BARRIER",
+                 "SHORT_GRASS", "TALL_GRASS", "FERN", "LARGE_FERN" -> true;
+            default -> false;
+        };
     }
 
     private static boolean routeSideAnchorValid(

@@ -46,23 +46,25 @@ class ToBeeCandidateProfileServiceTest {
 
     @Test
     void startBarrierAllowsOnlyAirBarrierAndReplaceableVegetation() {
-        assertTrue(ToBeeCandidateProfileService.startBarrierOverlayReplaceable(org.bukkit.Material.AIR));
-        assertTrue(ToBeeCandidateProfileService.startBarrierOverlayReplaceable(org.bukkit.Material.BARRIER));
-        assertTrue(ToBeeCandidateProfileService.startBarrierOverlayReplaceable(org.bukkit.Material.SHORT_GRASS));
-        assertTrue(ToBeeCandidateProfileService.startBarrierOverlayReplaceable(org.bukkit.Material.TALL_GRASS));
-        assertTrue(ToBeeCandidateProfileService.startBarrierOverlayReplaceable(org.bukkit.Material.FERN));
-        assertTrue(ToBeeCandidateProfileService.startBarrierOverlayReplaceable(org.bukkit.Material.LARGE_FERN));
+        assertTrue(ToBeeCandidateProfileService.startBarrierOverlayReplaceableName("AIR"));
+        assertTrue(ToBeeCandidateProfileService.startBarrierOverlayReplaceableName("CAVE_AIR"));
+        assertTrue(ToBeeCandidateProfileService.startBarrierOverlayReplaceableName("VOID_AIR"));
+        assertTrue(ToBeeCandidateProfileService.startBarrierOverlayReplaceableName("BARRIER"));
+        assertTrue(ToBeeCandidateProfileService.startBarrierOverlayReplaceableName("SHORT_GRASS"));
+        assertTrue(ToBeeCandidateProfileService.startBarrierOverlayReplaceableName("TALL_GRASS"));
+        assertTrue(ToBeeCandidateProfileService.startBarrierOverlayReplaceableName("FERN"));
+        assertTrue(ToBeeCandidateProfileService.startBarrierOverlayReplaceableName("LARGE_FERN"));
 
         org.junit.jupiter.api.Assertions.assertFalse(
-                ToBeeCandidateProfileService.startBarrierOverlayReplaceable(org.bukkit.Material.WATER));
+                ToBeeCandidateProfileService.startBarrierOverlayReplaceableName("WATER"));
         org.junit.jupiter.api.Assertions.assertFalse(
-                ToBeeCandidateProfileService.startBarrierOverlayReplaceable(org.bukkit.Material.LAVA));
+                ToBeeCandidateProfileService.startBarrierOverlayReplaceableName("LAVA"));
         org.junit.jupiter.api.Assertions.assertFalse(
-                ToBeeCandidateProfileService.startBarrierOverlayReplaceable(org.bukkit.Material.OAK_BUTTON));
+                ToBeeCandidateProfileService.startBarrierOverlayReplaceableName("OAK_BUTTON"));
         org.junit.jupiter.api.Assertions.assertFalse(
-                ToBeeCandidateProfileService.startBarrierOverlayReplaceable(org.bukkit.Material.OAK_SIGN));
+                ToBeeCandidateProfileService.startBarrierOverlayReplaceableName("OAK_SIGN"));
         org.junit.jupiter.api.Assertions.assertFalse(
-                ToBeeCandidateProfileService.startBarrierOverlayReplaceable(org.bukkit.Material.STONE));
+                ToBeeCandidateProfileService.startBarrierOverlayReplaceableName("STONE"));
     }
 
     @Test
