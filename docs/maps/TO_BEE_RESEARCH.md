@@ -1239,3 +1239,31 @@ The activation service now:
 This keeps cleanup scoped even if a server configuration ever places multiple
 DeathRun maps in one Bukkit world, while plugin shutdown still performs a full
 safety sweep.
+
+
+### Real-world 23-trap lifecycle acceptance
+
+Run #327 adds a second acceptance layer on top of the successful run #325
+archive promotion/restart gate.
+
+`/dr tobee runtimecheck <world>` now temporarily edit-locks an idle To Bee
+runtime and exercises **all 23 reconstructed traps on the real imported
+archive**. For every trap it:
+
+1. snapshots the trap target and a surrounding BlockData envelope;
+2. activates the actual runtime trap implementation;
+3. verifies either a real block mutation or a newly spawned tagged trap entity;
+4. lets the configured active duration elapse;
+5. ends the trap and removes newly spawned test entities;
+6. checks the surrounding envelope for residual block changes;
+7. restores the full snapshot as a final safety measure before moving on.
+
+Flood traps use a wider 12-block envelope so water escaping the declared target
+cannot hide behind a successful target-cell restore. Fire Snake is observed
+after its scheduled moving-frame tasks begin. Arrow/TNT/Minefield traps must
+produce tagged entities.
+
+CI runs this check after the real archive has been bootstrapped, backed up,
+promoted and reported healthy. The smoke job now requires both
+`23/23 traps` in the manifest and a final
+`[DR-TOBEE-RUNTIME] PASS traps=23` lifecycle result.

@@ -39,6 +39,7 @@ import pl.mrstudios.deathrun.config.impl.MapConfiguration;
 import pl.mrstudios.deathrun.classic.playtest.ClassicPlaytestService;
 import pl.mrstudios.deathrun.classic.playtest.PlaytestTraceService;
 import pl.mrstudios.deathrun.classic.tobee.ToBeeCandidateProfileService;
+import pl.mrstudios.deathrun.classic.tobee.ToBeeRuntimeAcceptanceService;
 import pl.mrstudios.deathrun.classic.vote.ClassicVoteService;
 
 import java.nio.file.Path;
@@ -253,6 +254,48 @@ public class CommandDeathRun {
 
         this.message(sender, PREFIX + "<green>To Bee archive signature and candidate profile verified.");
         this.message(sender, PREFIX + "<gray>Fidelity notes: <white>" + String.join(", ", result.details()));
+    }
+
+    @Execute(name = "tobee runtimecheck")
+    @Permission("mrstudios.command.deathrun.setup")
+    public void runtimeCheckToBee(
+            @Context CommandSender sender,
+            @Arg("world") String worldName
+    ) {
+        World world = this.plugin.getServer().getWorld(worldName);
+        if (world == null)
+            world = this.arenaManager.loadExistingMapWorld(worldName);
+        if (world == null) {
+            this.message(sender, PREFIX + "<red>To Bee runtime check could not load world <white>"
+                    + this.safe(worldName) + "<red>.");
+            return;
+        }
+
+        ToBeeRuntimeAcceptanceService.StartResult started = new ToBeeRuntimeAcceptanceService(
+                this.plugin, this.arenaManager
+        ).start(world, result -> {
+            if (result.success()) {
+                this.message(sender, PREFIX + "<green>To Bee runtime lifecycle check PASS: <white>"
+                        + result.trapsTested() + "/23 traps"
+                        + " <gray>| block=<white>" + result.mutationAssertions()
+                        + " <gray>| entity=<white>" + result.entityAssertions());
+                return;
+            }
+
+            this.message(sender, PREFIX + "<red>To Bee runtime lifecycle check FAIL: <white>"
+                    + result.trapsTested() + " traps tested"
+                    + " <gray>| issues=<white>" + result.issues().size());
+            for (String issue : result.issues().stream().limit(12).toList())
+                this.message(sender, PREFIX + "<gray>" + this.safe(issue));
+        });
+
+        if (!started.started()) {
+            this.message(sender, PREFIX + "<red>To Bee runtime lifecycle check did not start: <white>"
+                    + this.safe(started.message()));
+            return;
+        }
+
+        this.message(sender, PREFIX + "<yellow>To Bee runtime lifecycle check started; map is temporarily edit-locked.");
     }
 
     @Execute(name = "vote")

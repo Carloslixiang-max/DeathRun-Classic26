@@ -430,6 +430,7 @@ jobs:
           jar tf "$JAR" | grep -q 'pl/mrstudios/deathrun/arena/listener/ClassicTrapEffectListener.class'
           jar tf "$JAR" | grep -q 'pl/mrstudios/deathrun/arena/trap/impl/TrapFireSnake.class'
           jar tf "$JAR" | grep -q 'pl/mrstudios/deathrun/arena/trap/impl/TrapDropTNT.class'
+          jar tf "$JAR" | grep -q 'pl/mrstudios/deathrun/classic/tobee/ToBeeRuntimeAcceptanceService.class'
           ! jar tf "$JAR" | grep -q 'net/kyori/adventure/platform/bukkit/BukkitAudiences.class'
           ! grep -R "BukkitAudiences" core/src/main/java
           unzip -p "$JAR" plugin.yml | grep -q 'api-version: "26.2"'
@@ -675,6 +676,23 @@ jobs:
           done
           test "$TOBEE_MANIFEST_OK" -eq 1
           grep -q 'traps=23' server.log
+
+          # Activate all 23 reconstructed traps on the real archived world.
+          # Each trap must show its expected active effect and return its
+          # surrounding BlockData envelope to the exact pre-activation state.
+          printf 'dr tobee runtimecheck tobee_ci\n' >&3
+          TOBEE_RUNTIME_OK=0
+          for _ in $(seq 1 300); do
+            if grep -q 'To Bee runtime lifecycle check PASS: 23/23 traps' server.log; then
+              TOBEE_RUNTIME_OK=1
+              break
+            fi
+            if grep -q 'To Bee runtime lifecycle check FAIL:' server.log; then break; fi
+            if ! kill -0 "$PID" 2>/dev/null; then break; fi
+            sleep 1
+          done
+          test "$TOBEE_RUNTIME_OK" -eq 1
+          grep -q '\[DR-TOBEE-RUNTIME\] PASS traps=23' server.log
 
           # Exercise real Classic26 world creation, map serialization, trap
           # registration and runtime reload inside a live Paper process.
