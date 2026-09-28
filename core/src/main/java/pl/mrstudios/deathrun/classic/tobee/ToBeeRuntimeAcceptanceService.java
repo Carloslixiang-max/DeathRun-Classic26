@@ -157,11 +157,33 @@ public final class ToBeeRuntimeAcceptanceService {
                     (trap.getDuration().toMillis() + 49L) / 50L
             );
 
+            if (kind == EffectKind.BLOCK_MUTATION) {
+                ToBeeRuntimeAcceptanceService.this.plugin.getServer().getScheduler().runTaskLater(
+                        ToBeeRuntimeAcceptanceService.this.plugin,
+                        () -> this.observeActive(trapIndex, trap, kind, targetBefore, entitiesBefore,
+                                envelope, durationTicks),
+                        ACTIVE_OBSERVE_TICKS
+                );
+                return;
+            }
+
+            // Entity traps spawn synchronously inside start(). Observe them now:
+            // arrows can hit nearby archive geometry within a few ticks and the
+            // minefield TNT has an 8-tick fuse, so a delayed entity assertion
+            // would turn a successful activation into a false negative.
+            this.entityAssertions++;
+            long spawned = this.world.getEntities().stream()
+                    .filter(DeathRunEntityTags::isTrapEntity)
+                    .filter(entity -> !entitiesBefore.contains(entity.getUniqueId()))
+                    .count();
+            if (spawned <= 0L)
+                this.issues.add("trap-" + (trapIndex + 1) + "-no-tagged-entity:"
+                        + trap.getClass().getSimpleName());
+
             ToBeeRuntimeAcceptanceService.this.plugin.getServer().getScheduler().runTaskLater(
                     ToBeeRuntimeAcceptanceService.this.plugin,
-                    () -> this.observeActive(trapIndex, trap, kind, targetBefore, entitiesBefore,
-                            envelope, durationTicks),
-                    ACTIVE_OBSERVE_TICKS
+                    () -> this.endAndVerify(trapIndex, trap, entitiesBefore, envelope),
+                    durationTicks
             );
         }
 
@@ -174,21 +196,10 @@ public final class ToBeeRuntimeAcceptanceService {
                 Map<BlockKey, String> envelope,
                 long durationTicks
         ) {
-            if (kind == EffectKind.BLOCK_MUTATION) {
-                this.mutationAssertions++;
-                if (!hasTargetMutation(trap, targetBefore))
-                    this.issues.add("trap-" + (trapIndex + 1) + "-no-active-block-mutation:"
-                            + trap.getClass().getSimpleName());
-            } else {
-                this.entityAssertions++;
-                long spawned = this.world.getEntities().stream()
-                        .filter(DeathRunEntityTags::isTrapEntity)
-                        .filter(entity -> !entitiesBefore.contains(entity.getUniqueId()))
-                        .count();
-                if (spawned <= 0L)
-                    this.issues.add("trap-" + (trapIndex + 1) + "-no-tagged-entity:"
-                            + trap.getClass().getSimpleName());
-            }
+            this.mutationAssertions++;
+            if (!hasTargetMutation(trap, targetBefore))
+                this.issues.add("trap-" + (trapIndex + 1) + "-no-active-block-mutation:"
+                        + trap.getClass().getSimpleName());
 
             long remaining = Math.max(1L, durationTicks - ACTIVE_OBSERVE_TICKS);
             ToBeeRuntimeAcceptanceService.this.plugin.getServer().getScheduler().runTaskLater(
