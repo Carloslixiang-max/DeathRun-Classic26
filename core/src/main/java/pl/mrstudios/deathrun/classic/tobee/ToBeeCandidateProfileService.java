@@ -10,6 +10,7 @@ import pl.mrstudios.deathrun.arena.ArenaManager;
 import pl.mrstudios.deathrun.arena.checkpoint.Checkpoint;
 import pl.mrstudios.deathrun.arena.trap.impl.TrapArrows;
 import pl.mrstudios.deathrun.arena.trap.impl.TrapDisappearingBlocks;
+import pl.mrstudios.deathrun.arena.trap.impl.TrapDropTNT;
 import pl.mrstudios.deathrun.arena.trap.impl.TrapFireFloor;
 import pl.mrstudios.deathrun.arena.trap.impl.TrapFireSnake;
 import pl.mrstudios.deathrun.arena.trap.impl.TrapFlood;
@@ -254,6 +255,26 @@ public final class ToBeeCandidateProfileService {
             FIRE_SNAKE_B_TRAP
     );
 
+    private static final MaterialTrapEvidence DARK_WOOD_B_TRAP = new MaterialTrapEvidence(
+            "pair-014-dark-wood-B",
+            new BlockPos(16, 25, 76),
+            new BlockPos(15, 35, 57),
+            darkWoodBTargetPositions(),
+            "SPRUCE_SLAB",
+            "TrapDisappearingBlocks: remove the nearest 17-cell high-route spruce-slab run",
+            "target geometry archive-backed; closest unused preserved control button reconstruction"
+    );
+
+    private static final MaterialTrapEvidence DROP_TNT_TRAP = new MaterialTrapEvidence(
+            "action-017-drop-TNT",
+            new BlockPos(29, 44, 9),
+            new BlockPos(28, 48, 7),
+            dropTntAnchorPositions(),
+            "TNT",
+            "TrapDropTNT: drop primed TNT from the five preserved overhead TNT anchors",
+            "anchor geometry archive-backed; nearest preserved high-stage control button reconstruction"
+    );
+
     private static final MaterialTrapEvidence RANDOM_WALL_A_TRAP = new MaterialTrapEvidence(
             "pair-003-random-wall-A", new BlockPos(-45, 29, 2), new BlockPos(-41, 35, 1),
             randomWallATargetPositions(), "AIR",
@@ -363,9 +384,11 @@ public final class ToBeeCandidateProfileService {
         addDisappearingTrap(map, world, SEA_LANTERN_TRAP);
         addDisappearingTrap(map, world, FLOOR_FALL_B_TRAP);
         addCoalFireTrap(map, world);
+        addDropTntTrap(map, world);
         addFloodTrap(map, world, FLOOD_B_TRAP);
         addFireArrowTrap(map, world, FIRE_ARROW_TRAPS.get(0));
         addFireSnakeTrap(map, world, FIRE_SNAKE_A_TRAP);
+        addDisappearingTrap(map, world, DARK_WOOD_B_TRAP);
         addDisappearingTrap(map, world, RED_C_TRAP);
         addMinefieldTrap(map, world);
         addWallTrap(map, world, RANDOM_WALL_B_TRAP);
@@ -490,7 +513,8 @@ public final class ToBeeCandidateProfileService {
 
         for (MaterialTrapEvidence evidence : List.of(
                 ICE_MELT_TRAP, COAL_FIRE_TRAP,
-                RED_A_TRAP, RED_B_TRAP, RED_C_TRAP, RED_D_TRAP, SEA_LANTERN_TRAP, DARK_WOOD_A_TRAP,
+                RED_A_TRAP, RED_B_TRAP, RED_C_TRAP, RED_D_TRAP, SEA_LANTERN_TRAP,
+                DARK_WOOD_A_TRAP, DARK_WOOD_B_TRAP, DROP_TNT_TRAP,
                 FLOOR_FALL_A_TRAP, FLOOR_FALL_B_TRAP, MINEFIELD_TRAP, FLOOD_A_TRAP, FLOOD_B_TRAP,
                 RANDOM_WALL_A_TRAP, RANDOM_WALL_B_TRAP, RANDOM_WALL_C_TRAP
         )) {
@@ -609,7 +633,7 @@ public final class ToBeeCandidateProfileService {
     }
 
     public static int implementedTrapCount() {
-        return FIRE_ARROW_TRAPS.size() + 18;
+        return FIRE_ARROW_TRAPS.size() + 20;
     }
 
     public static @NotNull MaterialTrapEvidence iceMeltEvidence() {
@@ -628,7 +652,11 @@ public final class ToBeeCandidateProfileService {
         return SEA_LANTERN_TRAP;
     }
     public static @NotNull List<MaterialTrapEvidence> darkWoodEvidence() {
-        return List.of(DARK_WOOD_A_TRAP);
+        return List.of(DARK_WOOD_A_TRAP, DARK_WOOD_B_TRAP);
+    }
+
+    public static @NotNull MaterialTrapEvidence dropTntEvidence() {
+        return DROP_TNT_TRAP;
     }
     public static @NotNull MaterialTrapEvidence floorFallEvidence() {
         return FLOOR_FALL_A_TRAP;
@@ -686,9 +714,9 @@ public final class ToBeeCandidateProfileService {
                 "original-waiting-lobby-not-recovered",
                 "runner-start-layout-generated-from-safe-archive-geometry-not-original",
                 "death-spawns-generated-from-first-stage-control-geometry-not-original",
-                "death-button-to-trap-bindings-partially-reconstructed-runtime-subset",
-                "trap-target-geometry-recovered-21-runtime-traps",
-                "remaining-2-action-traps-dark-wood-B-drop-TNT",
+                "death-button-to-trap-bindings-partially-reconstructed-runtime-set",
+                "trap-target-geometry-recovered-23-of-23-action-traps",
+                "all-surviving-action-signs-have-runtime-traps",
                 "start-barrier-generated-outside-gate-006-not-original",
                 "original-checkpoint-score-values-not-recovered"
         );
@@ -756,6 +784,18 @@ public final class ToBeeCandidateProfileService {
         trap.setButton(blockLocation(world, MINEFIELD_TRAP.button()));
         trap.setLocations(MINEFIELD_TRAP.targets().stream()
                 .map(pos -> blockLocation(world, new BlockPos(pos.x(), pos.y() + 1, pos.z())))
+                .toList());
+        map.arenaTraps.add(trap);
+    }
+
+    private static void addDropTntTrap(
+            @NotNull MapConfiguration.MapDefinition map,
+            @NotNull World world
+    ) {
+        TrapDropTNT trap = new TrapDropTNT();
+        trap.setButton(blockLocation(world, DROP_TNT_TRAP.button()));
+        trap.setLocations(DROP_TNT_TRAP.targets().stream()
+                .map(pos -> blockLocation(world, pos))
                 .toList());
         map.arenaTraps.add(trap);
     }
@@ -838,6 +878,25 @@ public final class ToBeeCandidateProfileService {
                 new BlockPos(29, 33, 85),
                 new BlockPos(29, 33, 81),
                 new BlockPos(27, 33, 79)
+        );
+    }
+
+    private static @NotNull List<BlockPos> darkWoodBTargetPositions() {
+        List<BlockPos> positions = new ArrayList<>();
+        for (int x = 26; x <= 39; x++)
+            positions.add(new BlockPos(x, 35, 70));
+        for (int z = 71; z <= 73; z++)
+            positions.add(new BlockPos(39, 35, z));
+        return List.copyOf(positions);
+    }
+
+    private static @NotNull List<BlockPos> dropTntAnchorPositions() {
+        return List.of(
+                new BlockPos(33, 49, 4),
+                new BlockPos(34, 49, 3),
+                new BlockPos(34, 49, 4),
+                new BlockPos(34, 49, 5),
+                new BlockPos(35, 49, 4)
         );
     }
 

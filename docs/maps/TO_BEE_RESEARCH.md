@@ -1138,3 +1138,41 @@ moving magma/flame front follows the preserved west-facing launcher direction.
 This raises the To Bee candidate runtime to **16 implemented traps**. Original
 Hive timing remains unknown; physical source direction, path and the B control
 button are archive-backed.
+
+
+### Full 23/23 action-trap runtime coverage
+
+Run #321 closes the final two surviving action-sign gaps. The To Bee candidate
+profile now contains a runtime trap for **all 23 archived action signs**.
+
+**Remove dark wood B**:
+
+- action sign: `16,25,76`
+- target selected from the nearest route-level semantic component recovered in
+  run #320: **17 `spruce_slab` cells**
+- geometry: `x=26..39,y=35,z=70` plus `x=39,y=35,z=71..73`
+- the connected `acacia_wood` tail at `39,35,74` is deliberately excluded,
+  keeping the reconstruction restricted to the repeated spruce route surface
+- reconstructed control: preserved oak button `15,35,57`, the closest unused
+  member of the same surviving high-stage control strip
+- runtime: `TrapDisappearingBlocks`
+
+**Drop TNT**:
+
+- action sign: `29,44,9`
+- archive target: exactly **5 TNT blocks** in a cross at `y=49`:
+  `33,49,4`; `34,49,3`; `34,49,4`; `34,49,5`; `35,49,4`
+- reconstructed control: `28,48,7`, the nearest preserved high-stage button
+  and distinct from the coal/flood controls already assigned in that stage
+- runtime: new `TrapDropTNT`, which treats those five TNT blocks as immutable
+  overhead anchors and spawns primed, zero-yield TNT one block below them; the
+  archive blocks themselves are never removed or exploded
+
+The physical target geometry is archive-backed. The two button assignments and
+effect timing are still explicitly reconstruction-level because Hive's original
+server-side bindings are absent from the world archive.
+
+At this point there are no surviving To Bee action labels without a runtime
+implementation. Remaining uncertainty is fidelity metadata (original lobby,
+exact spawn/button bindings, original checkpoint score values and timing), not
+a missing trap type.

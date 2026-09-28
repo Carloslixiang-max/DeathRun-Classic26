@@ -21,7 +21,7 @@ class ToBeeCandidateProfileServiceTest {
         assertEquals(726, ToBeeCandidateProfileService.startSearchColumnCount());
         assertEquals(14, ToBeeCandidateProfileService.startBarrierPositions().size());
         assertEquals(3, ToBeeCandidateProfileService.fireArrowTrapCount());
-        assertEquals(21, ToBeeCandidateProfileService.implementedTrapCount());
+        assertEquals(23, ToBeeCandidateProfileService.implementedTrapCount());
         assertEquals(366, ToBeeCandidateProfileService.expectedPortalBlockTotal());
         assertEquals(7, new HashSet<>(ToBeeCandidateProfileService.routeGateIds()).size());
     }
@@ -224,6 +224,38 @@ class ToBeeCandidateProfileServiceTest {
     }
 
     @Test
+    void finalDarkWoodAndDropTntEvidenceCompletesActionCatalog() {
+        var woods = ToBeeCandidateProfileService.darkWoodEvidence();
+        assertEquals(2, woods.size());
+        var darkB = woods.get(1);
+        assertEquals("pair-014-dark-wood-B", darkB.id());
+        assertEquals("SPRUCE_SLAB", darkB.expectedMaterialName());
+        assertEquals(17, darkB.targets().size());
+        assertEquals(17, new HashSet<>(darkB.targets()).size());
+        assertEquals(new ToBeeCandidateProfileService.BlockPos(16, 25, 76), darkB.actionSign());
+        assertEquals(new ToBeeCandidateProfileService.BlockPos(15, 35, 57), darkB.button());
+
+        var drop = ToBeeCandidateProfileService.dropTntEvidence();
+        assertEquals("action-017-drop-TNT", drop.id());
+        assertEquals("TNT", drop.expectedMaterialName());
+        assertEquals(5, drop.targets().size());
+        assertEquals(5, new HashSet<>(drop.targets()).size());
+        assertEquals(new ToBeeCandidateProfileService.BlockPos(29, 44, 9), drop.actionSign());
+        assertEquals(new ToBeeCandidateProfileService.BlockPos(28, 48, 7), drop.button());
+
+        var allKnownButtons = List.of(
+                darkB.button(),
+                drop.button(),
+                ToBeeCandidateProfileService.coalFireEvidence().button(),
+                ToBeeCandidateProfileService.floodEvidence().button(),
+                ToBeeCandidateProfileService.fireSnakeEvidence().button(),
+                ToBeeCandidateProfileService.fireArrowEvidence().get(0).button(),
+                ToBeeCandidateProfileService.redBlockEvidence().get(2).button()
+        );
+        assertEquals(allKnownButtons.size(), new HashSet<>(allKnownButtons).size());
+    }
+
+    @Test
     void deathControlStartAnchorsStayPinnedToUniqueArchiveCandidate() {
         assertEquals(new ToBeeCandidateProfileService.BlockPos(76, 25, 47),
                 ToBeeCandidateProfileService.deathControlButtonCandidate());
@@ -253,9 +285,9 @@ class ToBeeCandidateProfileServiceTest {
                 "original-waiting-lobby-not-recovered",
                 "runner-start-layout-generated-from-safe-archive-geometry-not-original",
                 "death-spawns-generated-from-first-stage-control-geometry-not-original",
-                "death-button-to-trap-bindings-partially-reconstructed-runtime-subset",
-                "trap-target-geometry-recovered-21-runtime-traps",
-                "remaining-2-action-traps-dark-wood-B-drop-TNT",
+                "death-button-to-trap-bindings-partially-reconstructed-runtime-set",
+                "trap-target-geometry-recovered-23-of-23-action-traps",
+                "all-surviving-action-signs-have-runtime-traps",
                 "start-barrier-generated-outside-gate-006-not-original",
                 "original-checkpoint-score-values-not-recovered"
         ), ToBeeCandidateProfileService.knownRemainingBlockers());
