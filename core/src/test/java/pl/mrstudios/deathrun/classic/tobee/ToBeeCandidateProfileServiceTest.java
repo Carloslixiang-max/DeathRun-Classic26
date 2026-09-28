@@ -106,7 +106,7 @@ class ToBeeCandidateProfileServiceTest {
     @Test
     void darkWoodTrapPinsNearestRouteLevelArchiveRun() {
         var wood = ToBeeCandidateProfileService.darkWoodEvidence();
-        assertEquals(1, wood.size());
+        assertEquals(2, wood.size());
         var first = wood.get(0);
         assertEquals("pair-002-dark-wood-A", first.id());
         assertEquals("SPRUCE_WOOD", first.expectedMaterialName());
