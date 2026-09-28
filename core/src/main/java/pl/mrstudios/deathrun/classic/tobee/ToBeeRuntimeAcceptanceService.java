@@ -157,8 +157,8 @@ public final class ToBeeRuntimeAcceptanceService {
                     (trap.getDuration().toMillis() + 49L) / 50L
             );
 
-            this.plugin.getServer().getScheduler().runTaskLater(
-                    this.plugin,
+            ToBeeRuntimeAcceptanceService.this.plugin.getServer().getScheduler().runTaskLater(
+                    ToBeeRuntimeAcceptanceService.this.plugin,
                     () -> this.observeActive(trapIndex, trap, kind, targetBefore, entitiesBefore,
                             envelope, durationTicks),
                     ACTIVE_OBSERVE_TICKS
@@ -191,8 +191,8 @@ public final class ToBeeRuntimeAcceptanceService {
             }
 
             long remaining = Math.max(1L, durationTicks - ACTIVE_OBSERVE_TICKS);
-            this.plugin.getServer().getScheduler().runTaskLater(
-                    this.plugin,
+            ToBeeRuntimeAcceptanceService.this.plugin.getServer().getScheduler().runTaskLater(
+                    ToBeeRuntimeAcceptanceService.this.plugin,
                     () -> this.endAndVerify(trapIndex, trap, entitiesBefore, envelope),
                     remaining
             );
@@ -207,8 +207,8 @@ public final class ToBeeRuntimeAcceptanceService {
             safeEnd(trap, trapIndex);
             cleanupNewEntities(this.world, entitiesBefore);
 
-            this.plugin.getServer().getScheduler().runTaskLater(
-                    this.plugin,
+            ToBeeRuntimeAcceptanceService.this.plugin.getServer().getScheduler().runTaskLater(
+                    ToBeeRuntimeAcceptanceService.this.plugin,
                     () -> {
                         List<String> residual = changedBlocks(this.world, envelope, 12);
                         if (!residual.isEmpty())
@@ -220,7 +220,7 @@ public final class ToBeeRuntimeAcceptanceService {
                         restoreEnvelope(this.world, envelope);
                         cleanupNewEntities(this.world, entitiesBefore);
 
-                        this.plugin.getLogger().info(
+                        ToBeeRuntimeAcceptanceService.this.plugin.getLogger().info(
                                 "[DR-TOBEE-RUNTIME] trap=" + (trapIndex + 1)
                                         + "/" + this.runtime.map().arenaTraps.size()
                                         + " type=" + trap.getClass().getSimpleName()
@@ -260,7 +260,7 @@ public final class ToBeeRuntimeAcceptanceService {
                     List.copyOf(this.issues)
             );
 
-            this.plugin.getLogger().info(
+            ToBeeRuntimeAcceptanceService.this.plugin.getLogger().info(
                     "[DR-TOBEE-RUNTIME] " + (result.success() ? "PASS" : "FAIL")
                             + " traps=" + result.trapsTested()
                             + " mutationAssertions=" + result.mutationAssertions()
