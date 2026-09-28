@@ -178,6 +178,35 @@ public class CommandDeathRun {
         this.message(player, PREFIX + "<gray>Inspect with <white>/dr map manifest to-bee-or-not-to-bee</white> and <white>/dr map check to-bee-or-not-to-bee</white>.");
     }
 
+    @Execute(name = "tobee bootstrap")
+    @Permission("mrstudios.command.deathrun.setup")
+    public void bootstrapToBeeCandidateWorld(
+            @Context CommandSender sender,
+            @Arg("world") String worldName
+    ) {
+        World world = this.arenaManager.loadExistingMapWorld(worldName);
+        if (world == null) {
+            this.message(sender, PREFIX + "<red>To Bee bootstrap could not load existing world <white>"
+                    + this.safe(worldName) + "<red>.");
+            return;
+        }
+
+        ToBeeCandidateProfileService.Result result = new ToBeeCandidateProfileService(
+                this.configuration, this.arenaManager
+        ).bootstrap(world);
+
+        if (!result.success()) {
+            this.message(sender, PREFIX + "<red>To Bee candidate bootstrap failed: <white>" + result.message());
+            if (!result.details().isEmpty())
+                this.message(sender, PREFIX + "<gray>" + String.join(", ", result.details()));
+            return;
+        }
+
+        this.message(sender, PREFIX + "<green>To Bee archive-backed candidate profile created.");
+        this.message(sender, PREFIX + "<yellow>Safety lock remains enabled until normal map promotion preflight passes.");
+        this.message(sender, PREFIX + "<gray>Remaining fidelity notes: <white>" + String.join(", ", result.details()));
+    }
+
     @Execute(name = "tobee verify")
     @Permission("mrstudios.command.deathrun.setup")
     public void verifyToBeeCandidate(@Context Player player) {
@@ -194,6 +223,36 @@ public class CommandDeathRun {
 
         this.message(player, PREFIX + "<green>To Bee archive signature and candidate profile verified.");
         this.message(player, PREFIX + "<gray>Still intentionally unresolved: <white>" + String.join(", ", result.details()));
+    }
+
+    @Execute(name = "tobee verify")
+    @Permission("mrstudios.command.deathrun.setup")
+    public void verifyToBeeCandidateWorld(
+            @Context CommandSender sender,
+            @Arg("world") String worldName
+    ) {
+        World world = this.plugin.getServer().getWorld(worldName);
+        if (world == null)
+            world = this.arenaManager.loadExistingMapWorld(worldName);
+        if (world == null) {
+            this.message(sender, PREFIX + "<red>To Bee verification could not load existing world <white>"
+                    + this.safe(worldName) + "<red>.");
+            return;
+        }
+
+        ToBeeCandidateProfileService.Result result = new ToBeeCandidateProfileService(
+                this.configuration, this.arenaManager
+        ).verify(world);
+
+        if (!result.success()) {
+            this.message(sender, PREFIX + "<red>To Bee candidate verification failed: <white>" + result.message());
+            if (!result.details().isEmpty())
+                this.message(sender, PREFIX + "<gray>" + String.join(", ", result.details()));
+            return;
+        }
+
+        this.message(sender, PREFIX + "<green>To Bee archive signature and candidate profile verified.");
+        this.message(sender, PREFIX + "<gray>Fidelity notes: <white>" + String.join(", ", result.details()));
     }
 
     @Execute(name = "vote")
@@ -643,19 +702,19 @@ public class CommandDeathRun {
     @Execute(name = "map disable")
     @Permission("mrstudios.command.deathrun.setup")
     public void setupMapsDisable(
-            @Context Player player,
+            @Context CommandSender sender,
             @Arg("id") String id
     ) {
         this.configuration.map().ensureMapsMutable();
         MapConfiguration.MapDefinition map = this.configuration.map().getMapById(id);
         if (map == null) {
-            this.message(player, this.configuration.language().commandMessageSetupMapMissing.replace("<map>", id));
+            this.message(sender, this.configuration.language().commandMessageSetupMapMissing.replace("<map>", id));
             return;
         }
 
         List<String> issues = this.mapPromotionIssues(map, true);
         if (!issues.isEmpty()) {
-            this.message(player, this.configuration.language().commandMessageSetupMapPreflightFailed
+            this.message(sender, this.configuration.language().commandMessageSetupMapPreflightFailed
                     .replace("<map>", this.safe(map.id))
                     .replace("<issues>", String.join(", ", issues)));
             return;
@@ -663,8 +722,8 @@ public class CommandDeathRun {
 
         map.arenaSetupEnabled = false;
         this.configuration.map().save();
-        this.message(player, this.configuration.language().commandMessageSetupMapPreflightPassed.replace("<map>", this.safe(map.id)));
-        this.message(player, this.configuration.language().commandMessageSetupMapDisabled.replace("<map>", map.id));
+        this.message(sender, this.configuration.language().commandMessageSetupMapPreflightPassed.replace("<map>", this.safe(map.id)));
+        this.message(sender, this.configuration.language().commandMessageSetupMapDisabled.replace("<map>", map.id));
     }
 
     @Execute(name = "map restore")

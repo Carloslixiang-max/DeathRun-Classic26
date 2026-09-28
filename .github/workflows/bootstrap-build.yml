@@ -429,6 +429,7 @@ jobs:
           jar tf "$JAR" | grep -q 'pl/mrstudios/deathrun/classic/vote/ClassicVoteService.class'
           jar tf "$JAR" | grep -q 'pl/mrstudios/deathrun/arena/listener/ClassicTrapEffectListener.class'
           jar tf "$JAR" | grep -q 'pl/mrstudios/deathrun/arena/trap/impl/TrapFireSnake.class'
+          jar tf "$JAR" | grep -q 'pl/mrstudios/deathrun/arena/trap/impl/TrapDropTNT.class'
           ! jar tf "$JAR" | grep -q 'net/kyori/adventure/platform/bukkit/BukkitAudiences.class'
           ! grep -R "BukkitAudiences" core/src/main/java
           unzip -p "$JAR" plugin.yml | grep -q 'api-version: "26.2"'
@@ -446,7 +447,7 @@ jobs:
   smoke:
     needs: build
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
 
     steps:
       - name: Install Java 25
@@ -481,6 +482,20 @@ jobs:
 
           test -s smoke/paper.jar
           test -s smoke/plugins/WorldEdit-7.4.5.jar
+
+      - name: Download archived To Bee world fixture
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p smoke/tobee_ci/region
+          TO_BEE_COMMIT='9a5b49593be61716ff3419aff24ce313567df14f'
+          BASE="https://raw.githubusercontent.com/Mqzn/HiveMCMaps/$TO_BEE_COMMIT/death-run/to-bee-or-not-to-bee"
+          curl -fsSL --retry 3 --retry-delay 2 "$BASE/level.dat" -o smoke/tobee_ci/level.dat
+          for region in 'r.-1.-1.mca' 'r.-1.0.mca' 'r.0.-1.mca' 'r.0.0.mca'; do
+            curl -fsSL --retry 3 --retry-delay 2 "$BASE/region/$region" -o "smoke/tobee_ci/region/$region"
+          done
+          test -s smoke/tobee_ci/level.dat
+          test "$(find smoke/tobee_ci/region -name '*.mca' -type f | wc -l)" -eq 4
 
       - name: Boot Paper 26.2 with DeathRun
         shell: bash
@@ -579,6 +594,87 @@ jobs:
           done
 
           test "$READY" -eq 1
+
+          # Load the actual archived Hive Java To Bee world into Paper 26.2,
+          # build the production-candidate profile from its preserved geometry,
+          # back it up, promote it through the normal preflight, then require a
+          # healthy 23-trap manifest. No third-party world binary is uploaded.
+          printf 'dr tobee bootstrap tobee_ci\n' >&3
+          TOBEE_BOOTSTRAP_OK=0
+          for _ in $(seq 1 90); do
+            if grep -q 'To Bee archive-backed candidate profile created' server.log; then
+              TOBEE_BOOTSTRAP_OK=1
+              break
+            fi
+            if grep -q 'To Bee candidate bootstrap failed' server.log; then break; fi
+            if ! kill -0 "$PID" 2>/dev/null; then break; fi
+            sleep 1
+          done
+          test "$TOBEE_BOOTSTRAP_OK" -eq 1
+
+          printf 'dr tobee verify tobee_ci\n' >&3
+          TOBEE_VERIFY_OK=0
+          for _ in $(seq 1 45); do
+            if grep -q 'To Bee archive signature and candidate profile verified' server.log; then
+              TOBEE_VERIFY_OK=1
+              break
+            fi
+            if grep -q 'To Bee candidate verification failed' server.log; then break; fi
+            if ! kill -0 "$PID" 2>/dev/null; then break; fi
+            sleep 1
+          done
+          test "$TOBEE_VERIFY_OK" -eq 1
+
+          printf 'dr map backup to-bee-or-not-to-bee\n' >&3
+          TOBEE_BACKUP_OK=0
+          for _ in $(seq 1 90); do
+            if grep -q 'Backup refreshed for map to-bee-or-not-to-bee' server.log; then
+              TOBEE_BACKUP_OK=1
+              break
+            fi
+            if ! kill -0 "$PID" 2>/dev/null; then break; fi
+            sleep 1
+          done
+          test "$TOBEE_BACKUP_OK" -eq 1
+          test -s plugins/DeathRun/backup/tobee_ci.zip
+
+          printf 'dr map disable to-bee-or-not-to-bee\n' >&3
+          TOBEE_PROMOTE_OK=0
+          for _ in $(seq 1 45); do
+            if grep -q 'Preflight checks passed for to-bee-or-not-to-bee' server.log; then
+              TOBEE_PROMOTE_OK=1
+              break
+            fi
+            if grep -q 'Cannot finalize map to-bee-or-not-to-bee' server.log; then break; fi
+            if ! kill -0 "$PID" 2>/dev/null; then break; fi
+            sleep 1
+          done
+          test "$TOBEE_PROMOTE_OK" -eq 1
+
+          printf 'dr map check to-bee-or-not-to-bee\n' >&3
+          TOBEE_HEALTH_OK=0
+          for _ in $(seq 1 45); do
+            if grep -q 'to-bee-or-not-to-bee.*healthy' server.log; then
+              TOBEE_HEALTH_OK=1
+              break
+            fi
+            if ! kill -0 "$PID" 2>/dev/null; then break; fi
+            sleep 1
+          done
+          test "$TOBEE_HEALTH_OK" -eq 1
+
+          printf 'dr map manifest to-bee-or-not-to-bee\n' >&3
+          TOBEE_MANIFEST_OK=0
+          for _ in $(seq 1 45); do
+            if grep -q 'Map manifest complete: to-bee-or-not-to-bee' server.log; then
+              TOBEE_MANIFEST_OK=1
+              break
+            fi
+            if ! kill -0 "$PID" 2>/dev/null; then break; fi
+            sleep 1
+          done
+          test "$TOBEE_MANIFEST_OK" -eq 1
+          grep -q 'traps=23' server.log
 
           # Exercise real Classic26 world creation, map serialization, trap
           # registration and runtime reload inside a live Paper process.
@@ -818,6 +914,34 @@ jobs:
             sleep 1
           done
           test "$VERIFY2" -eq 1
+
+          # The promoted real To Bee map must deserialize, reload its existing
+          # archived world and remain healthy with all 23 traps after restart.
+          printf 'dr map check to-bee-or-not-to-bee\n' >&4
+          TOBEE_RESTART_HEALTH_OK=0
+          for _ in $(seq 1 60); do
+            if grep -q 'to-bee-or-not-to-bee.*healthy' server-restart.log; then
+              TOBEE_RESTART_HEALTH_OK=1
+              break
+            fi
+            if ! kill -0 "$PID2" 2>/dev/null; then break; fi
+            sleep 1
+          done
+          test "$TOBEE_RESTART_HEALTH_OK" -eq 1
+
+          printf 'dr map manifest to-bee-or-not-to-bee\n' >&4
+          TOBEE_RESTART_MANIFEST_OK=0
+          for _ in $(seq 1 45); do
+            if grep -q 'Map manifest complete: to-bee-or-not-to-bee' server-restart.log; then
+              TOBEE_RESTART_MANIFEST_OK=1
+              break
+            fi
+            if ! kill -0 "$PID2" 2>/dev/null; then break; fi
+            sleep 1
+          done
+          test "$TOBEE_RESTART_MANIFEST_OK" -eq 1
+          grep -q 'traps=23' server-restart.log
+
           printf 'stop\n' >&4 || true
           exec 4>&-
           stop_server_process "$PID2"

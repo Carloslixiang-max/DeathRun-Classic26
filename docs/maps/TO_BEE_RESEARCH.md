@@ -1176,3 +1176,28 @@ At this point there are no surviving To Bee action labels without a runtime
 implementation. Remaining uncertainty is fidelity metadata (original lobby,
 exact spawn/button bindings, original checkpoint score values and timing), not
 a missing trap type.
+
+
+### Real archived-world promotion smoke gate
+
+Run #323 adds a live Paper 26.2 acceptance path for the actual pinned Hive Java
+`To Bee Or Not To Bee` archive rather than validating only the synthetic
+engineering playtest world.
+
+The smoke job now downloads the pinned `level.dat` plus all four archived Anvil
+region files directly into its ephemeral workspace, then:
+
+1. loads that existing world through Paper 26.2;
+2. runs `dr tobee bootstrap <world>` from the server console;
+3. runs archive/profile verification against the live Bukkit world;
+4. creates a real DeathRun world backup;
+5. promotes the map through the normal `map disable` preflight;
+6. requires a healthy manifest with exactly **23 runtime traps**;
+7. performs a clean shutdown and restart;
+8. requires the promoted To Bee map to deserialize and remain healthy with
+   all 23 traps after restart.
+
+The new world-argument bootstrap/verify overloads are console-compatible so
+this gate is reproducible in CI and by server administrators. The archived
+third-party world remains ephemeral and is never committed or uploaded as a
+repository artifact.
