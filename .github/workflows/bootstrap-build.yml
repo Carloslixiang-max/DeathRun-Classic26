@@ -695,7 +695,7 @@ jobs:
           printf 'dr tobee fingerprint tobee_ci\n' >&3
           TOBEE_FINGERPRINT_BEFORE=""
           for _ in $(seq 1 45); do
-            TOBEE_FINGERPRINT_BEFORE=$(grep 'To Bee configuration fingerprint PASS' server.log | tail -1 | sed -nE 's/.*fingerprint=([0-9a-f]{64}).*/\1/p')
+            TOBEE_FINGERPRINT_BEFORE=$(grep 'To Bee configuration fingerprint PASS' server.log | tail -1 | sed -nE 's/.*fingerprint=([0-9a-f]{64}).*/\1/p' || true)
             if [ -n "$TOBEE_FINGERPRINT_BEFORE" ]; then break; fi
             if grep -q 'To Bee configuration fingerprint FAIL:' server.log; then break; fi
             sleep 1
@@ -725,7 +725,7 @@ jobs:
           for _ in $(seq 1 45); do
             FINGERPRINT_PASS_NOW=$(grep -c 'To Bee configuration fingerprint PASS' server.log || true)
             if [ "$FINGERPRINT_PASS_NOW" -gt "$FINGERPRINT_PASS_BEFORE" ]; then
-              TOBEE_FINGERPRINT_AFTER_RUNTIME=$(grep 'To Bee configuration fingerprint PASS' server.log | tail -1 | sed -nE 's/.*fingerprint=([0-9a-f]{64}).*/\1/p')
+              TOBEE_FINGERPRINT_AFTER_RUNTIME=$(grep 'To Bee configuration fingerprint PASS' server.log | tail -1 | sed -nE 's/.*fingerprint=([0-9a-f]{64}).*/\1/p' || true)
               break
             fi
             if grep -q 'To Bee configuration fingerprint FAIL:' server.log; then break; fi
@@ -1029,7 +1029,7 @@ jobs:
           printf 'dr tobee fingerprint tobee_ci\n' >&4
           TOBEE_RESTART_FINGERPRINT=""
           for _ in $(seq 1 45); do
-            TOBEE_RESTART_FINGERPRINT=$(grep 'To Bee configuration fingerprint PASS' server-restart.log | tail -1 | sed -nE 's/.*fingerprint=([0-9a-f]{64}).*/\1/p')
+            TOBEE_RESTART_FINGERPRINT=$(grep 'To Bee configuration fingerprint PASS' server-restart.log | tail -1 | sed -nE 's/.*fingerprint=([0-9a-f]{64}).*/\1/p' || true)
             if [ -n "$TOBEE_RESTART_FINGERPRINT" ]; then break; fi
             if grep -q 'To Bee configuration fingerprint FAIL:' server-restart.log; then break; fi
             sleep 1
