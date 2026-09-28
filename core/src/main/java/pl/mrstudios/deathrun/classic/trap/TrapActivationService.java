@@ -263,6 +263,58 @@ public final class TrapActivationService {
                 .forEach(entity -> DeathRunEntityTags.tagForMap(entity, mapId));
     }
 
+    public static @NotNull MapRuntimeState mapRuntimeState(@NotNull String mapId) {
+        String normalized = mapId.toLowerCase(java.util.Locale.ROOT);
+
+        int active = (int) ACTIVE.keySet().stream()
+                .filter(key -> key.mapId().equalsIgnoreCase(normalized))
+                .count();
+        int cooldowns = (int) COOLDOWN_UNTIL.keySet().stream()
+                .filter(key -> key.mapId().equalsIgnoreCase(normalized))
+                .count();
+        int endTasks = (int) END_TASKS.keySet().stream()
+                .filter(key -> key.mapId().equalsIgnoreCase(normalized))
+                .count();
+        int holograms = (int) HOLOGRAMS.keySet().stream()
+                .filter(key -> key.mapId().equalsIgnoreCase(normalized))
+                .count();
+        int hologramTasks = (int) HOLOGRAM_TASKS.keySet().stream()
+                .filter(key -> key.mapId().equalsIgnoreCase(normalized))
+                .count();
+        int recentContacts = (int) RECENT_CONTACT.values().stream()
+                .filter(contact -> contact.context().mapId().equalsIgnoreCase(normalized))
+                .count();
+
+        return new MapRuntimeState(active, cooldowns, endTasks, holograms, hologramTasks, recentContacts);
+    }
+
+    public record MapRuntimeState(
+            int active,
+            int cooldowns,
+            int endTasks,
+            int holograms,
+            int hologramTasks,
+            int recentContacts
+    ) {
+        public boolean clean() {
+            return active == 0
+                    && cooldowns == 0
+                    && endTasks == 0
+                    && holograms == 0
+                    && hologramTasks == 0
+                    && recentContacts == 0;
+        }
+
+        public @NotNull String compact() {
+            return "active=" + active
+                    + ",cooldowns=" + cooldowns
+                    + ",endTasks=" + endTasks
+                    + ",holograms=" + holograms
+                    + ",hologramTasks=" + hologramTasks
+                    + ",recentContacts=" + recentContacts;
+        }
+    }
+
     public long cooldownRemainingMillis(@NotNull String mapId, int trapIndex) {
         return Math.max(0L, COOLDOWN_UNTIL.getOrDefault(new TrapKey(mapId, trapIndex), 0L) - System.currentTimeMillis());
     }

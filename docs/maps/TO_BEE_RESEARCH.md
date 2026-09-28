@@ -1267,3 +1267,27 @@ CI runs this check after the real archive has been bootstrapped, backed up,
 promoted and reported healthy. The smoke job now requires both
 `23/23 traps` in the manifest and a final
 `[DR-TOBEE-RUNTIME] PASS traps=23` lifecycle result.
+
+
+### Production-readiness state gate
+
+Run #330 adds a repeatable idle-state readiness gate for the real promoted To Bee runtime.
+
+`/dr tobee readiness <world>` requires all of the following at once:
+
+- map runtime exists on the requested loaded world;
+- setup mode is disabled and game state is `WAITING`;
+- no players remain attached to the runtime;
+- 20 Runner spawns, 2 Death spawns, 6 checkpoints and 23 traps remain loaded;
+- all 14 reconstructed start-gate cells are physically `BARRIER` again;
+- no trap-tagged arrows/TNT remain in the world;
+- no map-scoped TrapActivationService active contexts, cooldowns, end tasks,
+  holograms, hologram tasks or recent-contact attribution remain.
+
+CI executes readiness three times: immediately after real-world promotion,
+again after the full 23-trap lifecycle test, and again after the clean Paper
+restart.
+
+The archived title sign at `26,35,51` reads
+`To Bee or not | to Bee | ~~~~~~~~~~~~ | Timmetatsch`; the production candidate
+therefore now records **Timmetatsch** as map creator instead of `Unknown`.

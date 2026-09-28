@@ -40,6 +40,7 @@ import pl.mrstudios.deathrun.classic.playtest.ClassicPlaytestService;
 import pl.mrstudios.deathrun.classic.playtest.PlaytestTraceService;
 import pl.mrstudios.deathrun.classic.tobee.ToBeeCandidateProfileService;
 import pl.mrstudios.deathrun.classic.tobee.ToBeeRuntimeAcceptanceService;
+import pl.mrstudios.deathrun.classic.tobee.ToBeeReadinessService;
 import pl.mrstudios.deathrun.classic.vote.ClassicVoteService;
 
 import java.nio.file.Path;
@@ -296,6 +297,34 @@ public class CommandDeathRun {
         }
 
         this.message(sender, PREFIX + "<yellow>To Bee runtime lifecycle check started; map is temporarily edit-locked.");
+    }
+
+    @Execute(name = "tobee readiness")
+    @Permission("mrstudios.command.deathrun.setup")
+    public void readinessToBee(
+            @Context CommandSender sender,
+            @Arg("world") String worldName
+    ) {
+        World world = this.plugin.getServer().getWorld(worldName);
+        if (world == null) {
+            this.message(sender, PREFIX + "<red>To Bee readiness world is not loaded: <white>"
+                    + this.safe(worldName));
+            return;
+        }
+
+        ToBeeReadinessService.Result result = new ToBeeReadinessService(this.arenaManager).check(world);
+        if (!result.success()) {
+            this.message(sender, PREFIX + "<red>To Bee production readiness FAIL: <white>"
+                    + result.issues().size() + " issues");
+            for (String issue : result.issues().stream().limit(16).toList())
+                this.message(sender, PREFIX + "<gray>" + this.safe(issue));
+            return;
+        }
+
+        this.message(sender, PREFIX + "<green>To Bee production readiness PASS"
+                + " <gray>| barriers=<white>" + result.restoredBarriers()
+                + " <gray>| trapEntities=<white>" + result.trapEntities()
+                + " <gray>| traps=<white>23");
     }
 
     @Execute(name = "vote")

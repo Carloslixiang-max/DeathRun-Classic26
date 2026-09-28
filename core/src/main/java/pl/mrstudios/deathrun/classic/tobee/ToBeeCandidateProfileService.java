@@ -330,7 +330,7 @@ public final class ToBeeCandidateProfileService {
         MapConfiguration.MapDefinition map = new MapConfiguration.MapDefinition();
         map.id = MAP_ID;
         map.name = MAP_NAME;
-        map.creator = "Unknown (archived HiveMC Java world)";
+        map.creator = "Timmetatsch";
         map.world = world.getName();
 
         List<BlockPos> runnerStarts = runnerStartCandidates(world, 20);
