@@ -2,7 +2,9 @@ package pl.mrstudios.deathrun.classic.trap;
 
 import org.bukkit.Location;
 import org.bukkit.Server;
+import org.bukkit.World;
 import org.bukkit.entity.ArmorStand;
+import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.scheduler.BukkitRunnable;
@@ -98,8 +100,17 @@ public final class TrapActivationService {
         );
 
         ACTIVE.put(key, context);
+        World trapWorld = this.trapWorld(trap);
+        Set<UUID> trapEntitiesBefore = trapWorld == null
+                ? Set.of()
+                : trapWorld.getEntities().stream()
+                        .filter(DeathRunEntityTags::isTrapEntity)
+                        .map(Entity::getUniqueId)
+                        .collect(java.util.stream.Collectors.toSet());
         try {
             trap.start();
+            if (trapWorld != null)
+                this.tagNewTrapEntities(trapWorld, trapEntitiesBefore, runtime.mapId());
         } catch (Throwable throwable) {
             ACTIVE.remove(key, context);
             try {
@@ -160,11 +171,12 @@ public final class TrapActivationService {
         HOLOGRAMS.values().forEach(ArmorStand::remove);
         HOLOGRAMS.clear();
 
-        server.getWorlds().forEach(world ->
-                world.getEntitiesByClass(ArmorStand.class).stream()
-                        .filter(stand -> stand.getScoreboardTags().contains(HOLOGRAM_TAG))
-                        .forEach(ArmorStand::remove)
-        );
+        server.getWorlds().forEach(world -> {
+            world.getEntitiesByClass(ArmorStand.class).stream()
+                    .filter(stand -> stand.getScoreboardTags().contains(HOLOGRAM_TAG))
+                    .forEach(ArmorStand::remove);
+            DeathRunEntityTags.cleanupAllTrapEntities(world);
+        });
     }
 
     public static void clearPlayer(@NotNull UUID playerId) {
@@ -173,6 +185,10 @@ public final class TrapActivationService {
     }
 
     public static void resetMap(@NotNull String mapId) {
+        resetMap(mapId, null);
+    }
+
+    public static void resetMap(@NotNull String mapId, @Nullable World world) {
         String normalized = mapId.toLowerCase(java.util.Locale.ROOT);
 
         java.util.List<Map.Entry<TrapKey, TrapActivationContext>> active = ACTIVE.entrySet().stream()
@@ -220,6 +236,31 @@ public final class TrapActivationService {
         RECENT_CONTACT.entrySet().removeIf(entry ->
                 entry.getValue().context().mapId().equalsIgnoreCase(normalized)
         );
+
+        if (world != null)
+            DeathRunEntityTags.cleanupMapEntities(world, normalized);
+    }
+
+    private @Nullable World trapWorld(@NotNull ITrap trap) {
+        Location first = trap.getLocations().stream()
+                .filter(java.util.Objects::nonNull)
+                .filter(location -> location.getWorld() != null)
+                .findFirst()
+                .orElse(null);
+        if (first != null)
+            return first.getWorld();
+        return trap.getButton() == null ? null : trap.getButton().getWorld();
+    }
+
+    private void tagNewTrapEntities(
+            @NotNull World world,
+            @NotNull Set<UUID> before,
+            @NotNull String mapId
+    ) {
+        world.getEntities().stream()
+                .filter(DeathRunEntityTags::isTrapEntity)
+                .filter(entity -> !before.contains(entity.getUniqueId()))
+                .forEach(entity -> DeathRunEntityTags.tagForMap(entity, mapId));
     }
 
     public long cooldownRemainingMillis(@NotNull String mapId, int trapIndex) {

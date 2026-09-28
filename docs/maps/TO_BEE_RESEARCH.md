@@ -1214,3 +1214,28 @@ Those cells are non-structural replaceable vegetation at the two gate edges, not
 a wall or control block. Run #324 therefore keeps the conservative overlay check
 but allows only air, an existing barrier, short/tall grass and ferns. Water,
 lava, signs, buttons and solid structural blocks remain rejected.
+
+
+### Trap-entity lifecycle cleanup
+
+Run #326 hardens round/reset behavior after the real archived-world promotion
+gate became green.
+
+Projectile and explosive traps already tagged spawned arrows/TNT, but the old
+map reset path cleared cooldown/context/hologram state without removing a
+still-alive tagged projectile or explosive. That could leave a late arrow or TNT
+entity behind after a forced stop, round reset, runtime reload, or fast
+transition back to WAITING.
+
+The activation service now:
+
+- detects trap-tagged entities spawned synchronously by each activation;
+- adds a map-specific scoreboard tag to those new entities;
+- removes only that map's tagged trap entities on map reset;
+- removes every remaining tagged trap entity on plugin shutdown;
+- passes the loaded map world explicitly through normal WAITING, force-stop,
+  initialize and runtime-reload reset paths.
+
+This keeps cleanup scoped even if a server configuration ever places multiple
+DeathRun maps in one Bukkit world, while plugin shutdown still performs a full
+safety sweep.

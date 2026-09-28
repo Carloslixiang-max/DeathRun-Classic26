@@ -139,7 +139,9 @@ public class ArenaServiceRunnable extends BukkitRunnable {
     }
 
     protected void stateSwitchToWaiting() {
-        TrapActivationService.resetMap(this.resolvedMapId());
+        TrapActivationService.resetMap(this.resolvedMapId(), this.map.arenaWaitingLobbyLocation == null
+                ? null
+                : this.map.arenaWaitingLobbyLocation.getWorld());
         this.resetRoundState();
         for (int i = 0; i < this.map.arenaStartBarrierBlocks.size(); i++) {
             Location location = this.map.arenaStartBarrierBlocks.get(i);

@@ -75,6 +75,17 @@ public class ArenaManager {
         this.playerSnapshotService = new PlayerSnapshotService(plugin);
     }
 
+    private @Nullable World loadedWorldForMap(@NotNull MapConfiguration.MapDefinition map) {
+        if (map.world != null && !map.world.isBlank()) {
+            World named = this.server.getWorld(map.world);
+            if (named != null)
+                return named;
+        }
+        if (map.arenaWaitingLobbyLocation != null)
+            return map.arenaWaitingLobbyLocation.getWorld();
+        return null;
+    }
+
     public boolean isDeathRunWorld(@Nullable World world) {
         if (world == null)
             return false;
@@ -125,7 +136,7 @@ public class ArenaManager {
         this.playerMapIndex.clear();
 
         this.runtimesByMapId.values().forEach((runtime) -> {
-            TrapActivationService.resetMap(runtime.mapId());
+            TrapActivationService.resetMap(runtime.mapId(), this.loadedWorldForMap(runtime.map()));
             runtime.service().shutdown();
             this.saveAndReleaseWorld(runtime.map());
         });
@@ -272,7 +283,7 @@ public class ArenaManager {
                 for (Player queuedPlayer : this.signManager.drainQueuedPlayers(normalizedMapId, Integer.MAX_VALUE))
                     this.restoreQueuedPlayer(queuedPlayer);
 
-            TrapActivationService.resetMap(normalizedMapId);
+            TrapActivationService.resetMap(normalizedMapId, this.loadedWorldForMap(previous.map()));
             previous.service().shutdown();
             this.saveAndReleaseWorld(previous.map());
             this.runtimesByMapId.remove(normalizedMapId, previous);
@@ -429,7 +440,7 @@ public class ArenaManager {
         if (!wasWaiting)
             runtime.service().requestStop();
         else
-            TrapActivationService.resetMap(runtime.mapId());
+            TrapActivationService.resetMap(runtime.mapId(), this.loadedWorldForMap(runtime.map()));
 
         List<Player> activePlayers = runtime.arena().getUsers().stream()
                 .map(IUser::asBukkit)
