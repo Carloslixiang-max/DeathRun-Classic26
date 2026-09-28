@@ -1201,3 +1201,16 @@ The new world-argument bootstrap/verify overloads are console-compatible so
 this gate is reproducible in CI and by server administrators. The archived
 third-party world remains ephemeral and is never committed or uploaded as a
 repository artifact.
+
+
+### Paper 26.2 archived-world barrier edge correction
+
+Run #323 proved that Paper 26.2 can migrate and load the pinned Java archive as
+a real secondary world. The first live bootstrap then stopped at the start gate
+because the reconstructed x=84 barrier plane overlaps two original
+`SHORT_GRASS` cells at `84,25,79` and `84,25,85`.
+
+Those cells are non-structural replaceable vegetation at the two gate edges, not
+a wall or control block. Run #324 therefore keeps the conservative overlay check
+but allows only air, an existing barrier, short/tall grass and ferns. Water,
+lava, signs, buttons and solid structural blocks remain rejected.

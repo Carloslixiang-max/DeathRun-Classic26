@@ -476,7 +476,7 @@ public final class ToBeeCandidateProfileService {
 
         for (BlockPos barrier : startBarrierPositions()) {
             Material material = world.getBlockAt(barrier.x(), barrier.y(), barrier.z()).getType();
-            if (!material.isAir() && material != Material.BARRIER)
+            if (!startBarrierOverlayReplaceable(material))
                 issues.add("start-barrier-overlay-not-clear:" + barrier.compact() + ":" + material.name());
         }
 
@@ -1209,6 +1209,18 @@ public final class ToBeeCandidateProfileService {
                     if (world.getBlockAt(x, y, z).getType() == Material.NETHER_PORTAL)
                         count++;
         return count;
+    }
+
+    static boolean startBarrierOverlayReplaceable(@NotNull Material material) {
+        // The archived gate edge contains two SHORT_GRASS cells at foot level.
+        // Replacing non-structural vegetation with the temporary start barrier
+        // is safe; fluids, controls, signs and structural blocks remain rejected.
+        return material.isAir()
+                || material == Material.BARRIER
+                || material == Material.SHORT_GRASS
+                || material == Material.TALL_GRASS
+                || material == Material.FERN
+                || material == Material.LARGE_FERN;
     }
 
     private static boolean routeSideAnchorValid(

@@ -45,6 +45,27 @@ class ToBeeCandidateProfileServiceTest {
     }
 
     @Test
+    void startBarrierAllowsOnlyAirBarrierAndReplaceableVegetation() {
+        assertTrue(ToBeeCandidateProfileService.startBarrierOverlayReplaceable(org.bukkit.Material.AIR));
+        assertTrue(ToBeeCandidateProfileService.startBarrierOverlayReplaceable(org.bukkit.Material.BARRIER));
+        assertTrue(ToBeeCandidateProfileService.startBarrierOverlayReplaceable(org.bukkit.Material.SHORT_GRASS));
+        assertTrue(ToBeeCandidateProfileService.startBarrierOverlayReplaceable(org.bukkit.Material.TALL_GRASS));
+        assertTrue(ToBeeCandidateProfileService.startBarrierOverlayReplaceable(org.bukkit.Material.FERN));
+        assertTrue(ToBeeCandidateProfileService.startBarrierOverlayReplaceable(org.bukkit.Material.LARGE_FERN));
+
+        org.junit.jupiter.api.Assertions.assertFalse(
+                ToBeeCandidateProfileService.startBarrierOverlayReplaceable(org.bukkit.Material.WATER));
+        org.junit.jupiter.api.Assertions.assertFalse(
+                ToBeeCandidateProfileService.startBarrierOverlayReplaceable(org.bukkit.Material.LAVA));
+        org.junit.jupiter.api.Assertions.assertFalse(
+                ToBeeCandidateProfileService.startBarrierOverlayReplaceable(org.bukkit.Material.OAK_BUTTON));
+        org.junit.jupiter.api.Assertions.assertFalse(
+                ToBeeCandidateProfileService.startBarrierOverlayReplaceable(org.bukkit.Material.OAK_SIGN));
+        org.junit.jupiter.api.Assertions.assertFalse(
+                ToBeeCandidateProfileService.startBarrierOverlayReplaceable(org.bukkit.Material.STONE));
+    }
+
+    @Test
     void reconstructedStartBarrierStaysOutsidePortal006AndHasNoDuplicateCells() {
         List<ToBeeCandidateProfileService.BlockPos> barrier = ToBeeCandidateProfileService.startBarrierPositions();
         assertEquals(14, new HashSet<>(barrier).size());
