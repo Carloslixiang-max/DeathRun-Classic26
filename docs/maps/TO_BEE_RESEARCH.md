@@ -1291,3 +1291,28 @@ restart.
 The archived title sign at `26,35,51` reads
 `To Bee or not | to Bee | ~~~~~~~~~~~~ | Timmetatsch`; the production candidate
 therefore now records **Timmetatsch** as map creator instead of `Unknown`.
+
+
+### Deterministic production configuration fingerprint
+
+Run #331 adds a second final-state guard that is stricter than simple object
+counts. `/dr tobee fingerprint <world>` canonicalizes the **loaded runtime map**
+and hashes it with SHA-256.
+
+The canonical payload includes:
+
+- map id/name/creator/world, setup state and room-size settings;
+- all 20 Runner spawns and 2 Death spawns in list order;
+- all 14 start-barrier cells plus their restore materials;
+- all six checkpoints including id, name, respawn and trigger-volume locations;
+- checkpoint point values and finish checkpoint id;
+- all 23 traps in Death-navigation order, including exact Java class, control
+  button and every target location.
+
+Locations include exact double/float coordinates in hexadecimal form, so
+serialization drift is visible rather than rounded away.
+
+CI records the fingerprint immediately after promotion, verifies it is
+unchanged after activating/restoring all 23 traps, and compares it again after
+a clean Paper 26.2 restart. This closes the gap where counts could remain
+correct while route/trap ordering or coordinates silently changed.

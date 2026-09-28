@@ -39,6 +39,7 @@ import pl.mrstudios.deathrun.config.impl.MapConfiguration;
 import pl.mrstudios.deathrun.classic.playtest.ClassicPlaytestService;
 import pl.mrstudios.deathrun.classic.playtest.PlaytestTraceService;
 import pl.mrstudios.deathrun.classic.tobee.ToBeeCandidateProfileService;
+import pl.mrstudios.deathrun.classic.tobee.ToBeeFingerprintService;
 import pl.mrstudios.deathrun.classic.tobee.ToBeeRuntimeAcceptanceService;
 import pl.mrstudios.deathrun.classic.tobee.ToBeeReadinessService;
 import pl.mrstudios.deathrun.classic.vote.ClassicVoteService;
@@ -297,6 +298,31 @@ public class CommandDeathRun {
         }
 
         this.message(sender, PREFIX + "<yellow>To Bee runtime lifecycle check started; map is temporarily edit-locked.");
+    }
+
+    @Execute(name = "tobee fingerprint")
+    @Permission("mrstudios.command.deathrun.setup")
+    public void fingerprintToBee(
+            @Context CommandSender sender,
+            @Arg("world") String worldName
+    ) {
+        World world = this.plugin.getServer().getWorld(worldName);
+        if (world == null) {
+            this.message(sender, PREFIX + "<red>To Bee fingerprint world is not loaded: <white>"
+                    + this.safe(worldName));
+            return;
+        }
+
+        ToBeeFingerprintService.Result result = new ToBeeFingerprintService(this.arenaManager).fingerprint(world);
+        if (!result.success()) {
+            this.message(sender, PREFIX + "<red>To Bee configuration fingerprint FAIL: <white>"
+                    + String.join(", ", result.issues()));
+            return;
+        }
+
+        this.message(sender, PREFIX + "<green>To Bee configuration fingerprint PASS"
+                + " <gray>| fingerprint=<white>" + result.fingerprint()
+                + " <gray>| canonicalBytes=<white>" + result.canonicalBytes());
     }
 
     @Execute(name = "tobee readiness")
