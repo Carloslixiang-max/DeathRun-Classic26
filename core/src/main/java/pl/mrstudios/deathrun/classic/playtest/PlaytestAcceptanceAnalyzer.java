@@ -23,6 +23,8 @@ public final class PlaytestAcceptanceAnalyzer {
         boolean statePlaying = false;
         boolean stateEnding = false;
         boolean stateWaiting = false;
+        String previousState = null;
+        Set<String> pendingDisconnects = new LinkedHashSet<>();
         boolean runnerRole = false;
         boolean deathRole = false;
         boolean strafeLeft = false;
@@ -51,7 +53,8 @@ public final class PlaytestAcceptanceAnalyzer {
                 String state = field(line, "state");
                 statePlaying |= "PLAYING".equals(state);
                 stateEnding |= "ENDING".equals(state);
-                stateWaiting |= "WAITING".equals(state);
+                stateWaiting |= "WAITING".equals(state) && "ENDING".equals(previousState);
+                previousState = state;
             }
 
             if (line.contains(" | ROLE | ")) {
@@ -108,12 +111,22 @@ public final class PlaytestAcceptanceAnalyzer {
                     && "false".equals(field(line, "snapshotPending")))
                 restoreComplete = true;
 
-            if (line.contains(" | DISCONNECT | "))
-                disconnected = true;
+            if (line.contains(" | DISCONNECT | ")) {
+                String player = field(line, "player");
+                if (player != null && !player.isBlank()) {
+                    pendingDisconnects.remove(player);
+                    if ("PLAYING".equals(field(line, "state"))) {
+                        disconnected = true;
+                        pendingDisconnects.add(player);
+                    }
+                }
+            }
 
-            if (line.contains(" | RECONNECT_RECOVERY | ")
-                    && "false".equals(field(line, "pendingAfter")))
-                reconnectRecovered = true;
+            if (line.contains(" | RECONNECT_RECOVERY | ")) {
+                String player = field(line, "player");
+                boolean matched = pendingDisconnects.remove(player);
+                reconnectRecovered |= matched && "false".equals(field(line, "pendingAfter"));
+            }
         }
 
         Set<Integer> expectedCheckpoints = new LinkedHashSet<>(expectedCheckpointIds);
@@ -142,10 +155,10 @@ public final class PlaytestAcceptanceAnalyzer {
         add(checks, "zero-lives-elimination", eliminatedDeath, "death with eliminated=true");
         add(checks, "first-finish-60s-clamp", firstFinishClamp, "position=1 and remaining<=60");
         add(checks, "round-ending", stateEnding, "ENDING observed");
-        add(checks, "round-reset", stateWaiting, "WAITING observed after trace start");
+        add(checks, "round-reset", stateWaiting, "ENDING -> WAITING observed in consecutive state events");
         add(checks, "state-restore", restoreComplete, "snapshotPending=false");
         add(checks, "disconnect", disconnected, "active player disconnect observed");
-        add(checks, "reconnect-recovery", reconnectRecovered, "pendingAfter=false");
+        add(checks, "reconnect-recovery", reconnectRecovered, "same player recovered after PLAYING disconnect with pendingAfter=false");
 
         boolean complete = checks.stream().allMatch(Check::passed);
         return new Result(complete, List.copyOf(checks), Set.copyOf(checkpointIds), Set.copyOf(trapIndexes));
@@ -167,7 +180,7 @@ public final class PlaytestAcceptanceAnalyzer {
     }
 
     private static String field(@NotNull String line, @NotNull String key) {
-        String needle = key + "=";
+        String needle = " " + key + "=";
         int start = line.indexOf(needle);
         if (start < 0)
             return null;

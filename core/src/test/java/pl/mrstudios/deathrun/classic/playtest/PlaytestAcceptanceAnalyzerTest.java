@@ -56,4 +56,53 @@ class PlaytestAcceptanceAnalyzerTest {
         assertFalse(result.complete());
         assertTrue(result.checks().stream().anyMatch(check -> !check.passed()));
     }
+
+    private static boolean passes(String key, String... events) {
+        return PlaytestAcceptanceAnalyzer.analyze(List.of(events), List.of(), 0)
+                .checks().stream().filter(check -> check.key().equals(key))
+                .findFirst().orElseThrow().passed();
+    }
+
+    @Test
+    void resetRequiresEndingImmediatelyBeforeWaitingAmongStateEvents() {
+        assertFalse(passes("round-reset", "t | STATE | state=WAITING", "t | STATE | state=ENDING"));
+        assertFalse(passes("round-reset", "t | STATE | state=ENDING",
+                "t | STATE | state=PLAYING", "t | STATE | state=WAITING"));
+        assertTrue(passes("round-reset", "t | STATE | state=ENDING",
+                "t | RESTORE | player=Runner snapshotPending=false", "t | STATE | state=WAITING"));
+    }
+
+    @Test
+    void disconnectRequiresPlayingAndAnIdentifiedPlayer() {
+        assertFalse(passes("disconnect", "t | DISCONNECT | player=Runner state=WAITING"));
+        assertFalse(passes("disconnect", "t | DISCONNECT | state=PLAYING"));
+        assertFalse(passes("disconnect", "t | DISCONNECT | player=Runner oldstate=PLAYING"));
+        assertTrue(passes("disconnect", "t | DISCONNECT | player=Runner state=PLAYING"));
+    }
+
+    @Test
+    void recoveryRequiresEarlierActiveDisconnectForSamePlayer() {
+        String disconnect = "t | DISCONNECT | player=Runner state=PLAYING";
+        String recovered = "t | RECONNECT_RECOVERY | player=Runner pendingAfter=false";
+        assertFalse(passes("reconnect-recovery", recovered, disconnect));
+        assertFalse(passes("reconnect-recovery", disconnect,
+                "t | RECONNECT_RECOVERY | player=Other pendingAfter=false"));
+        assertFalse(passes("reconnect-recovery",
+                "t | DISCONNECT | player=Runner state=WAITING", recovered));
+        assertFalse(passes("reconnect-recovery", disconnect,
+                "t | RECONNECT_RECOVERY | player=Runner pendingAfter=true"));
+        assertTrue(passes("reconnect-recovery", disconnect, recovered));
+    }
+
+    @Test
+    void recoveryConsumesDisconnectAndNewDisconnectReplacesItsState() {
+        String disconnect = "t | DISCONNECT | player=Runner state=PLAYING";
+        String recovered = "t | RECONNECT_RECOVERY | player=Runner pendingAfter=false";
+        assertFalse(passes("reconnect-recovery", disconnect,
+                "t | RECONNECT_RECOVERY | player=Runner pendingAfter=true", recovered));
+        assertFalse(passes("reconnect-recovery", disconnect,
+                "t | DISCONNECT | player=Runner state=WAITING", recovered));
+        assertTrue(passes("reconnect-recovery", disconnect,
+                "t | RECONNECT_RECOVERY | player=Runner pendingAfter=true", disconnect, recovered));
+    }
 }
