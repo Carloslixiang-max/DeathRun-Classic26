@@ -1275,7 +1275,7 @@ public final class ToBeeCandidateProfileService {
         var feet = world.getBlockAt(candidate.x(), candidate.y(), candidate.z());
         var head = world.getBlockAt(candidate.x(), candidate.y() + 1, candidate.z());
         var floor = world.getBlockAt(candidate.x(), candidate.y() - 1, candidate.z());
-        return feet.isPassable() && head.isPassable() && floor.getType().isOccluding()
+        return feet.isPassable() && head.isPassable() && floor.getType().isSolid()
                 && !unsafeLandingMaterial(feet.getType()) && !unsafeLandingMaterial(head.getType())
                 && !unsafeLandingMaterial(floor.getType());
     }

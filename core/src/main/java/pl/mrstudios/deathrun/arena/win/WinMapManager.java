@@ -59,6 +59,8 @@ public class WinMapManager {
             int position,
             int timeSeconds
     ) {
+        player.sendMessage(net.kyori.adventure.text.Component.text(
+                "[死神跑酷] 通关成功！名次：第 " + position + " 名，用时：" + timeSeconds + " 秒。"));
         this.giveResultMap(
                 player,
                 background,
@@ -73,6 +75,8 @@ public class WinMapManager {
             @Nullable BufferedImage background,
             int deaths
     ) {
+        player.sendMessage(net.kyori.adventure.text.Component.text(
+                "[死神跑酷] 挑战结束，累计死亡：" + deaths + " 次。"));
         this.giveResultMap(
                 player,
                 background,

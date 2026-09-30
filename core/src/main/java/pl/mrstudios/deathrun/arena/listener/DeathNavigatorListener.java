@@ -116,7 +116,7 @@ public final class DeathNavigatorListener implements Listener {
                             "<red>机关未能激活，请联系管理员。</red>"
                     ));
                     default -> event.getPlayer().sendActionBar(MiniMessage.miniMessage().deserialize(
-                            "<red>机关暂不可用：" + result.name() + "</red>"
+                            "<red>机关暂不可用，请等待起跑或重新选择。</red>"
                     ));
                 }
             }

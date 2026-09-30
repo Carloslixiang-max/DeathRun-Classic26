@@ -124,7 +124,7 @@ public final class ClassicVoteService {
         this.votes.put(player.getUniqueId(), choice);
 
         String displayChoice = RANDOM.equals(choice)
-                ? "Random"
+                ? "随机地图"
                 : this.displayName(this.configuration.map().getMapById(choice));
         player.sendMessage(miniMessage().deserialize(
                 this.configuration.language().classicVoteRecorded

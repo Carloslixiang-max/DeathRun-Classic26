@@ -43,10 +43,8 @@ public class LoseScreenRenderer extends MapRenderer {
         canvas.drawImage(0, 0, this.background);
 
         MapFont font = MinecraftFont.Font;
-        canvas.drawText(10, 14, font, "DeathRun Defeat");
-        canvas.drawText(10, 38, font, "Player: " + this.playerName);
-        canvas.drawText(10, 54, font, "Status: You Died");
-        canvas.drawText(10, 70, font, "Deaths: " + this.deaths);
+        canvas.drawText(10, 38, font, this.playerName);
+        canvas.drawText(10, 70, font, "#" + this.deaths);
     }
 
 }

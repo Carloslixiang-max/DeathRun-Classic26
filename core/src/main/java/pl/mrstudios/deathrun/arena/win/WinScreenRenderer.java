@@ -46,10 +46,9 @@ public class WinScreenRenderer extends MapRenderer {
         canvas.drawImage(0, 0, this.background);
 
         MapFont font = MinecraftFont.Font;
-        canvas.drawText(10, 14, font, "DeathRun Victory");
-        canvas.drawText(10, 38, font, "Player: " + this.playerName);
-        canvas.drawText(10, 54, font, "Position: #" + this.position);
-        canvas.drawText(10, 70, font, "Time: " + this.formatTime(this.timeSeconds));
+        canvas.drawText(10, 38, font, this.playerName);
+        canvas.drawText(10, 54, font, "#" + this.position);
+        canvas.drawText(10, 70, font, this.formatTime(this.timeSeconds));
     }
 
     private @NotNull String formatTime(
