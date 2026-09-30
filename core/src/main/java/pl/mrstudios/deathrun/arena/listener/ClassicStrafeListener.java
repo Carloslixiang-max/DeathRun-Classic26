@@ -44,16 +44,34 @@ public final class ClassicStrafeListener implements Listener {
         if (direction == null)
             return;
         event.setCancelled(true);
+        long sampleStarted = System.currentTimeMillis();
+        long beforeLeft = this.strafeService.remainingMillis(player, ClassicStrafeService.Direction.LEFT);
+        long beforeBack = this.strafeService.remainingMillis(player, ClassicStrafeService.Direction.BACK);
+        long beforeRight = this.strafeService.remainingMillis(player, ClassicStrafeService.Direction.RIGHT);
         boolean activated = this.strafeService.activate(player, direction);
         if (activated) {
-            this.trace.record(runtime.mapId(), "STRAFE", "player=" + player.getName() + " direction=" + direction.name() + " cooldown=60");
+            var velocity = player.getVelocity();
+            long afterLeft = this.strafeService.remainingMillis(player, ClassicStrafeService.Direction.LEFT);
+            long afterBack = this.strafeService.remainingMillis(player, ClassicStrafeService.Direction.BACK);
+            long afterRight = this.strafeService.remainingMillis(player, ClassicStrafeService.Direction.RIGHT);
+            long sampleElapsedMillis = Math.max(0, System.currentTimeMillis() - sampleStarted);
+            this.trace.record(runtime.mapId(), "STRAFE", "player=" + player.getName()
+                    + " direction=" + direction.name() + " cooldown=60"
+                    + " horizontal=" + Math.hypot(velocity.getX(), velocity.getZ())
+                    + " vertical=" + velocity.getY()
+                    + " beforeLeft=" + beforeLeft + " beforeBack=" + beforeBack + " beforeRight=" + beforeRight
+                    + " afterLeft=" + afterLeft + " afterBack=" + afterBack + " afterRight=" + afterRight
+                    + " sampleElapsedMillis=" + sampleElapsedMillis);
             player.sendActionBar(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize(
                     "<aqua>" + direction.label() + "</aqua> <gray>used · <white>60s</white>"
             ));
             return;
         }
 
-        long seconds = (this.strafeService.remainingMillis(player, direction) + 999L) / 1000L;
+        long remainingMillis = this.strafeService.remainingMillis(player, direction);
+        this.trace.record(runtime.mapId(), "STRAFE_BLOCKED", "player=" + player.getName()
+                + " direction=" + direction.name() + " remainingMillis=" + remainingMillis);
+        long seconds = (remainingMillis + 999L) / 1000L;
         player.sendActionBar(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize(
                 "<red>" + direction.label() + "</red> <gray>ready in <white>" + seconds + "s</white>"
         ));

@@ -129,6 +129,11 @@ physically preserves seven dense Nether-portal gate components. Classic26 does
 not invent two extra gates or silently mix that later checkpoint/XP data into
 this archived Java reconstruction.
 
+Final multiplayer evidence uses `/dr map trace acceptance <id>` for event coverage
+and `/dr map trace rules <id>` for numeric rules and all-player restoration.
+Follow [the multiplayer acceptance rounds](docs/PLAYTEST.md) before recording a
+human PASS.
+
 ## Main commands
 
 ```text

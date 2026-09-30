@@ -12,9 +12,7 @@ import pl.mrstudios.deathrun.api.arena.event.arena.ArenaGameStateChangeEvent;
 import pl.mrstudios.deathrun.api.arena.event.arena.ArenaTrapActivateEvent;
 import pl.mrstudios.deathrun.api.arena.event.arena.ArenaUserJoinedEvent;
 import pl.mrstudios.deathrun.api.arena.event.arena.ArenaUserLeftEvent;
-import pl.mrstudios.deathrun.api.arena.event.user.UserArenaCheckpointEvent;
 import pl.mrstudios.deathrun.api.arena.event.user.UserArenaDeathEvent;
-import pl.mrstudios.deathrun.api.arena.event.user.UserArenaFinishedEvent;
 import pl.mrstudios.deathrun.api.arena.event.user.UserArenaRoleAssignedEvent;
 import pl.mrstudios.deathrun.api.arena.event.user.UserArenaUseBoosterEvent;
 import pl.mrstudios.deathrun.api.arena.user.IUser;
@@ -109,26 +107,9 @@ public final class PlaytestTraceListener implements Listener {
                 "ROLE",
                 "player=" + event.getUser().getName()
                         + " role=" + event.getRole()
+                        + " lives=" + event.getUser().getLives()
+                        + " points=" + event.getUser().getRoundPoints()
         );
-    }
-
-    @EventHandler(priority = EventPriority.MONITOR)
-    public void onCheckpoint(@NotNull UserArenaCheckpointEvent event) {
-        String mapId = this.trace.mapIdForUser(event.getUser());
-        if (mapId == null)
-            return;
-
-        IUser user = event.getUser();
-        int checkpointId = event.getCheckpoint().id();
-        this.server.getScheduler().runTask(this.plugin, () -> this.trace.record(
-                mapId,
-                "CHECKPOINT",
-                "player=" + user.getName()
-                        + " cp=" + checkpointId
-                        + " lives=" + user.getLives()
-                        + " points=" + user.getRoundPoints()
-                        + " eliminated=" + user.isEliminated()
-        ));
     }
 
     @EventHandler(priority = EventPriority.MONITOR)
@@ -144,33 +125,11 @@ public final class PlaytestTraceListener implements Listener {
                 "DEATH",
                 "player=" + user.getName()
                         + " deaths=" + user.getDeaths()
+                        + " livesBefore=" + event.getLivesBefore()
                         + " lives=" + user.getLives()
                         + " eliminated=" + user.isEliminated()
                         + " trap=" + trap
         );
-    }
-
-    @EventHandler(priority = EventPriority.MONITOR)
-    public void onFinish(@NotNull UserArenaFinishedEvent event) {
-        IUser user = event.getUser();
-        String mapId = this.trace.mapIdForUser(user);
-        if (mapId == null)
-            return;
-
-        this.server.getScheduler().runTask(this.plugin, () -> {
-            ArenaManager.ArenaRuntime runtime = this.arenaManager.runtimeByMapId(mapId);
-            int remaining = runtime == null ? -1 : runtime.arena().getRemainingTime();
-            this.trace.record(
-                    mapId,
-                    "FINISH",
-                    "player=" + user.getName()
-                            + " position=" + event.getPosition()
-                            + " time=" + event.getTime()
-                            + " lives=" + user.getLives()
-                            + " points=" + user.getRoundPoints()
-                            + " remaining=" + remaining
-            );
-        });
     }
 
     @EventHandler(priority = EventPriority.MONITOR)

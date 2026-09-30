@@ -56,6 +56,7 @@ After the test:
 ```text
 /dr map trace stop classic26-playtest
 /dr map trace acceptance classic26-playtest
+/dr map trace rules classic26-playtest
 ```
 
 The private report is written to:
@@ -114,7 +115,7 @@ Both clients join with `/dr join to-bee-or-not-to-bee`; an operator can use
 
 | Round | Runner actions | Death actions | Evidence to retain |
 | --- | --- | --- | --- |
-| Finish and controls | Use all three strafes; confirm independent cooldowns; die once without elimination; traverse all five intermediate checkpoints and finish | Use Previous, Next, Trap Jumper and hotbar activation; activate a physical button; exercise every configured trap across rounds if needed | All six configured gates and 23 trap indexes; +2 Lives at normal CPs; first finish at >60 seconds remaining clamps to 60; ENDING then WAITING |
+| Finish and controls | Use Left, Back, Right in quick succession, then retry each before its 60s cooldown expires; die once without elimination; traverse all five intermediate checkpoints and finish | Use Previous, Next, Trap Jumper and hotbar activation; activate a physical button; exercise every configured trap across rounds if needed | All six configured gates and 23 trap indexes; +2 Lives at normal CPs; first finish at >60 seconds remaining clamps to 60; ENDING then WAITING |
 | Elimination | Start with 2 Lives; die twice before gaining checkpoint lives | Observe eliminated Runner can no longer participate | Non-eliminating death followed by zero-lives elimination; restored pre-game state |
 | Disconnect | Disconnect while PLAYING, then reconnect with the same account | Observe session cleanup; allow the round to finish | DISCONNECT state=PLAYING, then same player's RECONNECT_RECOVERY pendingAfter=false; visually restored state |
 
@@ -127,6 +128,7 @@ After all clients have recovered and the map is idle:
 ```text
 /dr map trace stop to-bee-or-not-to-bee
 /dr map trace acceptance to-bee-or-not-to-bee
+/dr map trace rules to-bee-or-not-to-bee
 /dr tobee readiness <world>
 /dr tobee fingerprint <world>
 ```
@@ -142,8 +144,44 @@ counts after an earlier PLAYING disconnect for the same named player. A lobby
 disconnect, recovery logged before disconnection, or another player's recovery
 cannot satisfy that check.
 
-The analyzer checks event coverage, not every numeric rule or the appearance of
-the world on clients. Confirm Lives, cooldowns, finish timing, trap visibility,
-route continuity and restored items manually even when the verdict is PASS.
+The acceptance report checks event coverage. The separate rules report checks
+numeric evidence described below. Confirm trap visibility, route continuity
+and restored items on both clients even when both reports show PASS.
 A PASS is recorded evidence from this test session, not proof of full-room
 22-player capacity or a completed human test performed by CI.
+
+## Numeric rules report (trace schema 2)
+
+`/dr map trace rules <id>` complements `/dr map trace acceptance <id>`. For
+final acceptance both reports must PASS, followed by client observations and
+idle readiness/fingerprint checks. Older traces remain readable by the event
+coverage report; the rules report requires a fresh trace with the new numeric
+fields and otherwise reports INCOMPLETE.
+
+The rules report checks every observed result; a later correct round cannot
+hide an earlier invalid result. Checkpoint points are compared with the loaded
+map definition rather than trusting the trace's self-reported award.
+
+| Check | Required evidence |
+| --- | --- |
+| Runner initialization | Each recorded Runner assignment has 2 Lives and 0 points |
+| Checkpoints | Every configured normal CP records +2 Lives; every CP awards its configured points; finish gate adds no Lives |
+| Death | Recorded pre/post Lives differ by exactly 1; elimination is true exactly at zero |
+| Finish | Points increase by the remaining Lives; first finish uses min(previous remaining,60); later positions preserve remaining time |
+| Clamp exercised | At least one first-place finish occurs with more than 60 seconds left and produces exactly 60 |
+| Strafe | All three directions apply horizontal 1.78 and vertical 0.30; separate cooldowns preserve the other active timers |
+| Cooldown rejection | Retry each direction while its own cooldown is active; a STRAFE_BLOCKED result is needed for each |
+| Restoration | Every joined player's latest participation ends with an online RESTORE after LEAVE, or recovery after DISCONNECT; joining again requires another restoration |
+
+Use all three Strafes close together. Two different directions must activate
+while another direction's cooldown is still active to exercise independence.
+Using each once in different rounds covers directions but cannot prove that
+their timers are independent. After finishing the run, allow both clients to
+leave/reset and the scheduled RESTORE records to be written before stopping the
+trace. A remaining snapshot or a player still in the game keeps the restoration
+check incomplete.
+
+Checkpoint and finish records are now written at the applied mutation with
+pre/post values. A next-tick death, another checkpoint or round reset cannot
+replace their result. The snapshot RESTORE record still waits one tick so the
+leave/recovery operation can finish.

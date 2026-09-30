@@ -10,13 +10,19 @@ public class UserArenaDeathEvent extends Event {
 
     private final @NotNull IUser user;
     private final @NotNull IArena arena;
+    private final int livesBefore;
 
     public UserArenaDeathEvent(
             @NotNull IUser user,
             @NotNull IArena arena
     ) {
+        this(user, arena, -1);
+    }
+
+    public UserArenaDeathEvent(@NotNull IUser user, @NotNull IArena arena, int livesBefore) {
         this.user = user;
         this.arena = arena;
+        this.livesBefore = livesBefore;
     }
 
     public @NotNull IUser getUser() {
@@ -25,6 +31,11 @@ public class UserArenaDeathEvent extends Event {
 
     public @NotNull IArena getArena() {
         return this.arena;
+    }
+
+    /** Life count before the death was applied; -1 for legacy callers. */
+    public int getLivesBefore() {
+        return this.livesBefore;
     }
 
     /* Handler List */

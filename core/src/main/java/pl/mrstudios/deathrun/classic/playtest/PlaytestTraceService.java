@@ -48,7 +48,7 @@ public final class PlaytestTraceService {
         createDirectories(this.researchDirectory);
         Path path = this.reportPath(normalized);
 
-        String header = "# DeathRun Classic26 playtest trace" + System.lineSeparator()
+        String header = "# DeathRun Classic26 playtest trace schema=2" + System.lineSeparator()
                 + "# map=" + normalized + System.lineSeparator()
                 + "# started=" + Instant.now() + System.lineSeparator();
         writeString(path, header, StandardCharsets.UTF_8, CREATE, TRUNCATE_EXISTING);
@@ -142,6 +142,19 @@ public final class PlaytestTraceService {
                 ? java.nio.file.Files.readAllLines(path, StandardCharsets.UTF_8)
                 : List.of();
         return PlaytestAcceptanceAnalyzer.analyze(lines, expectedCheckpointIds, expectedTrapCount);
+    }
+
+    public synchronized @NotNull PlaytestRulesAnalyzer.Result rules(
+            @NotNull String mapId,
+            @NotNull List<Integer> checkpointIds,
+            @NotNull List<Integer> checkpointPoints,
+            @Nullable Integer finishId
+    ) throws IOException {
+        Path path = this.reportPath(mapId);
+        List<String> lines = java.nio.file.Files.exists(path)
+                ? java.nio.file.Files.readAllLines(path, StandardCharsets.UTF_8)
+                : List.of();
+        return PlaytestRulesAnalyzer.analyze(lines, checkpointIds, checkpointPoints, finishId);
     }
 
     public void recordArena(

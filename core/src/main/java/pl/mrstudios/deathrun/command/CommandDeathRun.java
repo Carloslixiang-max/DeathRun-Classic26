@@ -1449,6 +1449,33 @@ public class CommandDeathRun {
         }
     }
 
+    @Execute(name = "map trace rules")
+    @Permission("mrstudios.command.deathrun.setup")
+    public void setupMapTraceRules(@Context CommandSender sender, @Arg("id") String id) {
+        MapConfiguration.MapDefinition map = this.configuration.map().getMapById(id);
+        if (map == null) {
+            this.message(sender, this.configuration.language().commandMessageSetupMapMissing.replace("<map>", id));
+            return;
+        }
+
+        String mapId = this.configuration.map().normalizedMapId(map.id);
+        List<Integer> checkpointIds = map.arenaCheckpoints.stream()
+                .map(Checkpoint::id).toList();
+        Integer finishId = map.arenaFinishCheckpointId;
+        if (finishId == null && !checkpointIds.isEmpty())
+            finishId = checkpointIds.get(checkpointIds.size() - 1);
+        try {
+            var result = this.playtestTraceService.rules(mapId, checkpointIds, map.arenaCheckpointPoints, finishId);
+            this.message(sender, PREFIX + (result.complete() ? "<green>" : "<yellow>")
+                    + "Rules <white>" + mapId + (result.complete() ? "<green>: PASS" : "<yellow>: INCOMPLETE"));
+            for (var check : result.checks())
+                this.message(sender, PREFIX + (check.passed() ? "<green>PASS" : "<red>MISS")
+                        + " <white>" + this.safe(check.key()) + " <gray>· " + this.safe(check.detail()));
+        } catch (Exception exception) {
+            this.message(sender, PREFIX + "<red>Unable to analyze rules: <white>" + this.safe(exception.getMessage()));
+        }
+    }
+
     @Execute(name = "map trace status")
     @Permission("mrstudios.command.deathrun.setup")
     public void setupMapTraceStatus(

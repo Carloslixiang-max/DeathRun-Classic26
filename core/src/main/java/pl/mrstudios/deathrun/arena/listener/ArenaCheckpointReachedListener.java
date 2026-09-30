@@ -26,6 +26,7 @@ import pl.mrstudios.deathrun.plugin.Entrypoint;
 import pl.mrstudios.deathrun.reward.RewardService;
 import pl.mrstudios.deathrun.classic.checkpoint.SegmentAabb;
 import pl.mrstudios.deathrun.classic.score.ClassicScoring;
+import pl.mrstudios.deathrun.classic.playtest.PlaytestTraceService;
 
 import java.awt.image.BufferedImage;
 import java.util.Objects;
@@ -49,6 +50,7 @@ import static pl.mrstudios.deathrun.api.arena.user.enums.Role.SPECTATOR;
 public class ArenaCheckpointReachedListener implements Listener {
 
     private final ArenaManager arenaManager;
+    private final PlaytestTraceService trace;
     private final Plugin plugin;
     private final Server server;
     private final Configuration configuration;
@@ -62,9 +64,11 @@ public class ArenaCheckpointReachedListener implements Listener {
             @NotNull Server server,
                         @NotNull Configuration configuration,
                         @NotNull WinMapManager winMapManager,
-                        @NotNull RewardService rewardService
+                        @NotNull RewardService rewardService,
+                        @NotNull PlaytestTraceService trace
     ) {
         this.arenaManager = arenaManager;
+        this.trace = trace;
         this.plugin = plugin;
         this.server = server;
         this.configuration = configuration;
@@ -176,11 +180,23 @@ public class ArenaCheckpointReachedListener implements Listener {
         int finishIndex = finishCheckpoint == null ? -1 : map.arenaCheckpoints.indexOf(finishCheckpoint);
         boolean reachedFinishCheckpoint = finishIndex >= 0 && touchedIndex == finishIndex;
 
+        int livesBefore = user.getLives();
+        int pointsBefore = user.getRoundPoints();
+        int awardedPoints = this.checkpointPoints(map, touchedIndex);
         user.setRoundPoints(ClassicScoring.afterCheckpointPoints(
                 user.getRoundPoints(),
-                this.checkpointPoints(map, touchedIndex)
+                awardedPoints
         ));
         user.setLives(ClassicScoring.afterCheckpointLives(user.getLives(), reachedFinishCheckpoint));
+
+        // Record the applied result now; next-tick reads can include another CP,
+        // a death or round reset instead of this checkpoint's outcome.
+        this.trace.record(runtime.mapId(), "CHECKPOINT", "player=" + user.getName()
+                + " cp=" + checkpoint.id()
+                + " finish=" + reachedFinishCheckpoint
+                + " livesBefore=" + livesBefore + " lives=" + user.getLives()
+                + " pointsBefore=" + pointsBefore + " awardedPoints=" + awardedPoints
+                + " points=" + user.getRoundPoints() + " eliminated=" + user.isEliminated());
 
         player.showTitle(
                 title(
@@ -213,6 +229,7 @@ public class ArenaCheckpointReachedListener implements Listener {
         if (!completedFullSequence || !reachedFinishCheckpoint)
             return;
 
+        int finishPointsBefore = user.getRoundPoints();
         user.setRoundPoints(ClassicScoring.afterFinishPoints(user.getRoundPoints(), user.getLives()));
 
         arena.setFinishedRuns(arena.getFinishedRuns() + 1);
@@ -224,7 +241,13 @@ public class ArenaCheckpointReachedListener implements Listener {
 
         this.rewardService.rewardRunnerFinish(player, runtime.mapId(), position);
 
-        arena.setRemainingTime(ClassicScoring.remainingAfterFinish(arena.getRemainingTime(), position));
+        int remainingBefore = arena.getRemainingTime();
+        arena.setRemainingTime(ClassicScoring.remainingAfterFinish(remainingBefore, position));
+        this.trace.record(runtime.mapId(), "FINISH", "player=" + user.getName()
+                + " position=" + position + " time=" + time
+                + " lives=" + user.getLives() + " pointsBefore=" + finishPointsBefore
+                + " points=" + user.getRoundPoints() + " remainingBefore=" + remainingBefore
+                + " remaining=" + arena.getRemainingTime());
 
         player.showTitle(
                 title(

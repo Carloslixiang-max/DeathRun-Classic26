@@ -83,6 +83,7 @@ public final class DeathRunDeathService {
         LAST_DEATH_AT.put(player.getUniqueId(), now);
 
         TrapActivationContext attribution = this.trapActivationService.recentAttribution(player.getUniqueId());
+        int livesBefore = user.getLives();
         user.setDeaths(user.getDeaths() + 1);
         user.setLives(ClassicScoring.afterDeathLives(user.getLives()));
         if (user.getLives() <= 0) {
@@ -125,7 +126,7 @@ public final class DeathRunDeathService {
                     : null;
             this.winMapManager.giveLoseMap(player, parchmentImage, user.getDeaths());
         }
-        this.server.getPluginManager().callEvent(new UserArenaDeathEvent(user, runtime.arena()));
+        this.server.getPluginManager().callEvent(new UserArenaDeathEvent(user, runtime.arena(), livesBefore));
         player.showTitle(title(
                 miniMessage().deserialize(this.configuration.language().arenaDeathTitle),
                 miniMessage().deserialize(this.configuration.language().arenaDeathSubtitle),

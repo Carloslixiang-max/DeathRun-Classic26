@@ -925,6 +925,19 @@ jobs:
           done
           test "$ACCEPTANCE_CMD_OK" -eq 1
 
+          # No client has joined: numeric rules must report INCOMPLETE rather
+          # than accepting absence of evidence as a successful human playtest.
+          printf 'dr map trace rules classic26-playtest\n' >&3
+          RULES_CMD_OK=0
+          for _ in $(seq 1 30); do
+            if grep -q 'Rules classic26-playtest: INCOMPLETE' server.log; then
+              RULES_CMD_OK=1
+              break
+            fi
+            sleep 1
+          done
+          test "$RULES_CMD_OK" -eq 1
+
           printf 'stop\n' >&3 || true
           exec 3>&-
           stop_server_process "$PID"
