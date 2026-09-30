@@ -640,7 +640,7 @@ public class ArenaManager {
         if (this.playerSnapshotService.hasPending(player.getUniqueId())) {
             boolean restored = this.playerSnapshotService.restore(player);
             if (notify && restored)
-                player.sendMessage(miniMessage().deserialize("<gold>[DR]</gold> <gray>Your pre-DeathRun state was recovered."));
+                player.sendMessage(miniMessage().deserialize("<gold>[DR]</gold> <gray>已恢复你进入死神跑酷前的状态。"));
             return;
         }
 
@@ -651,7 +651,7 @@ public class ArenaManager {
         this.leaveCurrentMap(player, false);
         this.returnPlayerToHub(player);
         if (notify)
-            player.sendMessage(miniMessage().deserialize("<gold>[DR]</gold> <gray>Your previous arena session has ended; you were returned to the hub."));
+            player.sendMessage(miniMessage().deserialize("<gold>[DR]</gold> <gray>之前的比赛已经结束，已返回大厅。"));
     }
 
     public void restoreActivePlayersOnDisable() {
