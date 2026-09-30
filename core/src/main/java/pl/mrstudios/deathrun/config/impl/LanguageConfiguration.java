@@ -24,6 +24,14 @@ import static java.util.Arrays.asList;
 }) @SuppressWarnings("deprecation")
 @Names(strategy = HYPHEN_CASE, modifier = TO_LOWER_CASE)
 public class LanguageConfiguration extends OkaeriConfig {
+    public int chineseTextRevision = 0;
+    public List<String> chatMessageArenaRules = asList(
+            "<gold><b>━━━━ 死神跑酷 · 玩法与规则 ━━━━",
+            "<gray>跑酷者依次经过检查点并到达终点；死神使用机关阻止通关。",
+            "<gray>本局限时 <white><gameSeconds> 秒</white>；首位跑酷者通关后，剩余时间最多 <white>60 秒</white>。",
+            "<gray>跑酷者生命耗尽即淘汰，死亡后回到最近检查点；退出或结束后恢复入场前状态。"
+    );
+
 
     @Comment({
             "",
@@ -32,13 +40,13 @@ public class LanguageConfiguration extends OkaeriConfig {
             "------------------------------------------------------------------------",
             ""
     })
-    public String chatMessageNoPermissions = "<red>You don't have permissions to this command.";
-    public String chatMessageInvalidCommandUsage = "<red>Invalid command usage, correct usage is <dark_red><usage><red>.";
-    public String chatMessageArenaPlayerJoined = "<gray><player> <yellow>has joined. <aqua>(<currentPlayers>/<maxPlayers>)";
-    public String chatMessageArenaPlayerLeft = "<gray><player> <yellow>has quit.";
-    public String chatMessageArenaStartingTimer = "<yellow>Game starts in <gold><timer> seconds<yellow>.";
-        public String chatMessageArenaCheckpointReached = "<gold>Checkpoint reached: <yellow><checkpointName>";
-    public String chatMessageArenaPlayerFinished = "<reset> <white><b>FINISH ></b> <gray>Player <gold><player> <gray>has finished game in <white><seconds> seconds<gray>. <dark_gray>(#<finishPosition>)";
+    public String chatMessageNoPermissions = "<red>你没有权限使用此指令。";
+    public String chatMessageInvalidCommandUsage = "<red>指令用法错误，正确用法：<white><usage>";
+    public String chatMessageArenaPlayerJoined = "<gray><player> <yellow>加入了游戏。<aqua>(<currentPlayers>/<maxPlayers>)";
+    public String chatMessageArenaPlayerLeft = "<gray><player> <yellow>退出了游戏。";
+    public String chatMessageArenaStartingTimer = "<yellow>游戏将在 <gold><timer> <yellow>秒后开始。";
+        public String chatMessageArenaCheckpointReached = "<gold>已到达：<yellow><checkpointName>";
+    public String chatMessageArenaPlayerFinished = "<white><b>通关 ></b> <gold><player> <gray>用时 <white><seconds> 秒<gray>，第 <white><finishPosition> <gray>名。";
 
     @Comment({
             "",
@@ -49,7 +57,7 @@ public class LanguageConfiguration extends OkaeriConfig {
     })
     public List<String> commandHelpMainLines = asList(
             "<reset>",
-            "<reset>    <gold>DeathRun <dark_gray>(v<version>) <gray>by <white>MrStudios Industries",
+            "<reset>    <gold>DeathRun <dark_gray>(v<version>) <gray>作者：<white>MrStudios Industries",
             "<reset>",
             "<reset> <b>*</b> <white>/dr join <map>",
             "<reset> <b>*</b> <white>/dr vote",
@@ -74,7 +82,7 @@ public class LanguageConfiguration extends OkaeriConfig {
     );
     public List<String> commandHelpSetupLines = asList(
             "<reset>",
-            "<reset>    <gold>DeathRun <dark_gray>(v<version>) <gray>by <white>MrStudios Industries",
+            "<reset>    <gold>DeathRun <dark_gray>(v<version>) <gray>作者：<white>MrStudios Industries",
             "<reset>",
             "<reset> <b>*</b> <white>/dr map list",
             "<reset> <b>*</b> <white>/dr map profile classic <id>",
@@ -120,168 +128,168 @@ public class LanguageConfiguration extends OkaeriConfig {
             "<reset> <b>*</b> <white>/dr playtest verify",
             "<reset>"
     );
-    public String commandMessageSetupDisabled = "<dark_red><b>*</b> <red>You can't use that command while setup is disabled.";
-        public String commandMessageCheckpointAdded = "<reset> <dark_green><b>*</b> <green>Checkpoint <dark_green>#<checkpoint><green> added for map <dark_green><map><green>.";
-        public String commandMessageCheckpointAreaInfo = "<reset> <gray>Checkpoint area size: <white><blocks> blocks<gray>.";
-        public String commandMessageCheckpointAreaEmpty = "<reset> <dark_red><b>*</b> <red>Checkpoint area is empty. Select a WorldEdit region first.";
-                public String commandMessageCheckpointNotFound = "<reset> <dark_red><b>*</b> <red>Checkpoint <dark_red>#<checkpoint> <red>was not found on map <dark_red><map><red>.";
-                public String commandMessageCheckpointDeleted = "<reset> <dark_green><b>*</b> <green>Deleted checkpoint <dark_green>#<checkpoint> <green>from map <dark_green><map><green>.";
-                public String commandMessageCheckpointOrderUpdated = "<reset> <dark_green><b>*</b> <green>Moved checkpoint <dark_green>#<checkpoint> <green>to position <dark_green><position><green>.";
-                public String commandMessageCheckpointNameSet = "<reset> <dark_green><b>*</b> <green>Renamed checkpoint <dark_green>#<checkpoint> <green>to <dark_green><name><green>.";
-                public String commandMessageCheckpointFinishSet = "<reset> <dark_green><b>*</b> <green>Checkpoint <dark_green>#<checkpoint> <green>is now the finish checkpoint.";
-                public String commandMessageCheckpointMoved = "<reset> <dark_green><b>*</b> <green>Moved checkpoint <dark_green>#<checkpoint> <green>spawn to your current location.";
-                public String commandMessageCheckpointPointsSet = "<reset> <dark_green><b>*</b> <green>Checkpoint <dark_green>#<checkpoint> <green>points set to <gold><points><green>.";
-    public String commandMessageRoleInvalid = "<reset> <dark_red><b>*</b> <red>You must select <dark_red>RUNNER <red>or <dark_red>DEATH <red>role.";
-    public String commandMessageRoleSpawnAdded = "<reset> <dark_green><b>*</b> <green>Added <dark_green><role> <green>role spawn.";
-    public String commandMessageRoleSpawnListHeader = "<gold>[DR]</gold> <gray><role> spawns for <white><map><gray>: <white><count>";
+    public String commandMessageSetupDisabled = "<red>当前未启用地图编辑模式。";
+        public String commandMessageCheckpointAdded = "<green>已为 <map> 添加检查点 #<checkpoint>。";
+        public String commandMessageCheckpointAreaInfo = "<gray>检查点区域：<white><blocks> 个方块。";
+        public String commandMessageCheckpointAreaEmpty = "<red>检查点区域为空，请先用 WorldEdit 选择区域。";
+                public String commandMessageCheckpointNotFound = "<red><map> 中没有检查点 #<checkpoint>。";
+                public String commandMessageCheckpointDeleted = "<green>已删除 <map> 的检查点 #<checkpoint>。";
+                public String commandMessageCheckpointOrderUpdated = "<green>检查点 #<checkpoint> 已移到第 <position> 位。";
+                public String commandMessageCheckpointNameSet = "<green>检查点 #<checkpoint> 已改名为 <name>。";
+                public String commandMessageCheckpointFinishSet = "<green>检查点 #<checkpoint> 已设为终点。";
+                public String commandMessageCheckpointMoved = "<green>检查点 #<checkpoint> 的复活点已移到你的位置。";
+                public String commandMessageCheckpointPointsSet = "<green>检查点 #<checkpoint> 的分数已设为 <points>。";
+    public String commandMessageRoleInvalid = "<red>请选择跑酷者（runner）或死神（death）。";
+    public String commandMessageRoleSpawnAdded = "<green>已添加 <role> 出生点。";
+    public String commandMessageRoleSpawnListHeader = "<gold>[死神跑酷]</gold> <map> 的 <role> 出生点：<count> 个";
     public String commandMessageRoleSpawnListLine = "<reset> <gray>- <white>#<index> <dark_gray>| <white><world> <dark_gray>| <white><x>, <y>, <z>";
-    public String commandMessageRoleSpawnListEmpty = "<reset> <gold><b>*</b> <yellow>No <gold><role> <yellow>spawns are configured.";
-    public String commandMessageRoleSpawnNotFound = "<reset> <dark_red><b>*</b> <red><role> spawn <dark_red>#<index> <red>does not exist.";
-    public String commandMessageRoleSpawnTeleported = "<reset> <dark_green><b>*</b> <green>Teleported to <dark_green><role> <green>spawn <dark_green>#<index><green>.";
-    public String commandMessageRoleSpawnMoved = "<reset> <dark_green><b>*</b> <green>Moved <dark_green><role> <green>spawn <dark_green>#<index> <green>to your current location.";
-    public String commandMessageRoleSpawnDeleted = "<reset> <dark_green><b>*</b> <green>Deleted <dark_green><role> <green>spawn <dark_green>#<index><green>.";
-    public String commandMessageRoleSpawnCleared = "<reset> <dark_green><b>*</b> <green>Cleared <dark_green><count> <green><role> spawn(s).";
-    public String commandMessageRoleSpawnWrongWorld = "<reset> <dark_red><b>*</b> <red>Stand in map <dark_red><map><red>'s configured world <dark_red><world> <red>before adding or moving a spawn.";
-    public String commandMessageArenaNameSet = "<reset> <dark_green><b>*</b> <green>Arena name has been set to <dark_green><name><green>.";
-    public String commandMessageStartBarrierSet = "<reset> <dark_green><b>*</b> <green>Arena start barrier has been set.";
-    public String commandMessageWaitingLobbySet = "<reset> <dark_green><b>*</b> <green>Arena waiting lobby has been set.";
-    public String commandMessageTeleportPadAdded = "<reset> <dark_green><b>*</b> <green>Added arena teleport pad.";
-        public String commandMessageSaveSuccess = "<reset> <dark_green><b>*</b> <green>Arena configuration saved successfully.";
-    public String commandMessageTrapLookAtButton = "<reset> <dark_red><b>*</b> <red>You must look at button that is activating trap.";
-    public String commandMessageTrapNotExists = "<reset> <dark_red><b>*</b> <red>Trap <dark_red><type> <red>is not exists.";
-    public String commandMessageTrapAdded = "<reset> <dark_green><b>*</b> <green>Added trap <dark_green><type> <green>to arena.";
-    public String commandMessageNoMapsConfigured = "<dark_red><b>*</b> <red>No maps are configured yet.";
-                public String commandMessageStartSuccess = "<dark_green><b>*</b> <green>Force-start scheduled for map <dark_green><map><green>.";
-                public String commandMessageStartMapUnavailable = "<dark_red><b>*</b> <red>Map <dark_red><map> <red>is not available.";
-                public String commandMessageStartNoPlayers = "<dark_red><b>*</b> <red>Map <dark_red><map> <red>has no queued players to start.";
-                public String commandMessageStartAlreadyRunning = "<dark_red><b>*</b> <red>Map <dark_red><map> <red>is already running.";
-                public String commandMessageStartNoCurrentMap = "<dark_red><b>*</b> <red>You are not queued in any map. Use <white>/dr start <map><red>.";
-                public String commandMessageStopSuccess = "<dark_green><b>*</b> <green>Map <dark_green><map> <green>has been stopped and reset to waiting.";
-                public String commandMessageStopMapUnavailable = "<dark_red><b>*</b> <red>Map <dark_red><map> <red>is not available.";
-                public String commandMessageStopAlreadyWaiting = "<gold><b>*</b> <yellow>Map <gold><map> <yellow>is already in waiting state.";
-                public String commandMessageStopMovedToHub = "<dark_red><b>*</b> <red>The match has been stopped by an administrator.";
-                public String commandMessageStopNoCurrentMap = "<dark_red><b>*</b> <red>You are not queued in any map. Use <white>/dr stop <map><red>.";
-                public String commandMessageReloadSuccess = "<dark_green><b>*</b> <green>DeathRun configuration and runtimes reloaded.";
-                public String commandMessageReloadFailed = "<dark_red><b>*</b> <red>Reload failed: <dark_red><reason>";
-                public String commandMessageRecoverSuccess = "<dark_green><b>*</b> <green>Your saved pre-DeathRun state was restored.";
-                public String commandMessageRecoverFailed = "<dark_red><b>*</b> <red>Recovery could not complete yet. Your recovery file was kept; check the saved world and try again.";
-                public String commandMessageRecoverNone = "<gold><b>*</b> <yellow>No pending DeathRun recovery exists for you.";
-                public String commandMessageRecoverInMatch = "<dark_red><b>*</b> <red>Leave the current DeathRun match before running recovery.";
-                public String commandMessageJoinForcedActor = "<dark_green><b>*</b> <green>Executed join for <dark_green><player><green> on map <dark_green><map><green>.";
-                public String commandMessageJoinForcedLobbyActor = "<dark_green><b>*</b> <green>Sent <dark_green><player> <green>to lobby.";
-        public String commandMessageSetupMapSelected = "<reset> <dark_green><b>*</b> <green>Selected setup map <dark_green><map><green>.";
-        public String commandMessageMapCreatorSet = "<reset> <dark_green><b>*</b> <green>Map <dark_green><map> <green>creator set to <white><creator><green>.";
-        public String commandMessageSetupMapCreated = "<reset> <dark_green><b>*</b> <green>Created map <dark_green><map><green> in world <dark_green><world><green>.";
-        public String commandMessageSetupMapDeleted = "<reset> <dark_green><b>*</b> <green>Deleted map <dark_green><map><green>.";
-        public String commandMessageSetupMapEnabled = "<reset> <dark_green><b>*</b> <green>Enabled setup mode for map <dark_green><map><green>.";
-        public String commandMessageSetupMapDisabled = "<reset> <dark_green><b>*</b> <green>Disabled setup mode for map <dark_green><map><green>.";
-        public String commandMessageSetupMapRestoreSuccess = "<reset> <dark_green><b>*</b> <green>Restored world <dark_green><world> <green>for map <dark_green><map><green>.";
-        public String commandMessageSetupMapRestoreMissingBackup = "<reset> <dark_red><b>*</b> <red>Missing backup zip for world <dark_red><world><red>.";
-        public String commandMessageSetupMapRestoreWorldMissing = "<reset> <dark_red><b>*</b> <red>Map world <dark_red><world> <red>is not set.";
-        public String commandMessageSetupMapRestorePlayersPresent = "<reset> <dark_red><b>*</b> <red>Cannot restore map while players are queued or in-game.";
-        public String commandMessageSetupMapRestoreUnloadFailed = "<reset> <dark_red><b>*</b> <red>Could not unload world <dark_red><world><red>.";
-        public String commandMessageSetupMapRestoreLoadFailed = "<reset> <dark_red><b>*</b> <red>Could not load restored world <dark_red><world><red>.";
-        public String commandMessageSetupMapRestoreFailed = "<reset> <dark_red><b>*</b> <red>Map restore failed: <dark_red><reason>";
-        public String commandMessageSetupMapCheckHeader = "<gold>[DR]</gold> <gray>Map health check:";
-        public String commandMessageSetupMapCheckEntryOk = "<reset> <dark_green><b>*</b> <green><map> <gray>- healthy";
-        public String commandMessageSetupMapCheckEntryIssues = "<reset> <dark_red><b>*</b> <red><map> <gray>- issues: <white><issues>";
-        public String commandMessageSetupMapCheckNoIssues = "<reset> <dark_green><b>*</b> <green>No issues detected.";
-        public String commandMessageSetupMapStatusHeader = "<gold>[DR]</gold> <gray>Map status:";
-        public String commandMessageSetupMapStatusLine = "<reset> <gray>- <white><map> <dark_gray>| state: <white><state> <dark_gray>| players: <white><players>/<maxPlayers> <dark_gray>| setup: <white><setup> <dark_gray>| health: <white><health>";
-        public String commandMessageSetupMapStatusIssues = "<reset>   <dark_gray>issues: <white><issues>";
-        public String commandMessageSetupMapFixBarrierSuccess = "<reset> <dark_green><b>*</b> <green>Rebuilt barrier restore snapshot for <dark_green><map><green>.";
-        public String commandMessageSetupMapFixBarrierNoBarrier = "<reset> <dark_red><b>*</b> <red>Map <dark_red><map> <red>has no configured start barrier blocks.";
-        public String commandMessageSetupMapBackupSuccess = "<reset> <dark_green><b>*</b> <green>Backup refreshed for map <dark_green><map> <green>(world <dark_green><world><green>).";
-        public String commandMessageSetupMapBackupWorldMissing = "<reset> <dark_red><b>*</b> <red>World <dark_red><world> <red>is not loaded.";
-        public String commandMessageSetupMapBackupPlayersPresent = "<reset> <dark_red><b>*</b> <red>Cannot back up or autofix a DeathRun map while players are inside it.";
-        public String commandMessageSetupMapBackupFailed = "<reset> <dark_red><b>*</b> <red>Backup failed: <dark_red><reason>";
-        public String commandMessageSetupMapAutofixApplied = "<reset> <dark_green><b>*</b> <green>Autofix applied for <dark_green><map><green>: <white><actions>";
-        public String commandMessageSetupMapAutofixNoChanges = "<reset> <gold><b>*</b> <yellow>No autofix actions applied for <gold><map><yellow>.";
-        public String commandMessageSetupMapPreflightFailed = "<reset> <dark_red><b>*</b> <red>Cannot finalize map <dark_red><map><red>. Fix: <white><issues>";
-        public String commandMessageSetupMapPreflightPassed = "<reset> <dark_green><b>*</b> <green>Preflight checks passed for <dark_green><map><green>.";
-        public String commandMessageSetupMapMissing = "<reset> <dark_red><b>*</b> <red>Map <dark_red><map> <red>does not exist.";
-        public String commandMessageSetupMapAlreadyExists = "<reset> <dark_red><b>*</b> <red>Map <dark_red><map> <red>already exists.";
-        public String commandMessageSetupMapInvalidWorld = "<reset> <dark_red><b>*</b> <red>World <dark_red><world> <red>is not loaded and no existing world data was found on disk.";
-        public String commandMessageSetupMapWorldUnavailable = "<reset> <dark_red><b>*</b> <red>The world for this map could not be found. Please ensure the map's world is loaded.";
-        public String commandMessageSetupMapNoSelection = "<reset> <dark_red><b>*</b> <red>Select setup map first using <white>/dr map edit <id><red>.";
-        public String commandMessageSetupMapLocked = "<reset> <dark_red><b>*</b> <red>Selected map setup is disabled. Re-enable it in map.yml or create a new map.";
-        public String commandMessageSetupEditModeRequired = "<reset> <dark_red><b>*</b> <red>You must be in edit mode to use this command. Use <white>/dr map edit <mapname> <red>first.";
-        public String commandMessageSetupEditModeAlreadyActive = "<reset> <gold><b>*</b> <yellow>You are already in edit mode. Please finish editing your current map first.";
-        public String commandMessageSetupEditModeEntered = "<reset> <dark_green><b>*</b> <green>Edit mode enabled for map <dark_green><map><green>.";
-        public String commandMessageSetupEditModeSaved = "<reset> <dark_green><b>*</b> <green>Editing complete; all changes have been saved.";
-        public String commandMessageSetupEditModeCancelled = "<reset> <gold><b>*</b> <yellow>Edit mode cancelled for map <gold><map><yellow>.";
+    public String commandMessageRoleSpawnListEmpty = "<yellow>没有配置 <role> 出生点。";
+    public String commandMessageRoleSpawnNotFound = "<red>没有 <role> 出生点 #<index>。";
+    public String commandMessageRoleSpawnTeleported = "<green>已传送至 <role> 出生点 #<index>。";
+    public String commandMessageRoleSpawnMoved = "<green>已移动 <role> 出生点 #<index>。";
+    public String commandMessageRoleSpawnDeleted = "<green>已删除 <role> 出生点 #<index>。";
+    public String commandMessageRoleSpawnCleared = "<green>已清空 <count> 个 <role> 出生点。";
+    public String commandMessageRoleSpawnWrongWorld = "<red>请先进入 <map> 对应的世界 <world>。";
+    public String commandMessageArenaNameSet = "<green>地图名称已设为 <name>。";
+    public String commandMessageStartBarrierSet = "<green>起跑屏障已设置。";
+    public String commandMessageWaitingLobbySet = "<green>等待位置已设置。";
+    public String commandMessageTeleportPadAdded = "<green>已添加传送台。";
+        public String commandMessageSaveSuccess = "<green>地图配置已保存。";
+    public String commandMessageTrapLookAtButton = "<red>请看向机关的激活按钮。";
+    public String commandMessageTrapNotExists = "<red>机关 <type> 不存在。";
+    public String commandMessageTrapAdded = "<green>已添加机关 <type>。";
+    public String commandMessageNoMapsConfigured = "<red>尚未配置地图。";
+                public String commandMessageStartSuccess = "<green>已安排开始地图 <map>。";
+                public String commandMessageStartMapUnavailable = "<red>地图 <map> 不可用。";
+                public String commandMessageStartNoPlayers = "<red>地图 <map> 没有等待中的玩家。";
+                public String commandMessageStartAlreadyRunning = "<red>地图 <map> 已在比赛中。";
+                public String commandMessageStartNoCurrentMap = "<red>你没有加入地图，请使用 <white>/dr start <map>。";
+                public String commandMessageStopSuccess = "<green>地图 <map> 已停止并复位至等待状态。";
+                public String commandMessageStopMapUnavailable = "<red>地图 <map> 不可用。";
+                public String commandMessageStopAlreadyWaiting = "<yellow>地图 <map> 已处于等待状态。";
+                public String commandMessageStopMovedToHub = "<red>管理员已结束本局比赛。";
+                public String commandMessageStopNoCurrentMap = "<red>你没有加入地图，请使用 <white>/dr stop <map>。";
+                public String commandMessageReloadSuccess = "<green>死神跑酷配置和地图已重载。";
+                public String commandMessageReloadFailed = "<red>重载失败：<reason>";
+                public String commandMessageRecoverSuccess = "<green>已恢复你进入游戏前的状态。";
+                public String commandMessageRecoverFailed = "<red>暂时无法恢复，恢复记录已保留，请检查原世界后重试。";
+                public String commandMessageRecoverNone = "<yellow>你没有待恢复的游戏状态。";
+                public String commandMessageRecoverInMatch = "<red>请先退出本局比赛，再执行恢复。";
+                public String commandMessageJoinForcedActor = "<green>已让 <player> 加入地图 <map>。";
+                public String commandMessageJoinForcedLobbyActor = "<green>已让 <player> 返回大厅。";
+        public String commandMessageSetupMapSelected = "<green>已选中地图 <map>。";
+        public String commandMessageMapCreatorSet = "<green>地图 <map> 的作者已设为 <creator>。";
+        public String commandMessageSetupMapCreated = "<green>已在世界 <world> 创建地图 <map>。";
+        public String commandMessageSetupMapDeleted = "<green>已删除地图 <map>。";
+        public String commandMessageSetupMapEnabled = "<green>已启用地图 <map> 的编辑模式。";
+        public String commandMessageSetupMapDisabled = "<green>已关闭地图 <map> 的编辑模式。";
+        public String commandMessageSetupMapRestoreSuccess = "<green>已从备份恢复地图 <map> 的世界 <world>。";
+        public String commandMessageSetupMapRestoreMissingBackup = "<red>世界 <world> 缺少备份压缩包。";
+        public String commandMessageSetupMapRestoreWorldMissing = "<red>未设置地图世界 <world>。";
+        public String commandMessageSetupMapRestorePlayersPresent = "<red>玩家等待或比赛期间不能恢复地图。";
+        public String commandMessageSetupMapRestoreUnloadFailed = "<red>无法卸载世界 <world>。";
+        public String commandMessageSetupMapRestoreLoadFailed = "<red>无法加载恢复后的世界 <world>。";
+        public String commandMessageSetupMapRestoreFailed = "<red>地图恢复失败：<reason>";
+        public String commandMessageSetupMapCheckHeader = "<gold>[死神跑酷]</gold> <gray>地图检查：";
+        public String commandMessageSetupMapCheckEntryOk = "<green><map> <gray>— 正常";
+        public String commandMessageSetupMapCheckEntryIssues = "<red><map> <gray>— 问题：<white><issues>";
+        public String commandMessageSetupMapCheckNoIssues = "<green>未发现问题。";
+        public String commandMessageSetupMapStatusHeader = "<gold>[死神跑酷]</gold> <gray>地图状态：";
+        public String commandMessageSetupMapStatusLine = "<gray><map> | 状态：<state> | 玩家：<players>/<maxPlayers> | 编辑：<setup> | 健康：<health>";
+        public String commandMessageSetupMapStatusIssues = "<gray>问题：<white><issues>";
+        public String commandMessageSetupMapFixBarrierSuccess = "<green>已重建 <map> 的起跑屏障恢复记录。";
+        public String commandMessageSetupMapFixBarrierNoBarrier = "<red>地图 <map> 没有配置起跑屏障。";
+        public String commandMessageSetupMapBackupSuccess = "<green>地图 <map> 的备份已更新（世界 <world>）。";
+        public String commandMessageSetupMapBackupWorldMissing = "<red>世界 <world> 未加载。";
+        public String commandMessageSetupMapBackupPlayersPresent = "<red>地图内有人时不能备份或自动修复。";
+        public String commandMessageSetupMapBackupFailed = "<red>备份失败：<reason>";
+        public String commandMessageSetupMapAutofixApplied = "<green>已修复 <map>：<actions>";
+        public String commandMessageSetupMapAutofixNoChanges = "<yellow>地图 <map> 无需自动修复。";
+        public String commandMessageSetupMapPreflightFailed = "<red>地图 <map> 无法开放，请修复：<issues>";
+        public String commandMessageSetupMapPreflightPassed = "<green>地图 <map> 已通过开放检查。";
+        public String commandMessageSetupMapMissing = "<red>地图 <map> 不存在。";
+        public String commandMessageSetupMapAlreadyExists = "<red>地图 <map> 已存在。";
+        public String commandMessageSetupMapInvalidWorld = "<red>世界 <world> 未加载，且未找到世界文件。";
+        public String commandMessageSetupMapWorldUnavailable = "<red>找不到地图世界，请确认世界已加载。";
+        public String commandMessageSetupMapNoSelection = "<red>请先使用 <white>/dr map edit <id> <red>选择地图。";
+        public String commandMessageSetupMapLocked = "<red>地图编辑已关闭，请先重新启用。";
+        public String commandMessageSetupEditModeRequired = "<red>请先使用 <white>/dr map edit <mapname> <red>进入编辑模式。";
+        public String commandMessageSetupEditModeAlreadyActive = "<yellow>你已在编辑地图，请先结束当前编辑。";
+        public String commandMessageSetupEditModeEntered = "<green>已进入 <map> 的编辑模式。";
+        public String commandMessageSetupEditModeSaved = "<green>编辑完成，全部修改已保存。";
+        public String commandMessageSetupEditModeCancelled = "<yellow>已取消编辑地图 <map>。";
         public String commandMessageSetupMapListLine = "<reset> <gray>- <white><id> <dark_gray>| <white><name> <dark_gray>| <white><world> <dark_gray>| <white><state>";
-        public String commandMessageSetupMapListEmpty = "<reset> <dark_red><b>*</b> <red>No setup maps available.";
-        public String commandMessageSetupMapDeleteLastBlocked = "<reset> <dark_red><b>*</b> <red>You cannot delete the last map.";
-        public String commandMessageSetupMapStateEnabled = "<green>setup-enabled";
-        public String commandMessageSetupMapStateDisabled = "<red>setup-disabled";
+        public String commandMessageSetupMapListEmpty = "<red>没有可编辑的地图。";
+        public String commandMessageSetupMapDeleteLastBlocked = "<red>不能删除最后一张地图。";
+        public String commandMessageSetupMapStateEnabled = "<yellow>编辑中";
+        public String commandMessageSetupMapStateDisabled = "<green>可游玩";
 
-        public String commandMessageClassicProfileApplied = "<reset> <dark_green><b>*</b> <green>Applied Classic profile <dark_green><profile> <green>to map <dark_green><map><green>.";
-        public String commandMessageClassicProfileCheckpointCount = "<reset> <dark_red><b>*</b> <red>Profile <dark_red><profile> <red>requires exactly <dark_red><required> <red>checkpoints; map has <dark_red><actual><red>.";
+        public String commandMessageClassicProfileApplied = "<green>已为 <map> 应用经典规则 <profile>。";
+        public String commandMessageClassicProfileCheckpointCount = "<red>规则 <profile> 需要 <required> 个检查点，当前为 <actual> 个。";
 
-    public String mapSelectorTitle = "DeathRun Maps";
+    public String mapSelectorTitle = "死神跑酷地图";
     public String mapSelectorMapName = "<gold><name>";
     public List<String> mapSelectorMapLore = asList(
-            "<gray>Creator: <white><creator>",
-            "<gray>World: <white><world>",
-            "<gray>Players: <white><players>/<maxPlayers>",
-            "<gray>Status: <white><status>",
-            "<yellow>Click to join"
+            "<gray>作者： <white><creator>",
+            "<gray>世界： <white><world>",
+            "<gray>玩家： <white><players>/<maxPlayers>",
+            "<gray>状态： <white><status>",
+            "<yellow>点击加入"
     );
-    public String mapSelectorStatusAvailable = "<green>Available";
-    public String mapSelectorStatusDisabled = "<red>Disabled";
-    public String mapSelectorStatusMissingLobby = "<gold>Missing lobby";
-        public String mapSelectorStatusNotReady = "<gold>Not ready";
-                public String mapSelectorStatusEditing = "<gold>Being edited";
-        public String mapSelectorStatusInProgress = "<red>In progress";
-        public String mapSelectorMapSelected = "<dark_green><b>*</b> <green>Joined map <dark_green><map><green>.";
-    public String mapSelectorMapUnavailable = "<dark_red><b>*</b> <red>This map is not available yet.";
-                public String mapSelectorMapEditing = "<dark_red><b>*</b> <red>This map is currently unavailable as it is being edited.";
-        public String mapSelectorMapNotReady = "<dark_red><b>*</b> <red>This map is not fully configured yet.";
-        public String mapSelectorMapFull = "<dark_red><b>*</b> <red>This map is full right now.";
-        public String mapSelectorMapInProgress = "<dark_red><b>*</b> <red>This match is already in progress.";
-        public String mapSelectorAlreadyJoined = "<gold><b>*</b> <yellow>You are already queued on this map.";
+    public String mapSelectorStatusAvailable = "<green>可加入";
+    public String mapSelectorStatusDisabled = "<red>未开放";
+    public String mapSelectorStatusMissingLobby = "<gold>缺少等待点";
+        public String mapSelectorStatusNotReady = "<gold>未就绪";
+                public String mapSelectorStatusEditing = "<gold>编辑中";
+        public String mapSelectorStatusInProgress = "<red>比赛中";
+        public String mapSelectorMapSelected = "<green>已加入地图 <map>。";
+    public String mapSelectorMapUnavailable = "<red>地图暂不可用。";
+                public String mapSelectorMapEditing = "<red>地图正在编辑，暂不可加入。";
+        public String mapSelectorMapNotReady = "<red>地图尚未配置完成。";
+        public String mapSelectorMapFull = "<red>地图人数已满。";
+        public String mapSelectorMapInProgress = "<red>本局比赛已经开始。";
+        public String mapSelectorAlreadyJoined = "<yellow>你已在这张地图的等待队列中。";
 
-    public String classicVoteTitle = "DeathRun Map Vote";
-    public String classicVoteRandomName = "<light_purple><b>Random Map";
+    public String classicVoteTitle = "死神跑酷地图投票";
+    public String classicVoteRandomName = "<light_purple><b>随机地图";
     public List<String> classicVoteMapLore = asList(
-            "<gray>Creator: <white><creator>",
-            "<gray>Votes: <white><votes>",
-            "<yellow>Click to vote"
+            "<gray>作者： <white><creator>",
+            "<gray>票数： <white><votes>",
+            "<yellow>点击投票"
     );
     public List<String> classicVoteRandomLore = asList(
-            "<gray>Votes: <white><votes>",
-            "<gray>If Random wins, one candidate is chosen randomly.",
-            "<yellow>Click to vote"
+            "<gray>票数： <white><votes>",
+            "<gray>随机选项获胜时，将从候选地图中随机选择。",
+            "<yellow>点击投票"
     );
-    public String classicVoteRecorded = "<green>Your vote: <white><choice>";
-    public String classicVoteCountdown = "<gold>Map vote ends in <white><seconds>s";
-    public String classicVoteWinner = "<gold>Map selected: <white><map> <gray>by <white><creator>";
-    public String classicVoteNoMaps = "<red>No playable DeathRun maps are available for voting.";
-    public String classicVoteInMatch = "<red>You cannot vote while already inside a DeathRun match.";
-    public String classicVoteLeft = "<yellow>You left the current DeathRun map vote.";
+    public String classicVoteRecorded = "<green>你的投票：<white><choice>";
+    public String classicVoteCountdown = "<gold>投票将在 <white><seconds> 秒后结束";
+    public String classicVoteWinner = "<gold>已选地图：<white><map> <gray>作者：<white><creator>";
+    public String classicVoteNoMaps = "<red>没有可投票的地图。";
+    public String classicVoteInMatch = "<red>比赛中不能参与地图投票。";
+    public String classicVoteLeft = "<yellow>你已退出地图投票。";
     public String classicPreshowTitle = "<gold><b><map>";
-    public String classicPreshowSubtitle = "<gray>Created by <white><creator>";
+    public String classicPreshowSubtitle = "<gray>作者：<white><creator>";
 
     public List<String> chatMessageArenaGameStartRunner = asList(
-            "<reset>",
-            "<reset>   <gold><b>*</b> <gray>You are <green>Runner<gray>.",
-            "<reset>   <white><b>*</b> <gray>Your task is complete run in shortest possible time, during this task interfering player will trigger various traps.",
-            "<reset>"
+            "<gold><b>你是跑酷者！",
+            "<gray>沿赛道依次通过检查点，到达终点；避开死神机关。",
+            "<gray>初始 <green>2 条生命</green>，普通检查点 <green>+2</green>，死亡 <red>−1</red>；耗尽后淘汰。",
+            "<gray>快捷栏 <aqua>4 / 5 / 6</aqua> 格羽毛右键：左 / 后 / 右冲刺，每个方向独立冷却 <white>60 秒</white>。",
+            "<gray>起跑屏障打开后才能冲刺；退出使用 <white>/dr leave</white>。"
     );
 
     public List<String> chatMessageArenaGameStartDeath = asList(
-            "<reset>",
-            "<reset>   <gold><b>*</b> <gray>You are <red>Death<gray>.",
-            "<reset>   <white><b>*</b> <gray>Your task is to disturb runners by launching traps.",
-            "<reset>"
+            "<gold><b>你是死神！",
+            "<gray>观察跑酷者，选择时机右键触发机关。",
+            "<gray><yellow>1 / 9</yellow> 格：上 / 下一个机关；<aqua>5</aqua> 格：传送到所选机关控制通道。",
+            "<gray><red>2–4 / 6–8</red> 格：激活所选机关；机关冷却时无法重复触发。",
+            "<gray>退出使用 <white>/dr leave</white>。"
     );
 
     public List<String> chatMessageGameEndSpectator = asList(
-            "<reset>",
-            "<reset>   <gold><b>*</b> <gray>You are <dark_gray>Spectator<gray>.",
-            "<reset>   <white><b>*</b> <gray>Now you can follow other players.",
-            "<reset>"
+            "<gray>你已成为观战者，可以观看其他玩家。",
+            "<gray>右键退出道具或使用 <white>/dr leave</white> 离开。"
     );
 
     @Comment({
@@ -297,21 +305,21 @@ public class LanguageConfiguration extends OkaeriConfig {
     public String arenaStartingTitle = "<red><timer>";
     public String arenaStartingSubtitle = "<reset>";
 
-    public String arenaDeathTitle = "<red>YOU DIED!";
-    public String arenaDeathSubtitle = "<yellow>Don't give up! Try again!";
+    public String arenaDeathTitle = "<red>你死了！";
+    public String arenaDeathSubtitle = "<yellow>别放弃，继续挑战！";
 
-    public String arenaCheckpointTitle = "<yellow>CHECKPOINT!";
-    public String arenaCheckpointSubtitle = "<gold>You reached <yellow>#<checkpoint> checkpoint<gold>.";
+    public String arenaCheckpointTitle = "<yellow>到达检查点！";
+    public String arenaCheckpointSubtitle = "<gold>已到达第 <yellow><checkpoint> <gold>个检查点。";
 
-    public String arenaFinishTitle = "<dark_aqua><b>FINISH";
-    public String arenaFinishSubtitle = "<gray>Your position is <white>#<position><gray>.";
+    public String arenaFinishTitle = "<dark_aqua><b>成功通关！";
+    public String arenaFinishSubtitle = "<gray>你的名次：第 <white><position> <gray>名。";
 
-    public String arenaGameEndTitle = "<red><b>GAME END!";
+    public String arenaGameEndTitle = "<red><b>比赛结束！";
     public String arenaGameEndSubtitle = "<reset>";
 
-    public String arenaMoveServerTitle = "<aqua>Waiting..";
-    public String arenaMoveServerSubtitle = "<gray>You will be transferred to lobby in <white><endTimer> seconds<gray>.";
-        public String arenaMoveServerChat = "<gray>Game ended, sending you back to lobby...";
+    public String arenaMoveServerTitle = "<aqua>等待返回…";
+    public String arenaMoveServerSubtitle = "<gray><white><endTimer> <gray>秒后返回大厅。";
+        public String arenaMoveServerChat = "<gray>比赛结束，正在返回大厅…";
 
     @Comment({
             "",
@@ -322,39 +330,39 @@ public class LanguageConfiguration extends OkaeriConfig {
     })
     public boolean arenaScoreboardEnabled = true;
     public int arenaScoreboardUpdateTicks = 20;
-    public String arenaScoreboardTitle = "<yellow><b>DEATH RUN";
+    public String arenaScoreboardTitle = "<yellow><b>死神跑酷";
 
     public List<String> arenaScoreboardLinesWaiting = asList(
             "<reset>",
-            "<white>Map: <green><map>",
-            "<white>Creator: <gray><creator>",
-            "<white>Players: <green><currentPlayers>/<maxPlayers>",
+            "<white>地图： <green><map>",
+            "<white>作者： <gray><creator>",
+            "<white>玩家： <green><currentPlayers>/<maxPlayers>",
             "<reset>",
-            "<white>Waiting.."
+            "<white>等待玩家…"
     );
 
     public List<String> arenaScoreboardLinesStarting = asList(
             "<reset>",
-            "<white>Map: <green><map>",
-            "<white>Creator: <gray><creator>",
-            "<white>Players: <green><currentPlayers>/<maxPlayers>",
+            "<white>地图： <green><map>",
+            "<white>作者： <gray><creator>",
+            "<white>玩家： <green><currentPlayers>/<maxPlayers>",
             "<reset>",
-            "<white>Start in <green><timer> seconds"
+            "<white><green><timer> 秒后开始"
     );
 
     public List<String> arenaScoreboardLinesPlaying = asList(
             "<reset>",
-            "<white>Time: <green><timeFormatted>",
-            "<white>Role: <green><role>",
-            "<white>Lives: <red><lives>",
-            "<white>Points: <gold><roundPoints>",
-            "<white>Checkpoint: <aqua><checkpoint>",
+            "<white>剩余时间： <green><timeFormatted>",
+            "<white>角色： <green><role>",
+            "<white>生命： <red><lives>",
+            "<white>分数： <gold><roundPoints>",
+            "<white>检查点： <aqua><checkpoint>",
             "<reset>",
-            "<white>Runners: <green><runners>",
-            "<white>Deaths: <red><deathPlayers>",
+            "<white>跑酷者： <green><runners>",
+            "<white>死神： <red><deathPlayers>",
             "<reset>",
-            "<white>Map: <green><map>",
-            "<white>Creator: <gray><creator>"
+            "<white>地图： <green><map>",
+            "<white>作者： <gray><creator>"
     );
 
     @Comment({
@@ -364,7 +372,7 @@ public class LanguageConfiguration extends OkaeriConfig {
             "------------------------------------------------------------------------",
             ""
     })
-    public String arenaHologramTrapDelayed = "<red><delay> seconds";
+    public String arenaHologramTrapDelayed = "<red><delay> 秒";
 
     @Comment({
             "",
@@ -373,9 +381,9 @@ public class LanguageConfiguration extends OkaeriConfig {
             "------------------------------------------------------------------------",
             ""
     })
-    public String arenaRolesRunnerName = "<green>Runner";
-    public String arenaRolesDeathName = "<red>Death";
-    public String arenaRolesSpectatorName = "<gray>Spectator";
+    public String arenaRolesRunnerName = "<green>跑酷者";
+    public String arenaRolesDeathName = "<red>死神";
+    public String arenaRolesSpectatorName = "<gray>观战者";
 
     @Comment({
             "",
@@ -384,7 +392,7 @@ public class LanguageConfiguration extends OkaeriConfig {
             "------------------------------------------------------------------------",
             ""
     })
-        public String arenaItemMapSelectorName = "<yellow>Map Selector <gray>(Right Click)";
-    public String arenaItemLeaveName = "<red>Leave <gray>(Right Click)";
+        public String arenaItemMapSelectorName = "<yellow>选择地图 <gray>（右键）";
+    public String arenaItemLeaveName = "<red>退出游戏 <gray>（右键）";
 
 }

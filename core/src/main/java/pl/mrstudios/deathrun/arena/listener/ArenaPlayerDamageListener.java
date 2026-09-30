@@ -25,6 +25,7 @@ import pl.mrstudios.deathrun.config.Configuration;
 import static org.bukkit.Material.LAVA;
 import static org.bukkit.Material.WATER;
 import static org.bukkit.event.EventPriority.MONITOR;
+import static org.bukkit.event.EventPriority.HIGHEST;
 import static org.bukkit.event.entity.EntityDamageEvent.DamageCause.*;
 import static pl.mrstudios.deathrun.api.arena.enums.GameState.PLAYING;
 
@@ -49,7 +50,7 @@ public class ArenaPlayerDamageListener implements Listener {
         this.trapActivationService = new TrapActivationService(plugin, server, configuration);
     }
 
-    @EventHandler(priority = MONITOR)
+    @EventHandler(priority = HIGHEST)
     public void onDamage(@NotNull EntityDamageEvent event) {
         if (!(event.getEntity() instanceof Player player))
             return;
@@ -101,7 +102,7 @@ public class ArenaPlayerDamageListener implements Listener {
         event.setCancelled(true);
     }
 
-    @EventHandler(priority = MONITOR)
+    @EventHandler(priority = MONITOR, ignoreCancelled = true)
     public void onPlayerMove(@NotNull PlayerMoveEvent event) {
         if (event.getTo() == null)
             return;

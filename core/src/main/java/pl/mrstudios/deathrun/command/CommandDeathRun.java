@@ -210,6 +210,22 @@ public class CommandDeathRun {
         this.message(sender, PREFIX + "<gray>Remaining fidelity notes: <white>" + String.join(", ", result.details()));
     }
 
+    @Execute(name = "tobee repair")
+    @Permission("mrstudios.command.deathrun.setup")
+    public void repairToBeeSpawns(@Context CommandSender sender, @Arg("world") String worldName) {
+        World world = this.arenaManager.loadExistingMapWorld(worldName);
+        if (world == null) {
+            this.message(sender, PREFIX + "<red>无法加载地图世界，请检查世界文件夹。");
+            return;
+        }
+        ToBeeCandidateProfileService.Result result = new ToBeeCandidateProfileService(this.configuration, this.arenaManager).repairSpawns(world);
+        this.message(sender, PREFIX + (result.success()
+                ? "<green>出生点已修复：20 个跑酷者位置、2 个死神位置；地图名称和检查点已汉化。"
+                : "<red>修复失败：请先退出所有玩家并停止比赛，检查控制通道是否被改动。"));
+        if (!result.success())
+            this.message(sender, PREFIX + "<gray>" + result.message() + " " + String.join(", ", result.details()));
+    }
+
     @Execute(name = "tobee verify")
     @Permission("mrstudios.command.deathrun.setup")
     public void verifyToBeeCandidate(@Context Player player) {

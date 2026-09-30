@@ -35,7 +35,8 @@ public final class ClassicStrafeListener implements Listener {
             return;
         Player player = event.getPlayer();
         ArenaManager.ArenaRuntime runtime = this.arenaManager.runtimeForPlayer(player);
-        if (runtime == null || runtime.arena().getGameState() != PLAYING)
+        if (runtime == null || runtime.arena().getGameState() != PLAYING
+                || runtime.service().barrierTimerForDisplay() > 0)
             return;
         IUser user = runtime.arena().getUser(player);
         if (user == null || user.getRole() != RUNNER || user.isEliminated())
@@ -63,7 +64,7 @@ public final class ClassicStrafeListener implements Listener {
                     + " afterLeft=" + afterLeft + " afterBack=" + afterBack + " afterRight=" + afterRight
                     + " sampleElapsedMillis=" + sampleElapsedMillis);
             player.sendActionBar(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize(
-                    "<aqua>" + direction.label() + "</aqua> <gray>used · <white>60s</white>"
+                    "<aqua>" + direction.label() + "</aqua> <gray>已使用 · <white>60 秒</white>"
             ));
             return;
         }
@@ -73,7 +74,7 @@ public final class ClassicStrafeListener implements Listener {
                 + " direction=" + direction.name() + " remainingMillis=" + remainingMillis);
         long seconds = (remainingMillis + 999L) / 1000L;
         player.sendActionBar(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize(
-                "<red>" + direction.label() + "</red> <gray>ready in <white>" + seconds + "s</white>"
+                "<red>" + direction.label() + "</red> <gray>冷却剩余 <white>" + seconds + " 秒</white>"
         ));
     }
 }

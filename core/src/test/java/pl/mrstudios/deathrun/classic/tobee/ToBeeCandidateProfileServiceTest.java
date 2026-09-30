@@ -18,7 +18,7 @@ class ToBeeCandidateProfileServiceTest {
         assertEquals(3, ToBeeCandidateProfileService.finishGateId());
         assertEquals(20, ToBeeCandidateProfileService.runnerSpawnTarget());
         assertEquals(2, ToBeeCandidateProfileService.deathSpawnTarget());
-        assertEquals(726, ToBeeCandidateProfileService.startSearchColumnCount());
+        assertEquals(56, ToBeeCandidateProfileService.startSearchColumnCount());
         assertEquals(14, ToBeeCandidateProfileService.startBarrierPositions().size());
         assertEquals(3, ToBeeCandidateProfileService.fireArrowTrapCount());
         assertEquals(23, ToBeeCandidateProfileService.implementedTrapCount());

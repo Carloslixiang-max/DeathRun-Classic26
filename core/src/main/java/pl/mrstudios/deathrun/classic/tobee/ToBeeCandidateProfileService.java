@@ -37,7 +37,7 @@ import java.util.Map;
 public final class ToBeeCandidateProfileService {
 
     public static final String MAP_ID = "to-bee-or-not-to-bee";
-    public static final String MAP_NAME = "To Bee Or Not To Bee";
+    public static final String MAP_NAME = "蜂与不蜂";
 
     private static final List<Integer> ROUTE_GATE_IDS = List.of(6, 7, 2, 1, 4, 5, 3);
     private static final List<Integer> CHECKPOINT_GATE_IDS = List.of(7, 2, 1, 4, 5, 3);
@@ -338,9 +338,9 @@ public final class ToBeeCandidateProfileService {
             return new Result(false, "insufficient-safe-runner-starts",
                     List.of(runnerStarts.size() + "/20"));
 
-        map.arenaWaitingLobbyLocation = feetLocation(world, runnerStarts.get(0));
+        map.arenaWaitingLobbyLocation = feetLocation(world, runnerStarts.get(0), ToBeeSpawnGeometry.RUNNER_YAW);
         runnerStarts.stream()
-                .map(pos -> feetLocation(world, pos))
+                .map(pos -> feetLocation(world, pos, ToBeeSpawnGeometry.RUNNER_YAW))
                 .forEach(map.arenaRunnerSpawnLocations::add);
 
         for (BlockPos pos : startBarrierPositions()) {
@@ -354,7 +354,7 @@ public final class ToBeeCandidateProfileService {
                     List.of(deathStarts.size() + "/2"));
 
         deathStarts.stream()
-                .map(pos -> feetLocation(world, pos))
+                .map(pos -> feetLocation(world, pos, ToBeeSpawnGeometry.DEATH_YAW))
                 .forEach(map.arenaDeathSpawnLocations::add);
 
         int checkpointId = 1;
@@ -369,8 +369,8 @@ public final class ToBeeCandidateProfileService {
                             blockLocation(world, gate.max())
                     ),
                     gateId == 3
-                            ? "Finish [archive candidate gate #003]"
-                            : "Checkpoint " + checkpointId + " [archive candidate gate #" + String.format("%03d", gateId) + "]"
+                            ? "终点"
+                            : "检查点 " + checkpointId
             ));
             map.arenaCheckpointPoints.add(0);
             checkpointId++;
@@ -418,6 +418,7 @@ public final class ToBeeCandidateProfileService {
         );
         this.configuration.map().maps.add(map);
         this.configuration.map().save();
+        ToBeeSignTranslations.apply(world);
         this.arenaManager.reloadRuntime(MAP_ID);
 
         return new Result(true, "candidate-profile-created", knownRemainingBlockers());
@@ -431,6 +432,7 @@ public final class ToBeeCandidateProfileService {
         if (map == null) {
             issues.add("profile-not-configured");
         } else {
+            issues.addAll(spawnIssues(world, map));
             if (!world.getName().equals(map.world))
                 issues.add("profile-world-mismatch:" + map.world);
             if (!map.arenaSetupEnabled)
@@ -609,11 +611,7 @@ public final class ToBeeCandidateProfileService {
     }
 
     public static int startSearchColumnCount() {
-        GateEvidence gate = GATES.get(6);
-        int normalDistances = 11; // d=2..12, kept behind the reconstructed x=84 barrier.
-        int lateralColumns = (gate.max().z() - gate.min().z() + 1) + 4;
-        int verticalColumns = 6;
-        return normalDistances * lateralColumns * verticalColumns;
+        return 8 * 7; // x=85..92, y=25, z=79..85; never decoration or side platforms.
     }
 
     public static @NotNull List<BlockPos> startBarrierPositions() {
@@ -1127,78 +1125,107 @@ public final class ToBeeCandidateProfileService {
             @NotNull World world,
             int limit
     ) {
-        List<BlockPos> candidates = new ArrayList<>();
-
-        // The only action/button pair that independently collapses to one
-        // panel/axis candidate is Release fire snake:
-        // action sign 76,25,56 -> button 76,25,47. Search only the corridor
-        // between those two archive-backed control anchors.
-        for (int x = 74; x <= 78; x++) {
-            for (int z = 48; z <= 55; z++) {
-                for (int y = 23; y <= 28; y++) {
-                    BlockPos pos = new BlockPos(x, y, z);
-                    if (safeStandingColumn(world, pos))
-                        candidates.add(pos);
-                }
-            }
-        }
-
-        final double centerX = 76.5;
-        final double centerY = 25.0;
-        final double centerZ = 51.5;
-        candidates.sort(
-                Comparator.comparingDouble((BlockPos pos) -> {
-                            double dx = pos.x() + 0.5 - centerX;
-                            double dy = pos.y() - centerY;
-                            double dz = pos.z() + 0.5 - centerZ;
-                            return dx * dx + dy * dy + dz * dz;
-                        })
-                        .thenComparingInt(BlockPos::x)
-                        .thenComparingInt(BlockPos::y)
-                        .thenComparingInt(BlockPos::z)
-        );
-
-        if (candidates.size() <= limit)
-            return List.copyOf(candidates);
-        return List.copyOf(candidates.subList(0, limit));
+        return ToBeeSpawnGeometry.DEATH_STARTS.stream()
+                .map(pos -> new BlockPos(pos.x(), pos.y(), pos.z()))
+                .filter(pos -> safeStandingColumn(world, pos)).limit(limit).toList();
     }
 
-    private static @NotNull List<BlockPos> runnerStartCandidates(
-            @NotNull World world,
-            int limit
-    ) {
-        GateEvidence gate = GATES.get(6);
+    private static @NotNull List<BlockPos> runnerStartCandidates(@NotNull World world, int limit) {
         List<BlockPos> candidates = new ArrayList<>();
-
-        for (int normalDistance = 2; normalDistance <= 12; normalDistance++) {
-            int x = gate.max().x() + normalDistance;
-            for (int z = gate.min().z() - 2; z <= gate.max().z() + 2; z++) {
-                for (int y = gate.min().y() - 2; y < gate.min().y() + 4; y++) {
-                    BlockPos pos = new BlockPos(x, y, z);
-                    if (safeStandingColumn(world, pos))
-                        candidates.add(pos);
-                }
+        for (int x = 85; x <= 92; x++)
+            for (int z = 79; z <= 85; z++) {
+                BlockPos pos = new BlockPos(x, 25, z);
+                if (safeStandingColumn(world, pos)
+                        && world.getBlockAt(x, 24, z).getType() == Material.GRASS_BLOCK)
+                    candidates.add(pos);
             }
+        candidates.sort(Comparator.comparingInt(BlockPos::x)
+                .thenComparingInt(pos -> Math.abs(pos.z() - 82)).thenComparingInt(BlockPos::z));
+        return candidates.stream().limit(limit).toList();
+    }
+
+    public static Location controlLanding(@NotNull World world, @NotNull Location button) {
+        for (var control : ToBeeSpawnGeometry.CONTROLS) {
+            var pos = control.button();
+            if (pos.x() != button.getBlockX() || pos.y() != button.getBlockY() || pos.z() != button.getBlockZ())
+                continue;
+            var landing = control.landing();
+            BlockPos feet = new BlockPos(landing.x(), landing.y(), landing.z());
+            return safeStandingColumn(world, feet) ? feetLocation(world, feet, ToBeeSpawnGeometry.DEATH_YAW) : null;
         }
+        return null;
+    }
 
-        final double centerY = 28.76;
-        final double centerZ = 81.91;
-        candidates.sort(
-                Comparator.comparingInt((BlockPos pos) -> pos.x() - gate.max().x())
-                        .thenComparingInt(pos -> Math.abs(pos.y() - gate.min().y()))
-                        .thenComparingDouble(pos -> {
-                            double dy = pos.y() - centerY;
-                            double dz = pos.z() + 0.5 - centerZ;
-                            return dy * dy + dz * dz;
-                        })
-                        .thenComparingInt(BlockPos::x)
-                        .thenComparingInt(BlockPos::y)
-                        .thenComparingInt(BlockPos::z)
-        );
+    public static List<String> spawnIssues(@NotNull World world, @NotNull MapConfiguration.MapDefinition map) {
+        List<String> issues = new ArrayList<>();
+        for (Location location : map.arenaRunnerSpawnLocations) {
+            if (!spawnWorldMatches(world, location) || !ToBeeSpawnGeometry.runnerRegion(location.getBlockX(), location.getBlockY(), location.getBlockZ())
+                    || !safeStandingColumn(world, new BlockPos(location.getBlockX(), location.getBlockY(), location.getBlockZ()))
+                    || world.getBlockAt(location.getBlockX(), 24, location.getBlockZ()).getType() != Material.GRASS_BLOCK
+                    || Math.abs(location.getYaw() - ToBeeSpawnGeometry.RUNNER_YAW) > 0.01f)
+                issues.add("runner-spawn-outside-reviewed-start-or-unsafe:" + location);
+        }
+        for (Location location : map.arenaDeathSpawnLocations) {
+            boolean reviewed = location != null && ToBeeSpawnGeometry.DEATH_STARTS.stream().anyMatch(pos ->
+                    pos.x() == location.getBlockX() && pos.y() == location.getBlockY() && pos.z() == location.getBlockZ());
+            if (!spawnWorldMatches(world, location) || !reviewed
+                    || !safeStandingColumn(world, new BlockPos(location.getBlockX(), location.getBlockY(), location.getBlockZ()))
+                    || Math.abs(location.getYaw() - ToBeeSpawnGeometry.DEATH_YAW) > 0.01f)
+                issues.add("death-spawn-outside-reviewed-controls-or-unsafe:" + location);
+        }
+        if (map.arenaRunnerSpawnLocations.stream().distinct().count() != 20)
+            issues.add("runner-spawns-not-20-distinct");
+        if (map.arenaDeathSpawnLocations.stream().distinct().count() != 2)
+            issues.add("death-spawns-not-2-distinct");
+        for (var trap : map.arenaTraps)
+            if (trap.getButton() == null || controlLanding(world, trap.getButton()) == null)
+                issues.add("unsafe-or-unreviewed-control-landing:" + (trap == null ? "null" : trap.getButton()));
+        return List.copyOf(issues);
+    }
 
-        if (candidates.size() <= limit)
-            return List.copyOf(candidates);
-        return List.copyOf(candidates.subList(0, limit));
+    private static boolean spawnWorldMatches(World world, Location location) {
+        return location != null && location.getWorld() != null && location.getWorld().getUID().equals(world.getUID());
+    }
+
+    /** Repairs an idle existing profile without recreating traps, points or rules. */
+    public @NotNull Result repairSpawns(@NotNull World world) {
+        this.configuration.map().ensureMapsMutable();
+        MapConfiguration.MapDefinition map = this.configuration.map().getMapById(MAP_ID);
+        var runtime = this.arenaManager.runtimeByMapId(MAP_ID);
+        if (map == null || runtime == null || !world.getName().equals(map.world))
+            return new Result(false, "profile-world-unavailable", List.of());
+        if (runtime.arena().getGameState() != pl.mrstudios.deathrun.api.arena.enums.GameState.WAITING
+                || !runtime.arena().getUsers().isEmpty() || !world.getPlayers().isEmpty())
+            return new Result(false, "map-must-be-idle-and-empty", List.of());
+        var runners = runnerStartCandidates(world, 20);
+        var deaths = deathStartCandidates(world, 2);
+        if (runners.size() != 20 || deaths.size() != 2)
+            return new Result(false, "reviewed-platforms-obstructed", List.of());
+        var oldRunners = map.arenaRunnerSpawnLocations;
+        var oldDeaths = map.arenaDeathSpawnLocations;
+        var oldLobby = map.arenaWaitingLobbyLocation;
+        map.arenaRunnerSpawnLocations = new ArrayList<>(runners.stream()
+                .map(pos -> feetLocation(world, pos, ToBeeSpawnGeometry.RUNNER_YAW)).toList());
+        map.arenaDeathSpawnLocations = new ArrayList<>(deaths.stream()
+                .map(pos -> feetLocation(world, pos, ToBeeSpawnGeometry.DEATH_YAW)).toList());
+        map.arenaWaitingLobbyLocation = map.arenaRunnerSpawnLocations.get(0).clone();
+        var issues = spawnIssues(world, map);
+        if (!issues.isEmpty()) {
+            map.arenaRunnerSpawnLocations = oldRunners;
+            map.arenaDeathSpawnLocations = oldDeaths;
+            map.arenaWaitingLobbyLocation = oldLobby;
+            return new Result(false, "spawn-check-failed", issues);
+        }
+        map.name = MAP_NAME;
+        for (int i = 0; i < map.arenaCheckpoints.size(); i++) {
+            var cp = map.arenaCheckpoints.get(i);
+            map.arenaCheckpoints.set(i, new Checkpoint(cp.id(), feetLocation(world, SAFE_ROUTE_SIDE_CANDIDATES.get(CHECKPOINT_GATE_IDS.get(i))), cp.locations(),
+                    i == map.arenaCheckpoints.size() - 1 ? "终点" : "检查点 " + (i + 1)));
+        }
+        this.configuration.map().save();
+        ToBeeSignTranslations.apply(world);
+        this.arenaManager.reloadRuntime(MAP_ID);
+        return new Result(true, "spawn-repair-complete", List.of("20-runner", "2-death", "23-controls"));
     }
 
     private static int countPortalBlocks(@NotNull World world, @NotNull GateEvidence gate) {
@@ -1241,17 +1268,26 @@ public final class ToBeeCandidateProfileService {
 
         return world.getBlockAt(candidate.x(), candidate.y(), candidate.z()).getType() == Material.BARRIER
                 && world.getBlockAt(candidate.x(), candidate.y() + 1, candidate.z()).getType() == Material.BARRIER
-                && world.getBlockAt(candidate.x(), candidate.y() - 1, candidate.z()).getType().isSolid();
+                && world.getBlockAt(candidate.x(), candidate.y() - 1, candidate.z()).getType().isOccluding();
     }
 
     private static boolean safeStandingColumn(@NotNull World world, @NotNull BlockPos candidate) {
         return world.getBlockAt(candidate.x(), candidate.y(), candidate.z()).isPassable()
                 && world.getBlockAt(candidate.x(), candidate.y() + 1, candidate.z()).isPassable()
-                && world.getBlockAt(candidate.x(), candidate.y() - 1, candidate.z()).getType().isSolid();
+                && world.getBlockAt(candidate.x(), candidate.y() - 1, candidate.z()).getType().isOccluding();
     }
 
     private static @NotNull Location feetLocation(@NotNull World world, @NotNull BlockPos pos) {
-        return new Location(world, pos.x() + 0.5, pos.y(), pos.z() + 0.5, 0f, 0f);
+        float yaw = switch (pos.x()) {
+            case 7, -14, 84 -> 90f;
+            case -5 -> -90f;
+            default -> 180f;
+        };
+        return feetLocation(world, pos, yaw);
+    }
+
+    private static @NotNull Location feetLocation(@NotNull World world, @NotNull BlockPos pos, float yaw) {
+        return new Location(world, pos.x() + 0.5, pos.y(), pos.z() + 0.5, yaw, 0f);
     }
 
     private static @NotNull Location blockLocation(@NotNull World world, @NotNull BlockPos pos) {

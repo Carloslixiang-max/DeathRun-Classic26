@@ -77,11 +77,11 @@ public class ArenaCheckpointReachedListener implements Listener {
     }
 
     @SuppressWarnings("deprecation")
-    @EventHandler(priority = MONITOR)
+    @EventHandler(priority = MONITOR, ignoreCancelled = true)
     public void onPlayerMove(
             @NotNull PlayerMoveEvent event
     ) {
-        if (event.getTo() == null || event.getFrom() == null)
+        if (event instanceof PlayerTeleportEvent || event.getTo() == null || event.getFrom() == null)
             return;
 
                 if (event.getFrom().getWorld() != null && event.getTo().getWorld() != null
@@ -98,14 +98,14 @@ public class ArenaCheckpointReachedListener implements Listener {
 
     }
 
-    @EventHandler(priority = MONITOR)
+    @EventHandler(priority = MONITOR, ignoreCancelled = true)
     public void onPlayerPortal(
             @NotNull PlayerPortalEvent event
     ) {
                 this.processCheckpoint(event.getPlayer(), event.getFrom(), event.getFrom(), "portal");
         }
 
-        @EventHandler(priority = MONITOR)
+        @EventHandler(priority = MONITOR, ignoreCancelled = true)
         public void onPlayerTeleport(
                         @NotNull PlayerTeleportEvent event
         ) {
@@ -131,6 +131,9 @@ public class ArenaCheckpointReachedListener implements Listener {
             return;
 
                                 if (arena.getGameState() != PLAYING)
+            return;
+
+        if (runtime.service().barrierTimerForDisplay() > 0)
             return;
 
         if (map.arenaCheckpoints.isEmpty())
@@ -322,7 +325,10 @@ public class ArenaCheckpointReachedListener implements Listener {
         private @Nullable Checkpoint finishCheckpoint(
                         @NotNull MapConfiguration.MapDefinition map
         ) {
-                if (map.arenaCheckpoints.isEmpty())
+                if (runtime.service().barrierTimerForDisplay() > 0)
+            return;
+
+        if (map.arenaCheckpoints.isEmpty())
                         return null;
 
                 if (map.arenaFinishCheckpointId == null)

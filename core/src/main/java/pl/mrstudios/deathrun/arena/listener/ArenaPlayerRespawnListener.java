@@ -55,10 +55,10 @@ public class ArenaPlayerRespawnListener implements Listener {
                     this.arenaManager.leaveCurrentMap(event.getPlayer(), true);
                     if (this.arenaManager.hasPendingSnapshot(event.getPlayer()))
                         event.getPlayer().sendMessage(org.bukkit.ChatColor.RED
-                                + "[DeathRun] Unexpected vanilla death detected; recovery is still pending. Use /dr recover.");
+                                + "[死神跑酷] 发生异常死亡，状态尚待恢复，请使用 /dr recover。");
                     else
                         event.getPlayer().sendMessage(org.bukkit.ChatColor.YELLOW
-                                + "[DeathRun] Unexpected vanilla death detected; your pre-game state was restored.");
+                                + "[死神跑酷] 发生异常死亡，已恢复入场前状态。");
                 }
             });
             return;

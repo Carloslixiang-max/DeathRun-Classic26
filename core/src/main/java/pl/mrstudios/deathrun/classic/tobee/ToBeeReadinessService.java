@@ -48,6 +48,8 @@ public final class ToBeeReadinessService {
         if (!"Timmetatsch".equals(runtime.map().creator))
             issues.add("creator:" + runtime.map().creator);
 
+        issues.addAll(ToBeeCandidateProfileService.spawnIssues(world, runtime.map()));
+
         int barriers = 0;
         for (var location : runtime.map().arenaStartBarrierBlocks) {
             if (location == null || location.getWorld() == null) {

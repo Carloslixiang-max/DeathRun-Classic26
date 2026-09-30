@@ -138,7 +138,7 @@ public final class ClassicStrafeService {
             meta.displayName(miniMessage().deserialize(direction.displayName));
         } else {
             meta.displayName(miniMessage().deserialize(
-                    "<red>" + direction.label() + "</red> <gray>(" + seconds + "s)</gray>"
+                    "<red>" + direction.label() + "</red> <gray>(" + seconds + " 秒)</gray>"
             ));
         }
         meta.getPersistentDataContainer().set(this.strafeKey, PersistentDataType.STRING, direction.name());
@@ -147,18 +147,18 @@ public final class ClassicStrafeService {
     }
 
     public enum Direction {
-        LEFT("<aqua>Left Strafe</aqua>"),
-        BACK("<aqua>Back Strafe</aqua>"),
-        RIGHT("<aqua>Right Strafe</aqua>");
+        LEFT("<aqua>左冲刺</aqua>"),
+        BACK("<aqua>后冲刺</aqua>"),
+        RIGHT("<aqua>右冲刺</aqua>");
 
         private final String displayName;
         Direction(String displayName) { this.displayName = displayName; }
 
         public String label() {
             return switch (this) {
-                case LEFT -> "Left Strafe";
-                case BACK -> "Back Strafe";
-                case RIGHT -> "Right Strafe";
+                case LEFT -> "左冲刺";
+                case BACK -> "后冲刺";
+                case RIGHT -> "右冲刺";
             };
         }
     }

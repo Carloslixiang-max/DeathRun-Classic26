@@ -55,7 +55,7 @@ public final class TrapActivationService {
     }
 
     public ActivationResult activate(@NotNull Player death, @NotNull ArenaManager.ArenaRuntime runtime, int trapIndex) {
-        if (runtime.arena().getGameState() != PLAYING)
+        if (runtime.arena().getGameState() != PLAYING || runtime.service().barrierTimerForDisplay() > 0)
             return ActivationResult.NOT_PLAYING;
 
         IUser user = runtime.arena().getUser(death);

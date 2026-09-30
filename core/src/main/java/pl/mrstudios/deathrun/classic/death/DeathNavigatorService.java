@@ -26,15 +26,15 @@ public final class DeathNavigatorService {
     }
 
     public void prepareDeath(@NotNull Player player) {
-        player.getInventory().setItem(0, item(Material.ARROW, "<yellow>Previous Trap</yellow>", Action.PREVIOUS));
-        player.getInventory().setItem(1, item(Material.BLAZE_POWDER, "<red>Activate</red>", Action.ACTIVATE));
-        player.getInventory().setItem(2, item(Material.BLAZE_POWDER, "<red>Activate</red>", Action.ACTIVATE));
-        player.getInventory().setItem(3, item(Material.BLAZE_POWDER, "<red>Activate</red>", Action.ACTIVATE));
-        player.getInventory().setItem(4, item(Material.ENDER_PEARL, "<aqua>Trap Jumper</aqua>", Action.JUMP));
-        player.getInventory().setItem(5, item(Material.BLAZE_POWDER, "<red>Activate</red>", Action.ACTIVATE));
-        player.getInventory().setItem(6, item(Material.BLAZE_POWDER, "<red>Activate</red>", Action.ACTIVATE));
-        player.getInventory().setItem(7, item(Material.BLAZE_POWDER, "<red>Activate</red>", Action.ACTIVATE));
-        player.getInventory().setItem(8, item(Material.ARROW, "<yellow>Next Trap</yellow>", Action.NEXT));
+        player.getInventory().setItem(0, item(Material.ARROW, "<yellow>上一个机关</yellow>", Action.PREVIOUS));
+        player.getInventory().setItem(1, item(Material.BLAZE_POWDER, "<red>激活机关</red>", Action.ACTIVATE));
+        player.getInventory().setItem(2, item(Material.BLAZE_POWDER, "<red>激活机关</red>", Action.ACTIVATE));
+        player.getInventory().setItem(3, item(Material.BLAZE_POWDER, "<red>激活机关</red>", Action.ACTIVATE));
+        player.getInventory().setItem(4, item(Material.ENDER_PEARL, "<aqua>机关传送</aqua>", Action.JUMP));
+        player.getInventory().setItem(5, item(Material.BLAZE_POWDER, "<red>激活机关</red>", Action.ACTIVATE));
+        player.getInventory().setItem(6, item(Material.BLAZE_POWDER, "<red>激活机关</red>", Action.ACTIVATE));
+        player.getInventory().setItem(7, item(Material.BLAZE_POWDER, "<red>激活机关</red>", Action.ACTIVATE));
+        player.getInventory().setItem(8, item(Material.ARROW, "<yellow>下一个机关</yellow>", Action.NEXT));
         SELECTED_TRAP.put(player.getUniqueId(), 0);
     }
 
@@ -79,7 +79,9 @@ public final class DeathNavigatorService {
         if (button == null || button.getWorld() == null)
             return false;
 
-        Location target = this.safeLandingNear(button, player.getLocation().getYaw(), player.getLocation().getPitch());
+        Location target = pl.mrstudios.deathrun.classic.tobee.ToBeeCandidateProfileService.MAP_ID.equalsIgnoreCase(runtime.mapId())
+                ? pl.mrstudios.deathrun.classic.tobee.ToBeeCandidateProfileService.controlLanding(button.getWorld(), button)
+                : this.safeLandingNear(button, player.getLocation().getYaw(), player.getLocation().getPitch());
         return target != null && player.teleport(target);
     }
 
@@ -118,14 +120,24 @@ public final class DeathNavigatorService {
     public @NotNull String selectionLabel(@NotNull Player player, @NotNull ArenaManager.ArenaRuntime runtime) {
         int index = this.selectedIndex(player, runtime);
         if (index < 0)
-            return "No traps";
+            return "没有机关";
 
         var trap = runtime.map().arenaTraps.get(index);
         String type = trap.getClass().getSimpleName();
         if (type.startsWith("Trap"))
             type = type.substring(4);
-        type = type.replaceAll("([a-z])([A-Z])", "$1 $2");
-        return "Trap " + (index + 1) + "/" + runtime.map().arenaTraps.size() + " · " + type;
+        type = switch (type) {
+            case "FireSnake" -> "火蛇";
+            case "FireFloor" -> "燃烧地板";
+            case "Arrows" -> "火焰箭";
+            case "DisappearingBlocks" -> "消失方块";
+            case "Flood" -> "洪水";
+            case "Minefield" -> "雷区";
+            case "WallSpawn" -> "随机墙壁";
+            case "DropTNT" -> "落下炸药";
+            default -> "机关";
+        };
+        return "机关 " + (index + 1) + "/" + runtime.map().arenaTraps.size() + " · " + type;
     }
 
     public static void clearPlayer(@NotNull UUID playerId) {

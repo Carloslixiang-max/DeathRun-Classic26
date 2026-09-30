@@ -68,7 +68,8 @@ public final class DeathRunDeathService {
 
     public @Nullable DeathResult killRunner(@NotNull Player player, @NotNull DeathRunDeathCause cause) {
         ArenaManager.ArenaRuntime runtime = this.arenaManager.runtimeForPlayer(player);
-        if (runtime == null || runtime.arena().getGameState() != PLAYING)
+        if (runtime == null || runtime.arena().getGameState() != PLAYING
+                || runtime.service().barrierTimerForDisplay() > 0)
             return null;
         IUser user = runtime.arena().getUser(player);
         if (user == null || user.getRole() != RUNNER || user.isEliminated())

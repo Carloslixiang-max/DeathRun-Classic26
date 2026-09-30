@@ -387,6 +387,10 @@ public class ArenaServiceRunnable extends BukkitRunnable {
                     if (player == null)
                         return;
 
+                    this.configuration.language().chatMessageArenaRules.stream()
+                            .map(line -> line.replace("<gameSeconds>", valueOf(this.configuration.plugin().arenaGameTime)))
+                            .map(miniMessage()::deserialize).forEach(player::sendMessage);
+
                     if (user.getRole() == RUNNER)
                         this.configuration.language().chatMessageArenaGameStartRunner.stream()
                                 .map(miniMessage()::deserialize)

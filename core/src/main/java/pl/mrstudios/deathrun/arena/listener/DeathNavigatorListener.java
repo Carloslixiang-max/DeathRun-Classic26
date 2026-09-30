@@ -81,12 +81,12 @@ public final class DeathNavigatorListener implements Listener {
                                 + " action=JUMP success=" + jumped
                                 + " selected=" + (this.navigator.selectedIndex(event.getPlayer(), runtime) + 1));
                 if (!jumped)
-                    event.getPlayer().sendActionBar(MiniMessage.miniMessage().deserialize("<red>Trap Jumper unavailable"));
+                    event.getPlayer().sendActionBar(MiniMessage.miniMessage().deserialize("<red>机关传送暂不可用"));
             }
             case ACTIVATE -> {
                 int index = this.navigator.selectedIndex(event.getPlayer(), runtime);
                 if (index < 0) {
-                    event.getPlayer().sendActionBar(MiniMessage.miniMessage().deserialize("<red>No trap selected"));
+                    event.getPlayer().sendActionBar(MiniMessage.miniMessage().deserialize("<red>未选择机关"));
                     return;
                 }
 
@@ -102,21 +102,21 @@ public final class DeathNavigatorListener implements Listener {
 
                 switch (result) {
                     case ACTIVATED -> event.getPlayer().sendActionBar(MiniMessage.miniMessage().deserialize(
-                            "<green>Activated</green> <gray>·</gray> <white>"
+                            "<green>已激活</green> <gray>·</gray> <white>"
                                     + this.navigator.selectionLabel(event.getPlayer(), runtime)
                                     + "</white>"
                     ));
                     case COOLDOWN -> {
                         long seconds = (this.activationService.cooldownRemainingMillis(runtime.mapId(), index) + 999L) / 1000L;
                         event.getPlayer().sendActionBar(MiniMessage.miniMessage().deserialize(
-                                "<red>Trap cooling down</red> <gray>·</gray> <white>" + seconds + "s</white>"
+                                "<red>机关冷却中</red> <gray>·</gray> <white>" + seconds + " 秒</white>"
                         ));
                     }
                     case FAILED -> event.getPlayer().sendActionBar(MiniMessage.miniMessage().deserialize(
-                            "<red>Trap failed safely. Check server log.</red>"
+                            "<red>机关未能激活，请联系管理员。</red>"
                     ));
                     default -> event.getPlayer().sendActionBar(MiniMessage.miniMessage().deserialize(
-                            "<red>Trap unavailable: " + result.name() + "</red>"
+                            "<red>机关暂不可用：" + result.name() + "</red>"
                     ));
                 }
             }
