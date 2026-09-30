@@ -15,7 +15,7 @@
 /dr map backup to-bee-or-not-to-bee
 ```
 
-`repair` 只升级出生点、出生朝向、检查点复活位置/名称、地图名称和 46 块原说明牌；保留机关、积分、人数、模式和编辑状态。地图必须等待且无人；落点检查失败时拒绝保存出生点。若 readiness 说明编辑模式仍开启，执行 `/dr map disable to-bee-or-not-to-bee` 后再检查。
+`repair` 会先保留旧 `map.yml.before-spawn-fix.bak`，再升级出生点、出生朝向、检查点复活位置/名称、地图名称和 46 块原说明牌；保留机关、积分、人数、模式和编辑状态。地图必须等待且无人；落点检查失败时拒绝保存出生点。若 readiness 说明编辑模式仍开启，执行 `/dr map disable to-bee-or-not-to-bee` 后再检查。
 
 旧 language.yml 首次启动会备份为 `language.yml.before-chinese-v3.bak`，然后升级文字到中文，保留计分板开关和刷新间隔。后续启动不会覆盖你的中文自定义文字。
 

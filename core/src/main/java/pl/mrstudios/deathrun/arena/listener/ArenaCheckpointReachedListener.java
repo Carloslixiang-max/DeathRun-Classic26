@@ -325,9 +325,6 @@ public class ArenaCheckpointReachedListener implements Listener {
         private @Nullable Checkpoint finishCheckpoint(
                         @NotNull MapConfiguration.MapDefinition map
         ) {
-                if (runtime.service().barrierTimerForDisplay() > 0)
-            return;
-
         if (map.arenaCheckpoints.isEmpty())
                         return null;
 

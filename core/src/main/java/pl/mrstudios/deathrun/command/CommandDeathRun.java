@@ -218,6 +218,15 @@ public class CommandDeathRun {
             this.message(sender, PREFIX + "<red>无法加载地图世界，请检查世界文件夹。");
             return;
         }
+        try {
+            Path mapFile = this.plugin.getDataFolder().toPath().resolve("map.yml");
+            Path previous = mapFile.resolveSibling("map.yml.before-spawn-fix.bak");
+            if (java.nio.file.Files.exists(mapFile) && !java.nio.file.Files.exists(previous))
+                java.nio.file.Files.copy(mapFile, previous);
+        } catch (java.io.IOException exception) {
+            this.message(sender, PREFIX + "<red>无法备份旧地图配置，出生点修复尚未执行。");
+            return;
+        }
         ToBeeCandidateProfileService.Result result = new ToBeeCandidateProfileService(this.configuration, this.arenaManager).repairSpawns(world);
         this.message(sender, PREFIX + (result.success()
                 ? "<green>出生点已修复：20 个跑酷者位置、2 个死神位置；地图名称和检查点已汉化。"

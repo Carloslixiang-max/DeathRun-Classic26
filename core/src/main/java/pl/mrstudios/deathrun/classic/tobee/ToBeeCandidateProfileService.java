@@ -1178,7 +1178,7 @@ public final class ToBeeCandidateProfileService {
         if (map.arenaDeathSpawnLocations.stream().distinct().count() != 2)
             issues.add("death-spawns-not-2-distinct");
         for (var trap : map.arenaTraps)
-            if (trap.getButton() == null || controlLanding(world, trap.getButton()) == null)
+            if (trap == null || trap.getButton() == null || controlLanding(world, trap.getButton()) == null)
                 issues.add("unsafe-or-unreviewed-control-landing:" + (trap == null ? "null" : trap.getButton()));
         return List.copyOf(issues);
     }
@@ -1272,9 +1272,19 @@ public final class ToBeeCandidateProfileService {
     }
 
     private static boolean safeStandingColumn(@NotNull World world, @NotNull BlockPos candidate) {
-        return world.getBlockAt(candidate.x(), candidate.y(), candidate.z()).isPassable()
-                && world.getBlockAt(candidate.x(), candidate.y() + 1, candidate.z()).isPassable()
-                && world.getBlockAt(candidate.x(), candidate.y() - 1, candidate.z()).getType().isOccluding();
+        var feet = world.getBlockAt(candidate.x(), candidate.y(), candidate.z());
+        var head = world.getBlockAt(candidate.x(), candidate.y() + 1, candidate.z());
+        var floor = world.getBlockAt(candidate.x(), candidate.y() - 1, candidate.z());
+        return feet.isPassable() && head.isPassable() && floor.getType().isOccluding()
+                && !unsafeLandingMaterial(feet.getType()) && !unsafeLandingMaterial(head.getType())
+                && !unsafeLandingMaterial(floor.getType());
+    }
+
+    private static boolean unsafeLandingMaterial(Material material) {
+        return switch (material) {
+            case WATER, LAVA, POWDER_SNOW, FIRE, SOUL_FIRE, MAGMA_BLOCK, CACTUS, COBWEB -> true;
+            default -> false;
+        };
     }
 
     private static @NotNull Location feetLocation(@NotNull World world, @NotNull BlockPos pos) {
