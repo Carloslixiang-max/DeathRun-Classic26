@@ -41,7 +41,10 @@ class PlayerSnapshotRecoveryTest {
                     name.equals("runTaskTimer") ? proxy(org.bukkit.scheduler.BukkitTask.class,(n,a)->null) : null);
             default -> null;
         });
-        Bukkit.setServer(server);
+        // Paper's public setter logs ServerBuildInfo through a server-only service provider.
+        // Install the interface fixture directly; teardown restores the singleton below.
+        Field serverField=Bukkit.class.getDeclaredField("server");
+        serverField.setAccessible(true); serverField.set(null,server);
         plugin=proxy(Plugin.class, (method,args) -> switch(method) {
             case "getDataFolder" -> root.toFile(); case "getServer" -> server;
             case "getLogger" -> Logger.getLogger("recovery-test"); default -> null;
