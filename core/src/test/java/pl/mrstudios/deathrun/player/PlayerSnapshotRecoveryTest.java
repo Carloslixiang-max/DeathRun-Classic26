@@ -35,6 +35,7 @@ class PlayerSnapshotRecoveryTest {
         });
         server=proxy(Server.class, (method,args) -> switch(method) {
             case "getWorld" -> world;
+            case "getOnlinePlayers" -> List.of(player);
             case "getLogger" -> Logger.getLogger("recovery-test");
             case "getName", "getVersion", "getBukkitVersion" -> "recovery-test";
             case "getScheduler" -> proxy(org.bukkit.scheduler.BukkitScheduler.class,(name,arguments) ->
@@ -61,6 +62,7 @@ class PlayerSnapshotRecoveryTest {
         });
         Scoreboard scoreboard=proxy(Scoreboard.class, (method,args) -> null);
         player=proxy(Player.class, (method,args) -> switch(method) {
+            case "getServer" -> server;
             case "getUniqueId" -> playerId; case "getName" -> "Runner"; case "getWorld" -> world;
             case "getLocation" -> new Location(world,85.5,25,82.5);
             case "getInventory" -> inventory; case "getScoreboard" -> scoreboard;
