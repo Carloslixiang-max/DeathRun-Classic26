@@ -2901,7 +2901,7 @@ public class CommandDeathRun {
         if (map == null || !this.playerInConfiguredMapWorld(player, map))
             return;
 
-        map.arenaWaitingLobbyLocation = player.getLocation().toCenterLocation();
+        map.arenaWaitingLobbyLocation = player.getLocation().clone();
         this.configuration.map().save();
         this.message(player, this.configuration.language().commandMessageWaitingLobbySet);
 
