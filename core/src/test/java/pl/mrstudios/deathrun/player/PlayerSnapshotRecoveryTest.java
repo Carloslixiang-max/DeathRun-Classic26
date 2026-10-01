@@ -26,7 +26,7 @@ class PlayerSnapshotRecoveryTest {
     @TempDir Path root;
     final UUID playerId=UUID.randomUUID(), worldId=UUID.randomUUID();
     final List<String> calls=new ArrayList<>();
-    boolean teleportAllowed=true, rejectStorage=false;
+    boolean teleportAllowed=true, rejectStorage=false, worldsAvailable=true;
     Plugin plugin; Player player; World world; Server server;
 
     @BeforeEach void setup() throws Exception {
@@ -34,7 +34,7 @@ class PlayerSnapshotRecoveryTest {
             case "getUID" -> worldId; case "getName" -> "saved"; default -> null;
         });
         server=proxy(Server.class, (method,args) -> switch(method) {
-            case "getWorld" -> world;
+            case "getWorld" -> worldsAvailable ? world : null;
             case "getOnlinePlayers" -> List.of(player);
             case "getLogger" -> Logger.getLogger("recovery-test");
             case "getName", "getVersion", "getBukkitVersion" -> "recovery-test";
@@ -91,6 +91,19 @@ class PlayerSnapshotRecoveryTest {
         assertEquals(List.of("teleport"),calls);
         assertTrue(service.hasPending(playerId));
         assertTrue(Files.readString(journal()).contains("PENDING"));
+    }
+
+    @Test void loadingMapBeforeItsWorldDoesNotRewriteWaitingWorldMetadata() throws Exception {
+        worldsAvailable=false;
+        Path mapFile=root.resolve("map.yml");
+        String original="maps:\n- id: bee\n  world: unloaded-room\n  arena-waiting-lobby-location:\n"
+                +"    world: unloaded-room\n    worldUuid: '"+worldId+"'\n"
+                +"    x: 90.5\n    y: 25.0\n    z: 79.5\n    yaw: 33.0\n    pitch: 0.0\n";
+        Files.writeString(mapFile,original);
+        MapConfiguration loaded=new pl.mrstudios.deathrun.config.ConfigurationFactory(root)
+                .produce(MapConfiguration.class,mapFile.toFile());
+        assertNull(loaded.getMapById("bee").arenaWaitingLobbyLocation.getWorld());
+        assertEquals(original,Files.readString(mapFile));
     }
     @Test void actualSuccessfulRecoverySavesPlayerBeforeRetiringJournal() throws Exception {
         journal("PENDING"); PlayerSnapshotService service=new PlayerSnapshotService(plugin);

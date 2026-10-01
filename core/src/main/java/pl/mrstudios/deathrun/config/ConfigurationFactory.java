@@ -32,7 +32,9 @@ public record ConfigurationFactory(
                 initializer.withConfigurer(new YamlBukkitConfigurer(), new SerdesBukkit(), new PluginSerdes())
                         .withBindFile(file)
                         .saveDefaults()
-                        .load(true)
+                        // Map worlds are loaded later by ArenaManager. Saving here would
+                        // serialize unresolved Locations without their world references.
+                        .load(!pl.mrstudios.deathrun.config.impl.MapConfiguration.class.isAssignableFrom(clazz))
         );
         if (config instanceof LanguageConfiguration language && upgradeChineseText(language, file.toPath()))
             config.save();
