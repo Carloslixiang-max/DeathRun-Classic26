@@ -20,7 +20,7 @@ public class ArenaMapSelectorListener implements Listener {
         this.mapSelectorService = mapSelectorService;
     }
 
-    @EventHandler(priority = EventPriority.MONITOR)
+    @EventHandler(priority = EventPriority.HIGHEST)
     public void onInventoryClick(
             @NotNull InventoryClickEvent event
     ) {
@@ -35,7 +35,7 @@ public class ArenaMapSelectorListener implements Listener {
             this.mapSelectorService.handleClick(player, event.getCurrentItem());
     }
 
-    @EventHandler(priority = EventPriority.MONITOR)
+    @EventHandler(priority = EventPriority.HIGHEST)
     public void onInventoryDrag(
             @NotNull InventoryDragEvent event
     ) {

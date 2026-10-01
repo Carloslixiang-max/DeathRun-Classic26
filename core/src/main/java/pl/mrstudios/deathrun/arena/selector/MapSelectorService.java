@@ -63,6 +63,10 @@ public class MapSelectorService {
     public boolean isSelectorInventory(
             @NotNull Inventory inventory
     ) {
+        return isMapSelectorInventory(inventory);
+    }
+
+    public static boolean isMapSelectorInventory(@NotNull Inventory inventory) {
         return inventory.getHolder() instanceof SelectorInventoryHolder;
     }
 

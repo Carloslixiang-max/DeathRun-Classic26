@@ -167,6 +167,41 @@ class PlayerSnapshotRecoveryTest {
         assertEquals(List.of("teleport"),calls);
     }
 
+    @Test void queuedMenuExceptionAllowsOnlyOwnedMenusAndNeverPendingRecovery() throws Exception {
+        journal("PENDING");
+        QueuedFixture queued=queuedFixture();
+        var guard=new PlayerRecoveryGuardListener(queued.manager(),queued.configuration());
+        Constructor<?> holderConstructor=Class.forName(
+                "pl.mrstudios.deathrun.arena.selector.MapSelectorService$SelectorInventoryHolder").getDeclaredConstructor();
+        holderConstructor.setAccessible(true);
+        Object ownedHolder=holderConstructor.newInstance();
+        var menu=openInventoryEvent(ownedHolder);
+        guard.open(menu); assertFalse(menu.isCancelled());
+        var container=openInventoryEvent(proxy(org.bukkit.inventory.InventoryHolder.class,(n,a)->null));
+        guard.open(container); assertTrue(container.isCancelled());
+        queued.manager().leaveQueue(player);
+        assertTrue(queued.manager().isRecoveryBlocked(player));
+        var orphanMenu=openInventoryEvent(ownedHolder);
+        guard.open(orphanMenu); assertTrue(orphanMenu.isCancelled());
+    }
+
+    private org.bukkit.event.inventory.InventoryOpenEvent openInventoryEvent(Object holder) {
+        var inventory=proxy(org.bukkit.inventory.Inventory.class,(method,args)->switch(method) {
+            case "getHolder" -> holder;
+            case "getType" -> org.bukkit.event.inventory.InventoryType.CHEST;
+            case "getSize" -> 9;
+            default -> null;
+        });
+        var view=proxy(org.bukkit.inventory.InventoryView.class,(method,args)->switch(method) {
+            case "getPlayer" -> player;
+            case "getTopInventory" -> inventory;
+            case "getBottomInventory" -> player.getInventory();
+            case "getType" -> org.bukkit.event.inventory.InventoryType.CHEST;
+            default -> null;
+        });
+        return new org.bukkit.event.inventory.InventoryOpenEvent(view);
+    }
+
     private QueuedFixture queuedFixture() throws Exception {
         Configuration config=new Configuration(null,new LanguageConfiguration(),null);
         ArenaManager manager=new ArenaManager(plugin,server,config,null,null);

@@ -37,9 +37,10 @@ public final class PlayerRecoveryGuardListener implements Listener {
     }
     @EventHandler(priority = HIGHEST) public void open(InventoryOpenEvent e) {
         if (e.getPlayer() instanceof Player p && manager.isPendingStateProtected(p)) {
-            boolean vote = manager.isQueuedSnapshot(p) && !manager.isRecoveryBlocked(p)
-                    && pl.mrstudios.deathrun.classic.vote.ClassicVoteService.isClassicVoteInventory(e.getInventory());
-            if (!vote) e.setCancelled(true);
+            boolean queueMenu = manager.isQueuedSnapshot(p) && !manager.isRecoveryBlocked(p)
+                    && (pl.mrstudios.deathrun.classic.vote.ClassicVoteService.isClassicVoteInventory(e.getInventory())
+                    || pl.mrstudios.deathrun.arena.selector.MapSelectorService.isMapSelectorInventory(e.getInventory()));
+            if (!queueMenu) e.setCancelled(true);
         }
     }
     @EventHandler(priority = HIGHEST) public void drop(PlayerDropItemEvent e) {
