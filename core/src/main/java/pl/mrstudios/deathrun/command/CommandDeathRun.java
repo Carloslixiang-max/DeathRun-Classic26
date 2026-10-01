@@ -534,7 +534,7 @@ public class CommandDeathRun {
     ) {
         boolean leftMap = this.arenaManager.leaveCurrentMap(player, true);
         boolean leftQueue = this.signManager.leaveQueue(player);
-        if (!leftMap && !leftQueue)
+        if (!leftMap && !leftQueue && !this.arenaManager.hasPendingSnapshot(player))
             return;
 
         if (!leftMap) {
@@ -552,9 +552,9 @@ public class CommandDeathRun {
             return;
         }
 
-        this.message(player, leftMap
-                ? this.configuration.language().chatMessageLeaveRestored
-                : this.configuration.language().chatMessageLeaveQueue);
+        this.message(player, leftQueue && !leftMap
+                ? this.configuration.language().chatMessageLeaveQueue
+                : this.configuration.language().chatMessageLeaveRestored);
     }
 
     /* Setup Command */

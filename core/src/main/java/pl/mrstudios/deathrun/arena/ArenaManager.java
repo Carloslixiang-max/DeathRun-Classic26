@@ -139,6 +139,10 @@ public class ArenaManager {
     }
 
     public boolean restorePendingSnapshot(@NotNull Player player) {
+        // A restored lobby player must not remain eligible for automatic arena admission.
+        // Clear queue ownership before restoring, so failures remain recovery-protected.
+        if (this.runtimeForPlayer(player) == null)
+            this.leaveQueue(player);
         return this.playerSnapshotService.restorePending(player);
     }
 

@@ -140,6 +140,51 @@ class PlayerSnapshotRecoveryTest {
         guard.move(move); assertFalse(move.isCancelled());
     }
 
+    @Test void successfulQueueRecoveryRemovesBothQueueIndexesBeforeUnlockingItems() throws Exception {
+        journal("PENDING");
+        QueuedFixture queued=queuedFixture();
+        assertTrue(queued.signs().isQueued(player));
+        assertEquals(1,queued.signs().queuedPlayersCount("bee"));
+        assertTrue(queued.manager().restorePendingSnapshot(player));
+        assertFalse(queued.signs().isQueued(player));
+        assertEquals(0,queued.signs().queuedPlayersCount("bee"));
+        assertFalse(queued.manager().isPendingStateProtected(player));
+        assertFalse(Files.exists(journal()));
+        assertEquals(List.of("teleport","inventory","save-player"),calls);
+    }
+
+    @Test void failedQueueRecoveryCannotBeReadmittedAndStillProtectsSnapshotItems() throws Exception {
+        journal("PENDING"); teleportAllowed=false;
+        QueuedFixture queued=queuedFixture();
+        assertFalse(queued.manager().restorePendingSnapshot(player));
+        assertFalse(queued.signs().isQueued(player));
+        assertEquals(0,queued.signs().queuedPlayersCount("bee"));
+        assertTrue(queued.manager().isRecoveryBlocked(player));
+        var drop=new PlayerDropItemEvent(player,proxy(Item.class,(method,args)->null));
+        new PlayerRecoveryGuardListener(queued.manager(),queued.configuration()).drop(drop);
+        assertTrue(drop.isCancelled());
+        assertTrue(Files.exists(journal()));
+        assertEquals(List.of("teleport"),calls);
+    }
+
+    private QueuedFixture queuedFixture() throws Exception {
+        Configuration config=new Configuration(null,new LanguageConfiguration(),null);
+        ArenaManager manager=new ArenaManager(plugin,server,config,null,null);
+        var signs=new pl.mrstudios.deathrun.arena.sign.SignManager(plugin,manager,config);
+        Field indexField=signs.getClass().getDeclaredField("playerQueue"); indexField.setAccessible(true);
+        @SuppressWarnings("unchecked") Map<UUID,String> index=(Map<UUID,String>)indexField.get(signs);
+        index.put(playerId,"bee");
+        Field queueField=signs.getClass().getDeclaredField("queuedPlayers"); queueField.setAccessible(true);
+        @SuppressWarnings("unchecked") Map<String,LinkedHashSet<UUID>> queues=(Map<String,LinkedHashSet<UUID>>)queueField.get(signs);
+        queues.put("bee",new LinkedHashSet<>(List.of(playerId)));
+        manager.setSignManager(signs);
+        return new QueuedFixture(manager,signs,config);
+    }
+
+    private record QueuedFixture(ArenaManager manager,
+                                 pl.mrstudios.deathrun.arena.sign.SignManager signs,
+                                 Configuration configuration) {}
+
     interface Handler { Object invoke(String method,Object[] args) throws Throwable; }
     static <T> T proxy(Class<T> type,Handler handler) {
         return type.cast(Proxy.newProxyInstance(type.getClassLoader(),new Class<?>[]{type},(object,method,args)->{

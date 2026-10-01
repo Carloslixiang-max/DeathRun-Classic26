@@ -961,7 +961,7 @@ jobs:
 
           cat server.log
           test "$PLAYTEST" -eq 1
-          grep -Eq 'Enabling DeathRun|Enabled DeathRun|DeathRun v1\.4\.1-classic26\.4' server.log
+          grep -Eq 'Enabling DeathRun|Enabled DeathRun|DeathRun v1\.4\.1-classic26\.5' server.log
           grep -q 'Registered listeners via reflection:' server.log
           ! grep -Eq 'Error occurred while enabling DeathRun|Could not load.*DeathRun|UnknownDependencyException.*WorldEdit|NoClassDefFoundError.*deathrun' server.log
           ! grep -Eq 'Failed to register listener via reflection|\[DeathRun\].*SEVERE|ERROR\]: \[DeathRun\]|\[DR-START\].*Fatal arena tick failure' server.log
@@ -1071,7 +1071,7 @@ jobs:
           stop_server_process "$PID2"
 
           cat server-restart.log
-          grep -Eq 'Enabling DeathRun|Enabled DeathRun|DeathRun v1\.4\.1-classic26\.4' server-restart.log
+          grep -Eq 'Enabling DeathRun|Enabled DeathRun|DeathRun v1\.4\.1-classic26\.5' server-restart.log
           grep -q 'Registered listeners via reflection:' server-restart.log
           ! grep -Eq 'SerializerException|Unable to deserialize|Error occurred while enabling DeathRun|Could not load.*DeathRun|NoClassDefFoundError.*deathrun' server-restart.log
           ! grep -Eq 'Failed to register listener via reflection|\[DeathRun\].*SEVERE|ERROR\]: \[DeathRun\]|\[DR-START\].*Fatal arena tick failure' server-restart.log
