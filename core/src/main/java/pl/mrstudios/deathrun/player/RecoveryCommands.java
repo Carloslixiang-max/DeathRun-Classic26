@@ -13,4 +13,12 @@ public final class RecoveryCommands {
         return (name.equals("dr") || name.equals("deathrun"))
                 && (parts[1].equals("recover") || parts[1].equals("leave"));
     }
+    public static boolean allowedWhileQueued(String command) {
+        if (allowed(command)) return true;
+        String[] parts = command.trim().toLowerCase(Locale.ROOT).split("\\s+");
+        if (parts.length < 2) return false;
+        String name = parts[0].replaceFirst("^/", "").replaceFirst("^deathrun:", "");
+        return (name.equals("dr") || name.equals("deathrun"))
+                && java.util.Set.of("maps", "vote", "join").contains(parts[1]);
+    }
 }

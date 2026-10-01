@@ -111,6 +111,14 @@ public class ArenaManager {
                 && (this.signManager == null || !this.signManager.isQueued(player)));
     }
 
+    public boolean isQueuedSnapshot(Player player) {
+        return this.hasPendingSnapshot(player) && this.signManager != null && this.signManager.isQueued(player);
+    }
+
+    public boolean isPendingStateProtected(Player player) {
+        return this.isRecoveryBlocked(player) || this.isQueuedSnapshot(player);
+    }
+
     public boolean ensureSnapshot(@NotNull Player player) {
         UUID playerId = player.getUniqueId();
 

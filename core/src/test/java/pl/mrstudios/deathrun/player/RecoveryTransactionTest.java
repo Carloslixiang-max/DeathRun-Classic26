@@ -43,4 +43,11 @@ class RecoveryTransactionTest {
         for (String command : List.of("/sellall", "/dr join foo", "/dr recover extra", "/other:dr recover", "/dr recover; /sellall"))
             assertFalse(RecoveryCommands.allowed(command), command);
     }
+    @Test void queuedPlayersCanVoteAndLeaveButCannotSellSnapshotItems() {
+        assertTrue(RecoveryCommands.allowedWhileQueued("/dr vote"));
+        assertTrue(RecoveryCommands.allowedWhileQueued("/dr join bee"));
+        assertTrue(RecoveryCommands.allowedWhileQueued("/dr leave"));
+        assertFalse(RecoveryCommands.allowedWhileQueued("/sellall"));
+        assertFalse(RecoveryCommands.allowedWhileQueued("/other:dr join bee"));
+    }
 }

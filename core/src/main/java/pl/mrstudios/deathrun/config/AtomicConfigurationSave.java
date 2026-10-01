@@ -15,12 +15,12 @@ public final class AtomicConfigurationSave {
         if (target == null) throw new IOException("Configuration is not bound to a file");
         Path staged = Files.createTempFile(target.toAbsolutePath().getParent(), ".deathrun-config-", ".tmp");
         try {
-            config.setBindFile(staged);
+            config.withBindFile(staged);
             config.save();
             try (FileChannel channel = FileChannel.open(staged, StandardOpenOption.WRITE)) { channel.force(true); }
             Files.move(staged, target, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
         } finally {
-            config.setBindFile(target);
+            config.withBindFile(target);
             Files.deleteIfExists(staged);
         }
     }

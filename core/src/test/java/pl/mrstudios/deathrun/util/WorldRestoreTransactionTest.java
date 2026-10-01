@@ -28,6 +28,27 @@ class WorldRestoreTransactionTest {
         assertThrows(java.io.IOException.class, () -> WorldRestoreTransaction.prepare(archive, world));
         assertEquals("original world", Files.readString(world.resolve("original.txt")));
     }
+    @Test void damagedEntryCrcFailsBeforeInstallation() throws Exception {
+        Path world=world(), path=root.resolve("damaged.zip");
+        byte[] data="region bytes".getBytes(java.nio.charset.StandardCharsets.UTF_8);
+        CRC32 crc=new CRC32(); crc.update(data);
+        try(var zip=new ZipOutputStream(Files.newOutputStream(path))) {
+            ZipEntry entry=new ZipEntry("bee/region/r.0.0.mca");
+            entry.setMethod(ZipEntry.STORED); entry.setSize(data.length); entry.setCrc(crc.getValue());
+            zip.putNextEntry(entry); zip.write(data); zip.closeEntry();
+        }
+        byte[] bytes=Files.readAllBytes(path);
+        for(int i=0;i<=bytes.length-data.length;i++) {
+            if(ArraysEqual(bytes,i,data)) { bytes[i]^=1; break; }
+        }
+        Files.write(path,bytes);
+        assertThrows(java.io.IOException.class,()->WorldRestoreTransaction.prepare(path,world));
+        assertEquals("original world",Files.readString(world.resolve("original.txt")));
+    }
+    private boolean ArraysEqual(byte[] bytes,int start,byte[] data) {
+        for(int i=0;i<data.length;i++) if(bytes[start+i]!=data[i]) return false;
+        return true;
+    }
     @Test void traversalCannotWriteOutsideStaging() throws Exception {
         Path world = world(); Path archive = archive("bee/../../escaped.txt");
         assertThrows(java.io.IOException.class, () -> WorldRestoreTransaction.prepare(archive, world));

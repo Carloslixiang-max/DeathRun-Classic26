@@ -326,9 +326,9 @@ public class SignManager {
 
             if (queueSign.type() == QueueSignType.LEAVE) {
                 this.setLine(sign, 0, "&c[DR]");
-                this.setLine(sign, 1, "&fLeave Queue");
+                this.setLine(sign, 1, this.configuration.language().signLeaveQueue);
                 this.setLine(sign, 2, "");
-                this.setLine(sign, 3, "&8Right Click");
+                this.setLine(sign, 3, this.configuration.language().signRightClick);
                 sign.update();
                 continue;
             }
@@ -339,12 +339,12 @@ public class SignManager {
 
             ArenaManager.ArenaRuntime runtime = this.arenaManager.runtimeByMapId(mapId);
             if (runtime == null) {
-                this.setLine(sign, 0, autoJoinSign ? "&8[Autojoin]" : "&8[NotJoinable]");
-                this.setLine(sign, 1, autoJoinSign ? "&7No Maps" : "&7Unknown");
+                this.setLine(sign, 0, autoJoinSign ? "&8[" + this.configuration.language().signAutoJoin + "]" : "&8[" + this.configuration.language().signNotJoinable + "]");
+                this.setLine(sign, 1, autoJoinSign ? "&7" + this.configuration.language().signNoMaps : "&7" + this.configuration.language().signUnknown);
                 this.setLine(sign, 2, "");
                 this.setLine(sign, 3, "");
                 //this.setLine(sign, 2, "&7- / -");
-                //this.setLine(sign, 3, "&7• In Game •");
+                //this.setLine(sign, 3, "&7• " + this.configuration.language().signInGame + " •");
                 sign.update();
                 continue;
             }
@@ -355,35 +355,35 @@ public class SignManager {
 
             if (runtime.arena().getGameState() == GameState.ENDING) {
                 this.setLine(sign, 0, "&4█ █ █ █ █");
-                this.setLine(sign, 1, autoJoinSign ? "&4[Autojoin]" : "&4[Restarting]");
-                this.setLine(sign, 2, autoJoinSign ? "&4Restarting" : mapName);
+                this.setLine(sign, 1, autoJoinSign ? "&4[" + this.configuration.language().signAutoJoin + "]" : "&4[" + this.configuration.language().signRestarting + "]");
+                this.setLine(sign, 2, autoJoinSign ? "&4" + this.configuration.language().signRestarting : mapName);
                 this.setLine(sign, 3, "&4█ █ █ █ █");
                 sign.update();
                 continue;
             }
 
             if (runtime.arena().getGameState() == GameState.PLAYING) {
-                this.setLine(sign, 0, autoJoinSign ? "&8[Autojoin]" : "&8[NotJoinable]");
-                this.setLine(sign, 1, autoJoinSign ? "&7Random Map" : mapName);
+                this.setLine(sign, 0, autoJoinSign ? "&8[" + this.configuration.language().signAutoJoin + "]" : "&8[" + this.configuration.language().signNotJoinable + "]");
+                this.setLine(sign, 1, autoJoinSign ? "&7" + this.configuration.language().signRandomMap : mapName);
                 this.setLine(sign, 2, "&f" + current + "/" + max);
-                this.setLine(sign, 3, "&7• In Game •");
+                this.setLine(sign, 3, "&7• " + this.configuration.language().signInGame + " •");
                 sign.update();
                 continue;
             }
 
             if (current >= max) {
-                this.setLine(sign, 0, autoJoinSign ? "&4[Auto Full]" : "&4[Full-" + queueSign.id() + "]");
-                this.setLine(sign, 1, autoJoinSign ? "&7Random Map" : mapName);
+                this.setLine(sign, 0, autoJoinSign ? "&4[" + this.configuration.language().signAutoFull + "]" : "&4[" + this.configuration.language().signFullPrefix + "-" + queueSign.id() + "]");
+                this.setLine(sign, 1, autoJoinSign ? "&7" + this.configuration.language().signRandomMap : mapName);
                 this.setLine(sign, 2, "&f" + max + "/" + max);
-                this.setLine(sign, 3, "&5● Lobby ●");
+                this.setLine(sign, 3, "&5● " + this.configuration.language().signLobby + " ●");
                 sign.update();
                 continue;
             }
 
-            this.setLine(sign, 0, autoJoinSign ? "&1[Autojoin]" : "&1[Join-" + queueSign.id() + "]");
-            this.setLine(sign, 1, autoJoinSign ? "&7Random Map" : mapName);
+            this.setLine(sign, 0, autoJoinSign ? "&1[" + this.configuration.language().signAutoJoin + "]" : "&1[" + this.configuration.language().signJoinPrefix + "-" + queueSign.id() + "]");
+            this.setLine(sign, 1, autoJoinSign ? "&7" + this.configuration.language().signRandomMap : mapName);
             this.setLine(sign, 2, "&8" + current + "/" + max);
-            this.setLine(sign, 3, "&5● Lobby ●");
+            this.setLine(sign, 3, "&5● " + this.configuration.language().signLobby + " ●");
             sign.update();
         }
     }

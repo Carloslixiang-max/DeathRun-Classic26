@@ -37,6 +37,8 @@ class PlayerSnapshotRecoveryTest {
             case "getWorld" -> world;
             case "getLogger" -> Logger.getLogger("recovery-test");
             case "getName", "getVersion", "getBukkitVersion" -> "recovery-test";
+            case "getScheduler" -> proxy(org.bukkit.scheduler.BukkitScheduler.class,(name,arguments) ->
+                    name.equals("runTaskTimer") ? proxy(org.bukkit.scheduler.BukkitTask.class,(n,a)->null) : null);
             default -> null;
         });
         Bukkit.setServer(server);
@@ -110,6 +112,27 @@ class PlayerSnapshotRecoveryTest {
         assertTrue(manager.restorePendingSnapshot(player));
         assertFalse(manager.isRecoveryBlocked(player));
         assertEquals(List.of("teleport","inventory","save-player"),calls);
+    }
+    @Test void queueSnapshotIsProtectedWithoutFreezingNormalQueueMovement() throws Exception {
+        journal("PENDING");
+        Configuration config=new Configuration(null,new LanguageConfiguration(),null);
+        ArenaManager manager=new ArenaManager(plugin,server,config,null,null);
+        var signs=new pl.mrstudios.deathrun.arena.sign.SignManager(plugin,manager,config);
+        // Seed the same queue index used by queuePlayerToMap, without constructing a map world.
+        Field field=signs.getClass().getDeclaredField("playerQueue"); field.setAccessible(true);
+        @SuppressWarnings("unchecked") Map<UUID,String> queue=(Map<UUID,String>)field.get(signs);
+        queue.put(playerId,"bee"); manager.setSignManager(signs);
+        assertFalse(manager.isRecoveryBlocked(player));
+        assertTrue(manager.isPendingStateProtected(player));
+        var guard=new PlayerRecoveryGuardListener(manager,config);
+        var drop=new PlayerDropItemEvent(player,proxy(Item.class,(method,args)->null));
+        guard.drop(drop); assertTrue(drop.isCancelled());
+        var sell=new org.bukkit.event.player.PlayerCommandPreprocessEvent(player,"/sellall");
+        guard.command(sell); assertTrue(sell.isCancelled());
+        var vote=new org.bukkit.event.player.PlayerCommandPreprocessEvent(player,"/dr vote");
+        guard.command(vote); assertFalse(vote.isCancelled());
+        var move=new org.bukkit.event.player.PlayerMoveEvent(player,new Location(world,0,25,0),new Location(world,1,25,0));
+        guard.move(move); assertFalse(move.isCancelled());
     }
 
     interface Handler { Object invoke(String method,Object[] args) throws Throwable; }

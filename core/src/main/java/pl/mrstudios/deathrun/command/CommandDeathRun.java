@@ -3514,8 +3514,16 @@ public class CommandDeathRun {
         if (mapId.equalsIgnoreCase("lobby") || mapId.equalsIgnoreCase("leave")) {
             this.signManager.leaveQueue(target);
             boolean leftMap = this.arenaManager.leaveCurrentMap(target, true);
-            if (!leftMap)
-                this.arenaManager.returnPlayerToHub(target);
+            if (!leftMap && this.arenaManager.hasPendingSnapshot(target)) {
+                if (!this.arenaManager.restorePendingSnapshot(target)) {
+                    this.message(target, this.configuration.language().chatMessageLeavePending);
+                    return;
+                }
+            } else if (!leftMap) this.arenaManager.returnPlayerToHub(target);
+            if (this.arenaManager.hasPendingSnapshot(target)) {
+                this.message(target, this.configuration.language().chatMessageLeavePending);
+                return;
+            }
             this.message(target, leftMap
                     ? this.configuration.language().chatMessageLeaveRestored
                     : this.configuration.language().chatMessageLeaveQueue);

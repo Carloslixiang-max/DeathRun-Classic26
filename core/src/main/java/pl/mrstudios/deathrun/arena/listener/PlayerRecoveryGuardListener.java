@@ -30,68 +30,78 @@ public final class PlayerRecoveryGuardListener implements Listener {
     }
 
     @EventHandler(priority = HIGHEST) public void click(InventoryClickEvent e) {
-        if (e.getWhoClicked() instanceof Player p && manager.isRecoveryBlocked(p)) e.setCancelled(true);
+        if (e.getWhoClicked() instanceof Player p && manager.isPendingStateProtected(p)) e.setCancelled(true);
     }
     @EventHandler(priority = HIGHEST) public void drag(InventoryDragEvent e) {
-        if (e.getWhoClicked() instanceof Player p && manager.isRecoveryBlocked(p)) e.setCancelled(true);
+        if (e.getWhoClicked() instanceof Player p && manager.isPendingStateProtected(p)) e.setCancelled(true);
     }
     @EventHandler(priority = HIGHEST) public void open(InventoryOpenEvent e) {
-        if (e.getPlayer() instanceof Player p && manager.isRecoveryBlocked(p)) e.setCancelled(true);
+        if (e.getPlayer() instanceof Player p && manager.isPendingStateProtected(p)) {
+            boolean vote = manager.isQueuedSnapshot(p) && !manager.isRecoveryBlocked(p)
+                    && pl.mrstudios.deathrun.classic.vote.ClassicVoteService.isClassicVoteInventory(e.getInventory());
+            if (!vote) e.setCancelled(true);
+        }
     }
     @EventHandler(priority = HIGHEST) public void drop(PlayerDropItemEvent e) {
-        if (manager.isRecoveryBlocked(e.getPlayer())) e.setCancelled(true);
+        if (manager.isPendingStateProtected(e.getPlayer())) e.setCancelled(true);
     }
     @EventHandler(priority = HIGHEST) public void pickup(PlayerAttemptPickupItemEvent e) {
-        if (manager.isRecoveryBlocked(e.getPlayer())) e.setCancelled(true);
+        if (manager.isPendingStateProtected(e.getPlayer())) e.setCancelled(true);
     }
     @EventHandler(priority = HIGHEST) public void arrow(PlayerPickupArrowEvent e) {
-        if (manager.isRecoveryBlocked(e.getPlayer())) e.setCancelled(true);
+        if (manager.isPendingStateProtected(e.getPlayer())) e.setCancelled(true);
     }
     @EventHandler(priority = HIGHEST) public void swap(PlayerSwapHandItemsEvent e) {
-        if (manager.isRecoveryBlocked(e.getPlayer())) e.setCancelled(true);
+        if (manager.isPendingStateProtected(e.getPlayer())) e.setCancelled(true);
     }
     @EventHandler(priority = HIGHEST) public void interact(PlayerInteractEvent e) {
-        if (manager.isRecoveryBlocked(e.getPlayer())) e.setCancelled(true);
+        if (manager.isPendingStateProtected(e.getPlayer())) e.setCancelled(true);
     }
     @EventHandler(priority = HIGHEST) public void entity(PlayerInteractEntityEvent e) {
-        if (manager.isRecoveryBlocked(e.getPlayer())) e.setCancelled(true);
+        if (manager.isPendingStateProtected(e.getPlayer())) e.setCancelled(true);
     }
     @EventHandler(priority = HIGHEST) public void entityAt(PlayerInteractAtEntityEvent e) { entity(e); }
     @EventHandler(priority = HIGHEST) public void stand(PlayerArmorStandManipulateEvent e) {
-        if (manager.isRecoveryBlocked(e.getPlayer())) e.setCancelled(true);
+        if (manager.isPendingStateProtected(e.getPlayer())) e.setCancelled(true);
     }
     @EventHandler(priority = HIGHEST) public void creative(org.bukkit.event.inventory.InventoryCreativeEvent e) {
         click(e);
     }
     @EventHandler(priority = HIGHEST) public void breakBlock(BlockBreakEvent e) {
-        if (manager.isRecoveryBlocked(e.getPlayer())) e.setCancelled(true);
+        if (manager.isPendingStateProtected(e.getPlayer())) e.setCancelled(true);
     }
     @EventHandler(priority = HIGHEST) public void placeBlock(BlockPlaceEvent e) {
-        if (manager.isRecoveryBlocked(e.getPlayer())) e.setCancelled(true);
+        if (manager.isPendingStateProtected(e.getPlayer())) e.setCancelled(true);
     }
     @EventHandler(priority = HIGHEST) public void damage(EntityDamageEvent e) {
-        if (e.getEntity() instanceof Player p && manager.isRecoveryBlocked(p)) e.setCancelled(true);
+        if (e.getEntity() instanceof Player p && manager.isPendingStateProtected(p)) e.setCancelled(true);
         if (e instanceof org.bukkit.event.entity.EntityDamageByEntityEvent hit
-                && hit.getDamager() instanceof Player p && manager.isRecoveryBlocked(p)) e.setCancelled(true);
+                && hit.getDamager() instanceof Player p && manager.isPendingStateProtected(p)) e.setCancelled(true);
     }
     @EventHandler(priority = HIGHEST) public void death(PlayerDeathEvent e) {
-        if (!manager.isRecoveryBlocked(e.getEntity())) return;
+        if (!manager.isPendingStateProtected(e.getEntity())) return;
         e.getDrops().clear();
         e.setKeepInventory(true);
         e.setKeepLevel(true);
         e.setDroppedExp(0);
     }
     @EventHandler(priority = HIGHEST) public void command(PlayerCommandPreprocessEvent e) {
-        if (!manager.isRecoveryBlocked(e.getPlayer()) || RecoveryCommands.allowed(e.getMessage())) return;
+        if (!manager.isPendingStateProtected(e.getPlayer())) return;
+        boolean blocked = manager.isRecoveryBlocked(e.getPlayer());
+        if (blocked ? RecoveryCommands.allowed(e.getMessage()) : RecoveryCommands.allowedWhileQueued(e.getMessage())) return;
         e.setCancelled(true);
         e.getPlayer().sendMessage(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage()
-                .deserialize(configuration.language().commandMessageRecoveryLocked));
+                .deserialize(blocked ? configuration.language().commandMessageRecoveryLocked
+                        : configuration.language().chatMessageQueueProtected));
     }
     @EventHandler(priority = HIGHEST, ignoreCancelled = true) public void teleport(PlayerTeleportEvent e) {
         if (manager.isRecoveryBlocked(e.getPlayer()) && !manager.isSnapshotRestoring(e.getPlayer()))
             e.setCancelled(true);
     }
-    @EventHandler(priority = HIGHEST, ignoreCancelled = true) public void portal(PlayerPortalEvent e) { teleport(e); }
+    @EventHandler(priority = HIGHEST, ignoreCancelled = true) public void portal(PlayerPortalEvent e) {
+        if (manager.isQueuedSnapshot(e.getPlayer())) e.setCancelled(true);
+        else teleport(e);
+    }
     @EventHandler(priority = HIGHEST, ignoreCancelled = true) public void move(PlayerMoveEvent e) {
         if (e instanceof PlayerTeleportEvent || e.getTo() == null
                 || !manager.isRecoveryBlocked(e.getPlayer()) || manager.isSnapshotRestoring(e.getPlayer())) return;

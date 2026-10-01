@@ -90,6 +90,9 @@ public final class ClassicVoteService {
     }
 
     public boolean isVoteInventory(@NotNull Inventory inventory) {
+        return isClassicVoteInventory(inventory);
+    }
+    public static boolean isClassicVoteInventory(@NotNull Inventory inventory) {
         return inventory.getHolder() instanceof VoteInventoryHolder;
     }
 
@@ -225,7 +228,7 @@ public final class ClassicVoteService {
             ArenaManager.JoinResult result = this.arenaManager.joinMap(player, winnerId);
             if (result != ArenaManager.JoinResult.JOINED && result != ArenaManager.JoinResult.ALREADY_IN_MAP)
                 player.sendMessage(miniMessage().deserialize(
-                        "<red>Could not join selected map: <white>" + result.name()
+                        "<red>未能加入选中的地图，请检查地图状态；如有待恢复状态，请使用 /dr recover。"
                 ));
         }
     }
