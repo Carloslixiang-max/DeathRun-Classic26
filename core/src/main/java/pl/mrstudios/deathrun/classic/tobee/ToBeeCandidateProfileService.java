@@ -338,7 +338,11 @@ public final class ToBeeCandidateProfileService {
             return new Result(false, "insufficient-safe-runner-starts",
                     List.of(runnerStarts.size() + "/20"));
 
-        map.arenaWaitingLobbyLocation = feetLocation(world, runnerStarts.get(0), ToBeeSpawnGeometry.RUNNER_YAW);
+        // Rebuilding a candidate profile must preserve an administrator's separate waiting room.
+        map.arenaWaitingLobbyLocation = existing != null
+                && spawnWorldMatches(world, existing.arenaWaitingLobbyLocation)
+                ? existing.arenaWaitingLobbyLocation.clone()
+                : feetLocation(world, runnerStarts.get(0), ToBeeSpawnGeometry.RUNNER_YAW);
         runnerStarts.stream()
                 .map(pos -> feetLocation(world, pos, ToBeeSpawnGeometry.RUNNER_YAW))
                 .forEach(map.arenaRunnerSpawnLocations::add);
@@ -1222,17 +1226,15 @@ public final class ToBeeCandidateProfileService {
             return new Result(false, "reviewed-platforms-obstructed", List.of());
         var oldRunners = map.arenaRunnerSpawnLocations;
         var oldDeaths = map.arenaDeathSpawnLocations;
-        var oldLobby = map.arenaWaitingLobbyLocation;
         map.arenaRunnerSpawnLocations = new ArrayList<>(runners.stream()
                 .map(pos -> feetLocation(world, pos, ToBeeSpawnGeometry.RUNNER_YAW)).toList());
         map.arenaDeathSpawnLocations = new ArrayList<>(deaths.stream()
                 .map(pos -> feetLocation(world, pos, ToBeeSpawnGeometry.DEATH_YAW)).toList());
-        map.arenaWaitingLobbyLocation = map.arenaRunnerSpawnLocations.get(0).clone();
+        // Waiting-room configuration is independent of Runner/Death race spawns.
         var issues = spawnIssues(world, map);
         if (!issues.isEmpty()) {
             map.arenaRunnerSpawnLocations = oldRunners;
             map.arenaDeathSpawnLocations = oldDeaths;
-            map.arenaWaitingLobbyLocation = oldLobby;
             return new Result(false, "spawn-check-failed", issues);
         }
         String oldName = map.name;
@@ -1258,7 +1260,6 @@ public final class ToBeeCandidateProfileService {
             map.arenaCheckpoints = oldCheckpoints;
             map.arenaRunnerSpawnLocations = oldRunners;
             map.arenaDeathSpawnLocations = oldDeaths;
-            map.arenaWaitingLobbyLocation = oldLobby;
             List<String> failures = new ArrayList<>();
             failures.add(String.valueOf(failure.getMessage()));
             try {
