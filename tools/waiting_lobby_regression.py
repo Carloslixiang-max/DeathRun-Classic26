@@ -11,14 +11,26 @@ import re
 
 def location_block(text):
     lines = text.splitlines(keepends=True)
+    entries = []
+    for row, line in enumerate(lines):
+        match = re.fullmatch(r"(\s*)-\s+id:\s*(.*?)\s*\n?", line)
+        if match:
+            entries.append((row, len(match.group(1)), match.group(2).strip("'\"")))
+    targets = [entry for entry in entries if entry[2] == 'to-bee-or-not-to-bee']
+    if len(targets) != 1:
+        raise ValueError("Expected exactly one ToBee map entry")
+    map_start, map_indent, _ = targets[0]
+    map_end = next((row for row, indent, _ in entries if row > map_start and indent <= map_indent), len(lines))
     blocks = []
     for start, line in enumerate(lines):
+        if not map_start <= start < map_end:
+            continue
         match = re.fullmatch(r"(\s*)arena-waiting-lobby-location:\s*\n?", line)
         if not match:
             continue
         indent = len(match.group(1))
         end = start + 1
-        while end < len(lines):
+        while end < map_end:
             row = lines[end]
             if row.strip() and not row.lstrip().startswith('#') and len(row) - len(row.lstrip()) <= indent:
                 break
