@@ -63,7 +63,8 @@ public final class ToBeeSignTranslations {
                 continue;
             for (int line = 0; line < 4; line++)
                 sign.getSide(Side.FRONT).line(line, Component.text(entry.lines().get(line)));
-            sign.update(true, false);
+            if (!sign.update(true, false))
+                throw new IllegalStateException("Sign update failed: " + sign.getLocation());
             changed++;
         }
         return changed;

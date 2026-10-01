@@ -101,6 +101,16 @@ public class ArenaManager {
         return this.playerSnapshotService.hasPending(player.getUniqueId());
     }
 
+    public boolean isSnapshotRestoring(Player player) {
+        return this.playerSnapshotService.isRestoring(player.getUniqueId());
+    }
+
+    public boolean isRecoveryBlocked(Player player) {
+        return this.isSnapshotRestoring(player) || (this.hasPendingSnapshot(player)
+                && this.runtimeForPlayer(player) == null
+                && (this.signManager == null || !this.signManager.isQueued(player)));
+    }
+
     public boolean ensureSnapshot(@NotNull Player player) {
         UUID playerId = player.getUniqueId();
 
@@ -341,7 +351,10 @@ public class ArenaManager {
         runtime.arena().getUsers().add(user);
         this.playerMapIndex.put(player.getUniqueId(), runtime.mapId());
 
-        this.preparePlayerForWaiting(player, runtime.map());
+        if (!this.preparePlayerForWaiting(player, runtime.map())) {
+            this.leaveCurrentMap(player, false);
+            return JoinResult.PLAYER_TELEPORT_FAILED;
+        }
 
         if (runtime.arena().getSidebar() != null)
             runtime.arena().getSidebar().addViewer(player);
@@ -563,7 +576,10 @@ public class ArenaManager {
             runtime.arena().getUsers().add(new User(player));
             this.playerMapIndex.put(player.getUniqueId(), runtime.mapId());
 
-            this.preparePlayerForWaiting(player, runtime.map());
+            if (!this.preparePlayerForWaiting(player, runtime.map())) {
+                this.leaveCurrentMap(player, false);
+                continue;
+            }
 
             if (runtime.arena().getSidebar() != null)
                 runtime.arena().getSidebar().addViewer(player);
@@ -930,10 +946,23 @@ public class ArenaManager {
                 && location.getWorld().getUID().equals(world.getUID());
     }
 
-    private void preparePlayerForWaiting(
+    private boolean preparePlayerForWaiting(
             @NotNull Player player,
             @NotNull MapConfiguration.MapDefinition map
     ) {
+        Location waitingLobby = map.arenaWaitingLobbyLocation;
+        if (waitingLobby == null) return false;
+        if (waitingLobby.getWorld() == null) {
+            World world = map.world == null ? null : this.server.getWorld(map.world);
+            if (world == null) return false;
+            waitingLobby = waitingLobby.clone();
+            waitingLobby.setWorld(world);
+            map.arenaWaitingLobbyLocation = waitingLobby;
+        }
+        if (!player.teleport(waitingLobby)) {
+            this.plugin.getLogger().warning("[DeathRun] Waiting teleport rejected for " + player.getName());
+            return false;
+        }
         player.getActivePotionEffects().stream()
                 .map(PotionEffect::getType)
                 .forEach(player::removePotionEffect);
@@ -946,25 +975,6 @@ public class ArenaManager {
         player.setFoodLevel(20);
         player.setSaturation(20.0f);
 
-        if (map.arenaWaitingLobbyLocation != null) {
-            Location waitingLobby = map.arenaWaitingLobbyLocation;
-            if (waitingLobby.getWorld() == null) {
-                World fallbackWorld = (map.world == null || map.world.isBlank()) ? null : this.server.getWorld(map.world);
-                if (fallbackWorld == null) {
-                    this.plugin.getLogger().severe("[DeathRun] Waiting teleport cancelled for player " + player.getName()
-                            + " because map " + this.mapId(map)
-                            + " has waiting lobby location with null world and configured world is unavailable.");
-                } else {
-                    waitingLobby = waitingLobby.clone();
-                    waitingLobby.setWorld(fallbackWorld);
-                    map.arenaWaitingLobbyLocation = waitingLobby;
-                }
-            }
-
-            if (waitingLobby.getWorld() != null)
-                player.teleport(waitingLobby);
-        }
-
         player.addPotionEffect(new PotionEffect(SATURATION, MAX_VALUE, 1, false, false, false));
         player.addPotionEffect(new PotionEffect(NIGHT_VISION, MAX_VALUE, 1, false, false, false));
 
@@ -976,6 +986,7 @@ public class ArenaManager {
                         .itemFlags(values())
                         .build()
         );
+        return true;
     }
 
     private @NotNull String mapId(
@@ -1168,6 +1179,7 @@ public class ArenaManager {
         JOINED,
         ALREADY_IN_MAP,
         PLAYER_STATE_SAVE_FAILED,
+        PLAYER_TELEPORT_FAILED,
         MAP_UNAVAILABLE,
         MAP_NOT_READY,
         MAP_FULL,

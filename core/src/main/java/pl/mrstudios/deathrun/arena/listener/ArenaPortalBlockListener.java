@@ -20,7 +20,7 @@ public class ArenaPortalBlockListener implements Listener {
         this.arenaManager = arenaManager;
     }
 
-    @EventHandler(priority = EventPriority.MONITOR)
+    @EventHandler(priority = EventPriority.HIGHEST)
     public void onPortal(
             @NotNull PlayerPortalEvent event
     ) {

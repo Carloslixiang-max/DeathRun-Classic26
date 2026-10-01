@@ -115,7 +115,7 @@ public class ArenaPlayerDamageListener implements Listener {
             this.deathService.killRunner(event.getPlayer(), DeathRunDeathCause.LAVA);
     }
 
-    @EventHandler(priority = MONITOR)
+    @EventHandler(priority = MONITOR, ignoreCancelled = true)
     public void onEntityExplode(@NotNull EntityExplodeEvent event) {
         if (!this.arenaManager.isDeathRunWorld(event.getLocation().getWorld()))
             return;
@@ -138,7 +138,7 @@ public class ArenaPlayerDamageListener implements Listener {
         });
     }
 
-    @EventHandler(priority = MONITOR)
+    @EventHandler(priority = HIGHEST)
     public void onCombust(@NotNull EntityCombustEvent event) {
         if (event.getEntity() instanceof Player player && this.arenaManager.runtimeForPlayer(player) != null)
             event.setCancelled(true);

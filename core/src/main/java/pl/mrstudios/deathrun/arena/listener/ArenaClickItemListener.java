@@ -18,15 +18,18 @@ import static org.bukkit.event.block.Action.RIGHT_CLICK_BLOCK;
 
 public class ArenaClickItemListener implements Listener {
 
+    private final pl.mrstudios.deathrun.config.Configuration configuration;
     private final ArenaManager arenaManager;
     private final SignManager signManager;
 
     @Inject
     public ArenaClickItemListener(
             @NotNull ArenaManager arenaManager,
-            @NotNull SignManager signManager
+            @NotNull SignManager signManager,
+            @NotNull pl.mrstudios.deathrun.config.Configuration configuration
     ) {
         this.arenaManager = arenaManager;
+        this.configuration = configuration;
         this.signManager = signManager;
     }
 
@@ -63,22 +66,22 @@ public class ArenaClickItemListener implements Listener {
 
         if (leftMap) {
             if (this.arenaManager.hasPendingSnapshot(event.getPlayer()))
-                event.getPlayer().sendMessage(org.bukkit.ChatColor.RED + "You left DeathRun, but recovery is still pending. Use /dr recover after the saved world is available.");
+                event.getPlayer().sendMessage(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize(this.configuration.language().chatMessageLeavePending));
             else
-                event.getPlayer().sendMessage(org.bukkit.ChatColor.YELLOW + "You have left DeathRun and your previous state was restored.");
+                event.getPlayer().sendMessage(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize(this.configuration.language().chatMessageLeaveRestored));
             return;
         }
 
         if (this.arenaManager.hasPendingSnapshot(event.getPlayer())) {
             if (!this.arenaManager.restorePendingSnapshot(event.getPlayer())) {
-                event.getPlayer().sendMessage(org.bukkit.ChatColor.RED + "DeathRun could not restore your saved state yet; recovery data was kept.");
+                event.getPlayer().sendMessage(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize(this.configuration.language().commandMessageRecoverFailed));
                 return;
             }
         } else {
             this.arenaManager.returnPlayerToHub(event.getPlayer());
         }
 
-        event.getPlayer().sendMessage(org.bukkit.ChatColor.YELLOW + "You have left the DeathRun queue.");
+        event.getPlayer().sendMessage(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize(this.configuration.language().chatMessageLeaveQueue));
 
     }
 

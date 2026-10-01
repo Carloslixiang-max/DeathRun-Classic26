@@ -119,7 +119,7 @@ public class Entrypoint extends JavaPlugin {
         this.arenaManager = new ArenaManager(this, this.getServer(), this.configuration, this.winMapManager, this.rewardService);
         this.classicVoteService = new ClassicVoteService(this, this.configuration, this.arenaManager);
         this.playtestTraceService = new PlaytestTraceService(this, this.arenaManager);
-        this.signManager = new SignManager(this, this.arenaManager);
+        this.signManager = new SignManager(this, this.arenaManager, this.configuration);
         this.arenaManager.setSignManager(this.signManager);
 
         /* Trap Registry */

@@ -370,7 +370,8 @@ public class ArenaServiceRunnable extends BukkitRunnable {
                     IUser runner = this.arena.getRunners().get(i);
                     Player runnerPlayer = requireNonNull(runner.asBukkit());
                     Location spawn = this.map.arenaRunnerSpawnLocations.get(i % this.map.arenaRunnerSpawnLocations.size());
-                    runnerPlayer.teleport(spawn);
+                    if (!runnerPlayer.teleport(spawn))
+                        throw new IllegalStateException("Runner start teleport rejected: " + runnerPlayer.getName());
                     runner.setCheckpoint(new pl.mrstudios.deathrun.arena.checkpoint.Checkpoint(
                             0, spawn.clone(), java.util.List.of(), "Start"
                     ));
@@ -378,7 +379,11 @@ public class ArenaServiceRunnable extends BukkitRunnable {
 
         range(0, this.arena.getDeaths().size())
                 .filter((i) -> this.arena.getDeaths().get(i).asBukkit() != null)
-                .forEach((i) -> requireNonNull(this.arena.getDeaths().get(i).asBukkit()).teleport(this.map.arenaDeathSpawnLocations.get(i % this.map.arenaDeathSpawnLocations.size())));
+                .forEach((i) -> {
+                    Player death = requireNonNull(this.arena.getDeaths().get(i).asBukkit());
+                    if (!death.teleport(this.map.arenaDeathSpawnLocations.get(i % this.map.arenaDeathSpawnLocations.size())))
+                        throw new IllegalStateException("Death start teleport rejected: " + death.getName());
+                });
 
         this.arena.getUsers()
                 .forEach((user) -> {
@@ -472,6 +477,8 @@ public class ArenaServiceRunnable extends BukkitRunnable {
     }
 
     protected void stateSwitchToEnding() {
+
+        this.arena.getUsers().forEach(user -> ClassicStrafeService.clearCooldowns(user.getUniqueId()));
 
         this.arena.getUsers()
                 .stream()

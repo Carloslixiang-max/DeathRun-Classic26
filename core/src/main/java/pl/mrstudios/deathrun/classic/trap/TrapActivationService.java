@@ -395,6 +395,23 @@ public final class TrapActivationService {
         return Collections.unmodifiableMap(copy);
     }
 
+    /** Main-thread visitor avoids copying every active trap on each player movement. */
+    public boolean visitActive(String mapId, java.util.function.Predicate<TrapActivationContext> visitor) {
+        long now = System.currentTimeMillis();
+        for (TrapActivationContext context : ACTIVE.values())
+            if (now <= context.expiresAt() && context.mapId().equalsIgnoreCase(mapId) && visitor.test(context))
+                return true;
+        return false;
+    }
+
+    public @Nullable TrapActivationContext activeForTrap(String mapId, ITrap trap) {
+        long now = System.currentTimeMillis();
+        for (TrapActivationContext context : ACTIVE.values())
+            if (now <= context.expiresAt() && context.mapId().equalsIgnoreCase(mapId) && context.trap() == trap)
+                return context;
+        return null;
+    }
+
     private double minDistanceSquared(@NotNull ITrap trap, @NotNull Location target) {
         return trap.getLocations().stream()
                 .filter(java.util.Objects::nonNull)

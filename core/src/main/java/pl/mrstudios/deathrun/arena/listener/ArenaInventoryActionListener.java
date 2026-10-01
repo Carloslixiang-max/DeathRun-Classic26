@@ -15,7 +15,7 @@ import org.jetbrains.annotations.NotNull;
 import pl.mrstudios.commons.inject.annotation.Inject;
 import pl.mrstudios.deathrun.arena.ArenaManager;
 
-import static org.bukkit.event.EventPriority.MONITOR;
+import static org.bukkit.event.EventPriority.HIGHEST;
 
 public class ArenaInventoryActionListener implements Listener {
 
@@ -30,7 +30,7 @@ public class ArenaInventoryActionListener implements Listener {
         this.plugin = plugin;
     }
 
-    @EventHandler(priority = MONITOR)
+    @EventHandler(priority = HIGHEST)
     public void onInventoryClick(@NotNull InventoryClickEvent event) {
         if (!(event.getWhoClicked() instanceof Player player))
             return;
@@ -43,7 +43,7 @@ public class ArenaInventoryActionListener implements Listener {
         event.setCancelled(true);
     }
 
-    @EventHandler(priority = MONITOR)
+    @EventHandler(priority = HIGHEST)
     public void onInventoryDrag(@NotNull InventoryDragEvent event) {
         if (!(event.getWhoClicked() instanceof Player player))
             return;
@@ -53,7 +53,7 @@ public class ArenaInventoryActionListener implements Listener {
         event.setCancelled(true);
     }
 
-    @EventHandler(priority = MONITOR)
+    @EventHandler(priority = HIGHEST)
     public void onCreativeInventory(@NotNull InventoryCreativeEvent event) {
         if (!(event.getWhoClicked() instanceof Player player))
             return;
@@ -62,7 +62,7 @@ public class ArenaInventoryActionListener implements Listener {
         event.setCancelled(true);
     }
 
-    @EventHandler(priority = MONITOR)
+    @EventHandler(priority = HIGHEST)
     public void onItemDrop(@NotNull PlayerDropItemEvent event) {
         Player player = event.getPlayer();
         if (!this.inDeathRun(player) || this.hasInventoryBypass(player) || player.isDead())
@@ -71,21 +71,21 @@ public class ArenaInventoryActionListener implements Listener {
         this.plugin.getLogger().fine("[DeathRun] Prevented arena item drop for " + player.getName());
     }
 
-    @EventHandler(priority = MONITOR)
+    @EventHandler(priority = HIGHEST)
     public void onPlayerItemSwap(@NotNull PlayerSwapHandItemsEvent event) {
         if (!this.inDeathRun(event.getPlayer()) || this.hasInventoryBypass(event.getPlayer()))
             return;
         event.setCancelled(true);
     }
 
-    @EventHandler(priority = MONITOR)
+    @EventHandler(priority = HIGHEST)
     public void onPlayerArrowPickup(@NotNull PlayerPickupArrowEvent event) {
         if (!this.inDeathRun(event.getPlayer()) || this.hasInventoryBypass(event.getPlayer()))
             return;
         event.setCancelled(true);
     }
 
-    @EventHandler(priority = MONITOR)
+    @EventHandler(priority = HIGHEST)
     public void onPlayerItemPickup(@NotNull PlayerAttemptPickupItemEvent event) {
         if (!this.inDeathRun(event.getPlayer()) || this.hasInventoryBypass(event.getPlayer()))
             return;

@@ -31,6 +31,7 @@ import static pl.mrstudios.deathrun.api.arena.user.enums.Role.RUNNER;
 
 public final class ClassicTrapEffectListener implements Listener {
 
+    private final pl.mrstudios.deathrun.classic.checkpoint.LocationBoundsCache bounds = new pl.mrstudios.deathrun.classic.checkpoint.LocationBoundsCache();
     private final ArenaManager arenaManager;
     private final Plugin plugin;
     private final TrapActivationService activationService;
@@ -50,9 +51,11 @@ public final class ClassicTrapEffectListener implements Listener {
         this.deathService = new DeathRunDeathService(arenaManager, plugin, server, configuration, winMapManager);
     }
 
-    @EventHandler
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onMove(@NotNull PlayerMoveEvent event) {
-        if (event.getTo() == null)
+        if (event instanceof org.bukkit.event.player.PlayerTeleportEvent || event.getTo() == null
+                || (event.getFrom().getX() == event.getTo().getX() && event.getFrom().getY() == event.getTo().getY()
+                && event.getFrom().getZ() == event.getTo().getZ()))
             return;
 
         Player player = event.getPlayer();
@@ -60,17 +63,11 @@ public final class ClassicTrapEffectListener implements Listener {
         if (!this.isActiveRunner(player, runtime))
             return;
 
-        for (TrapActivationContext context : this.activationService.activeAttributions().values()) {
-            if (!context.mapId().equalsIgnoreCase(runtime.mapId()))
-                continue;
-            if (!this.touches(context.trap(), event.getFrom(), event.getTo()))
-                continue;
-            if (this.applyContact(player, context))
-                return;
-        }
+        this.activationService.visitActive(runtime.mapId(), context ->
+                this.touches(context.trap(), event.getFrom(), event.getTo()) && this.applyContact(player, context));
     }
 
-    @EventHandler(priority = EventPriority.MONITOR)
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onTrapActivated(@NotNull ArenaTrapActivateEvent event) {
         // The activation event is fired immediately before TrapActivationService
         // publishes the active context. Run one tick later so players already
@@ -83,11 +80,7 @@ public final class ClassicTrapEffectListener implements Listener {
             if (runtime == null || runtime.arena().getGameState() != PLAYING)
                 return;
 
-            TrapActivationContext context = this.activationService.activeAttributions().values().stream()
-                    .filter(candidate -> candidate.mapId().equalsIgnoreCase(runtime.mapId()))
-                    .filter(candidate -> candidate.trap() == event.getTrap())
-                    .findFirst()
-                    .orElse(null);
+            TrapActivationContext context = this.activationService.activeForTrap(runtime.mapId(), event.getTrap());
             if (context == null)
                 return;
 
@@ -157,39 +150,6 @@ public final class ClassicTrapEffectListener implements Listener {
             @NotNull Location from,
             @NotNull Location to
     ) {
-        if (trap.getLocations().isEmpty() || from.getWorld() == null || to.getWorld() == null)
-            return false;
-
-        Location first = trap.getLocations().stream()
-                .filter(java.util.Objects::nonNull)
-                .findFirst()
-                .orElse(null);
-        if (first == null || first.getWorld() == null)
-            return false;
-
-        if (!from.getWorld().getUID().equals(to.getWorld().getUID())
-                || !first.getWorld().getUID().equals(from.getWorld().getUID()))
-            return false;
-
-        int minX = trap.getLocations().stream().filter(java.util.Objects::nonNull).mapToInt(Location::getBlockX).min().orElse(0);
-        int maxX = trap.getLocations().stream().filter(java.util.Objects::nonNull).mapToInt(Location::getBlockX).max().orElse(0);
-        int minY = trap.getLocations().stream().filter(java.util.Objects::nonNull).mapToInt(Location::getBlockY).min().orElse(0);
-        int maxY = trap.getLocations().stream().filter(java.util.Objects::nonNull).mapToInt(Location::getBlockY).max().orElse(0);
-        int minZ = trap.getLocations().stream().filter(java.util.Objects::nonNull).mapToInt(Location::getBlockZ).min().orElse(0);
-        int maxZ = trap.getLocations().stream().filter(java.util.Objects::nonNull).mapToInt(Location::getBlockZ).max().orElse(0);
-
-        final double halfWidth = 0.30;
-        final double playerHeight = 1.80;
-
-        return SegmentAabb.intersects(
-                from.getX(), from.getY(), from.getZ(),
-                to.getX(), to.getY(), to.getZ(),
-                minX - halfWidth,
-                minY - playerHeight,
-                minZ - halfWidth,
-                maxX + 1.0 + halfWidth,
-                maxY + 1.01,
-                maxZ + 1.0 + halfWidth
-        );
+        return this.bounds.touches(trap, trap.getLocations(), from, to);
     }
 }

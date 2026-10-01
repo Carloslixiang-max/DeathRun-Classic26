@@ -64,6 +64,12 @@ public class ArenaPlayerRespawnListener implements Listener {
             return;
         }
 
+        if (this.arenaManager.hasPendingSnapshot(event.getPlayer())) {
+            this.plugin.getServer().getScheduler().runTask(this.plugin,
+                    () -> this.arenaManager.restorePendingSnapshot(event.getPlayer()));
+            return;
+        }
+
         if (!this.arenaManager.shouldReturnToHubOnJoinOrRespawn(event.getPlayer()))
             return;
 

@@ -22,15 +22,18 @@ public class ArenaSignInteractListener implements Listener {
     private static final String SIGN_USE_PERMISSION = "deathrun.signs.use";
     private static final String LEGACY_SIGN_USE_PERMISSION = "deathrun.sign.use";
 
+    private final pl.mrstudios.deathrun.config.Configuration configuration;
     private final ArenaManager arenaManager;
     private final SignManager signManager;
 
     @Inject
     public ArenaSignInteractListener(
             @NotNull ArenaManager arenaManager,
-            @NotNull SignManager signManager
+            @NotNull SignManager signManager,
+            @NotNull pl.mrstudios.deathrun.config.Configuration configuration
     ) {
         this.arenaManager = arenaManager;
+        this.configuration = configuration;
         this.signManager = signManager;
     }
 
@@ -59,19 +62,19 @@ public class ArenaSignInteractListener implements Listener {
     private void handle(@NotNull Player player, @NotNull QueueSign queueSign) {
         if (!player.hasPermission(SIGN_USE_PERMISSION)
                 && !player.hasPermission(LEGACY_SIGN_USE_PERMISSION)) {
-            player.sendMessage(ChatColor.RED + "You don't have permission to use DeathRun signs.");
+            player.sendMessage(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize(this.configuration.language().chatMessageSignNoPermission));
             return;
         }
 
         switch (queueSign.type()) {
             case JOIN -> {
                 if (queueSign.mapId() != null && this.arenaManager.isMapLockedForEditing(queueSign.mapId())) {
-                    player.sendMessage(ChatColor.RED + "This map is currently unavailable as it is being edited.");
+                    player.sendMessage(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize(this.configuration.language().mapSelectorMapEditing));
                     return;
                 }
 
                 if (queueSign.mapId() == null || queueSign.mapId().isBlank()) {
-                    player.sendMessage(ChatColor.RED + "This map is currently not joinable.");
+                    player.sendMessage(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize(this.configuration.language().mapSelectorMapNotReady));
                     return;
                 }
 
@@ -84,7 +87,7 @@ public class ArenaSignInteractListener implements Listener {
             case AUTOJOIN -> {
                 String bestMapId = this.signManager.bestJoinableMap().orElse(null);
                 if (bestMapId == null) {
-                    player.sendMessage(ChatColor.RED + "No map available for auto-join.");
+                    player.sendMessage(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize(this.configuration.language().chatMessageAutoJoinUnavailable));
                     return;
                 }
 
@@ -98,27 +101,27 @@ public class ArenaSignInteractListener implements Listener {
                 boolean leftQueue = this.signManager.leaveQueue(player);
                 boolean leftMap = this.arenaManager.leaveCurrentMap(player, true);
                 if (!leftQueue && !leftMap) {
-                    player.sendMessage(ChatColor.GRAY + "You're not in any DeathRun queue.");
+                    player.sendMessage(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize(this.configuration.language().chatMessageNoQueue));
                     return;
                 }
 
                 if (leftMap) {
                     if (this.arenaManager.hasPendingSnapshot(player))
-                        player.sendMessage(ChatColor.RED + "You left DeathRun, but recovery is still pending. Use /dr recover after the saved world is available.");
+                        player.sendMessage(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize(this.configuration.language().chatMessageLeavePending));
                     else
-                        player.sendMessage(ChatColor.YELLOW + "You have left DeathRun and your previous state was restored.");
+                        player.sendMessage(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize(this.configuration.language().chatMessageLeaveRestored));
                     return;
                 }
 
                 if (this.arenaManager.hasPendingSnapshot(player)) {
                     if (!this.arenaManager.restorePendingSnapshot(player)) {
-                        player.sendMessage(ChatColor.RED + "DeathRun could not restore your saved state yet; recovery data was kept.");
+                        player.sendMessage(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize(this.configuration.language().commandMessageRecoverFailed));
                         return;
                     }
                 } else {
                     this.arenaManager.returnPlayerToHub(player);
                 }
-                player.sendMessage(ChatColor.YELLOW + "You have left the DeathRun queue.");
+                player.sendMessage(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize(this.configuration.language().chatMessageLeaveQueue));
             }
         }
     }

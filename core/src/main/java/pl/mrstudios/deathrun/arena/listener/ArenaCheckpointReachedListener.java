@@ -49,6 +49,7 @@ import static pl.mrstudios.deathrun.api.arena.user.enums.Role.SPECTATOR;
 
 public class ArenaCheckpointReachedListener implements Listener {
 
+    private final pl.mrstudios.deathrun.classic.checkpoint.LocationBoundsCache bounds = new pl.mrstudios.deathrun.classic.checkpoint.LocationBoundsCache();
     private final ArenaManager arenaManager;
     private final PlaytestTraceService trace;
     private final Plugin plugin;
@@ -125,6 +126,10 @@ public class ArenaCheckpointReachedListener implements Listener {
             @NotNull String source
     ) {
         Arena arena = this.arenaManager.arenaForPlayer(player);
+        if (source.equals("move") && player.getWorld().equals(from.getWorld())
+                && player.getLocation().distanceSquared(from) > 0.0001
+                && player.getLocation().distanceSquared(to) > 0.0001)
+            return; // An earlier hazard listener respawned the player; discard the old move.
         ArenaManager.ArenaRuntime runtime = this.arenaManager.runtimeForPlayer(player);
         MapConfiguration.MapDefinition map = this.arenaManager.mapForPlayer(player);
                 if (arena == null || map == null || runtime == null)
@@ -276,6 +281,7 @@ public class ArenaCheckpointReachedListener implements Listener {
         );
 
         user.setRole(SPECTATOR);
+        pl.mrstudios.deathrun.classic.strafe.ClassicStrafeService.clearCooldowns(player.getUniqueId());
         ofNullable(this.arenaManager.runtimeForPlayer(player))
                 .ifPresent((runtimeHandle) -> runtimeHandle.service().removeBackgroundSongPlayer(player));
 
@@ -342,39 +348,7 @@ public class ArenaCheckpointReachedListener implements Listener {
             @NotNull Location from,
             @NotNull Location to
     ) {
-        if (checkpoint.locations().isEmpty())
-            return false;
-
-        if (from.getWorld() == null || to.getWorld() == null || checkpoint.locations().get(0).getWorld() == null)
-            return false;
-
-        if (!from.getWorld().getUID().equals(to.getWorld().getUID())
-                || !checkpoint.locations().get(0).getWorld().getUID().equals(from.getWorld().getUID()))
-            return false;
-
-        int blockMinX = checkpoint.locations().stream().mapToInt(Location::getBlockX).min().orElseThrow();
-        int blockMaxX = checkpoint.locations().stream().mapToInt(Location::getBlockX).max().orElseThrow();
-        int blockMinY = checkpoint.locations().stream().mapToInt(Location::getBlockY).min().orElseThrow();
-        int blockMaxY = checkpoint.locations().stream().mapToInt(Location::getBlockY).max().orElseThrow();
-        int blockMinZ = checkpoint.locations().stream().mapToInt(Location::getBlockZ).min().orElseThrow();
-        int blockMaxZ = checkpoint.locations().stream().mapToInt(Location::getBlockZ).max().orElseThrow();
-
-        // Sweep the player's feet point against the checkpoint volume expanded by
-        // a normal player hitbox (0.6 wide, 1.8 high). This prevents tunnelling
-        // at Strafe velocity without granting checkpoints from blocks away.
-        final double halfWidth = 0.30;
-        final double height = 1.80;
-
-        return SegmentAabb.intersects(
-                from.getX(), from.getY(), from.getZ(),
-                to.getX(), to.getY(), to.getZ(),
-                blockMinX - halfWidth,
-                blockMinY - height,
-                blockMinZ - halfWidth,
-                blockMaxX + 1.0 + halfWidth,
-                blockMaxY + 1.0,
-                blockMaxZ + 1.0 + halfWidth
-        );
+        return this.bounds.touches(checkpoint, checkpoint.locations(), from, to, 1.0);
     }
 
     private int checkpointPoints(@NotNull MapConfiguration.MapDefinition map, int index) {

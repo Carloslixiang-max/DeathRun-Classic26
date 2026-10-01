@@ -32,6 +32,7 @@ import java.io.File;
 public class SignManager {
 
     private final Plugin plugin;
+    private final pl.mrstudios.deathrun.config.Configuration configuration;
     private final ArenaManager arenaManager;
     private final File storageFile;
 
@@ -42,10 +43,12 @@ public class SignManager {
 
     public SignManager(
             @NotNull Plugin plugin,
-            @NotNull ArenaManager arenaManager
+            @NotNull ArenaManager arenaManager,
+            @NotNull pl.mrstudios.deathrun.config.Configuration configuration
     ) {
         this.plugin = plugin;
         this.arenaManager = arenaManager;
+        this.configuration = configuration;
         this.storageFile = new File(this.plugin.getDataFolder(), "signs.yml");
 
         this.loadSigns();
@@ -127,7 +130,7 @@ public class SignManager {
             return false;
 
         if (this.arenaManager.isMapLockedForEditing(normalizedMapId)) {
-            player.sendMessage(ChatColor.RED + "This map is currently unavailable as it is being edited.");
+            player.sendMessage(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize(this.configuration.language().mapSelectorMapEditing));
             return false;
         }
 
@@ -150,13 +153,13 @@ public class SignManager {
             return false;
 
         if (this.arenaManager.runtimeForPlayer(player) != null) {
-            player.sendMessage(ChatColor.RED + "Leave your current DeathRun match before joining a queue.");
+            player.sendMessage(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize(this.configuration.language().chatMessageQueueNeedsLeave));
             return false;
         }
 
         // Queue teleport is already a DeathRun mutation: journal the exact state first.
         if (!this.arenaManager.ensureSnapshot(player)) {
-            player.sendMessage(ChatColor.RED + "DeathRun could not safely save your current state; queue join cancelled.");
+            player.sendMessage(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize(this.configuration.language().chatMessageQueueSaveFailed));
             return false;
         }
 
@@ -176,7 +179,7 @@ public class SignManager {
                     this.plugin.getLogger().severe("[DeathRun] Queue teleport cancelled for player " + player.getName()
                             + " on map " + normalizedMapId
                             + " because waiting lobby location has null world and configured world is unavailable.");
-                    player.sendMessage(ChatColor.RED + "This map is currently misconfigured (waiting lobby world missing). Please contact staff.");
+                    player.sendMessage(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize(this.configuration.language().chatMessageQueueWorldMissing));
                     this.leaveQueue(player);
                     this.arenaManager.restorePendingSnapshot(player);
                     return false;
@@ -189,8 +192,9 @@ public class SignManager {
 
             if (!player.teleport(waitingLobby)) {
                 this.leaveQueue(player);
-                this.arenaManager.restorePendingSnapshot(player);
-                player.sendMessage(ChatColor.RED + "DeathRun queue teleport failed; your previous state was restored.");
+                boolean recovered = this.arenaManager.restorePendingSnapshot(player);
+                player.sendMessage(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize(recovered
+                        ? this.configuration.language().chatMessageQueueTeleportFailed : this.configuration.language().chatMessageLeavePending));
                 return false;
             }
         }
@@ -231,6 +235,10 @@ public class SignManager {
     ) {
         LinkedHashSet<UUID> players = this.queuedPlayers.get(this.normalizeMapId(mapId));
         return players == null ? 0 : players.size();
+    }
+
+    public boolean isQueued(Player player) {
+        return this.playerQueue.containsKey(player.getUniqueId());
     }
 
     public void clearQueueForMap(

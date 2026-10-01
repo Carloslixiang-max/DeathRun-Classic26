@@ -40,6 +40,8 @@ public final class PlayerSnapshotService {
     private final Plugin plugin;
     private final File recoveryDirectory;
     private final Map<UUID, Scoreboard> liveScoreboards = new ConcurrentHashMap<>();
+    private final java.util.Set<UUID> restoring = ConcurrentHashMap.newKeySet();
+    private final java.util.Set<UUID> failedRecoveries = ConcurrentHashMap.newKeySet();
 
     public PlayerSnapshotService(@NotNull Plugin plugin) {
         this.plugin = plugin;
@@ -60,8 +62,11 @@ public final class PlayerSnapshotService {
      * may be reused when a player transitions from queue -> arena.
      */
     public boolean isCurrentSessionSnapshot(@NotNull UUID playerId) {
-        return this.liveScoreboards.containsKey(playerId) && this.hasPending(playerId);
+        return this.liveScoreboards.containsKey(playerId) && this.hasPending(playerId)
+                && !this.failedRecoveries.contains(playerId) && !this.restoring.contains(playerId);
     }
+
+    public boolean isRestoring(UUID playerId) { return this.restoring.contains(playerId); }
 
     public boolean capture(@NotNull Player player) {
         UUID playerId = player.getUniqueId();
@@ -145,6 +150,9 @@ public final class PlayerSnapshotService {
         File file = this.fileFor(playerId);
         if (!file.isFile())
             return true;
+        if (player.isDead() || !this.restoring.add(playerId))
+            return false;
+        this.failedRecoveries.add(playerId);
 
         try {
             YamlConfiguration yaml = YamlConfiguration.loadConfiguration(file);
@@ -154,64 +162,85 @@ public final class PlayerSnapshotService {
             if (!playerId.toString().equalsIgnoreCase(yaml.getString("uuid", "")))
                 throw new IllegalStateException("recovery UUID mismatch");
 
+            RecoveryTransaction.Phase phase = RecoveryTransaction.Phase.valueOf(yaml.getString("recovery-phase", "PENDING"));
+            if (phase == RecoveryTransaction.Phase.APPLIED) {
+                // Player data was saved before this phase was committed. Only retire the journal.
+                Files.delete(file.toPath());
+                this.liveScoreboards.remove(playerId);
+                this.failedRecoveries.remove(playerId);
+                return true;
+            }
+
             Location target = this.readLocation(yaml);
             if (target == null || target.getWorld() == null)
                 throw new IllegalStateException("snapshot world is unavailable");
 
-            player.getActivePotionEffects().stream()
-                    .map(PotionEffect::getType)
-                    .toList()
-                    .forEach(player::removePotionEffect);
+            ItemStack[] storage = this.readItemArray(yaml, "inventory.storage", 36);
+            ItemStack[] armor = this.readItemArray(yaml, "inventory.armor", 4);
+            ItemStack offhand = yaml.getItemStack("inventory.offhand");
+            GameMode savedMode = this.readGameMode(yaml);
 
-            player.getInventory().clear();
-            player.getInventory().setArmorContents(new ItemStack[4]);
-            player.getInventory().setItemInOffHand(null);
+            RecoveryTransaction.restore(phase, () -> {
+                player.closeInventory();
+                if (!player.teleport(target))
+                    throw new IllegalStateException("teleport to saved location was rejected");
+            }, () -> this.savePhase(yaml, file, RecoveryTransaction.Phase.RESTORING), () -> {
 
-            player.getInventory().setStorageContents(this.readItemArray(yaml, "inventory.storage", 36));
-            player.getInventory().setArmorContents(this.readItemArray(yaml, "inventory.armor", 4));
-            player.getInventory().setItemInOffHand(yaml.getItemStack("inventory.offhand"));
-            player.getInventory().setHeldItemSlot(clamp(yaml.getInt("inventory.held-slot", 0), 0, 8));
+                player.getActivePotionEffects().stream()
+                        .map(PotionEffect::getType)
+                        .toList()
+                        .forEach(player::removePotionEffect);
 
-            player.setGameMode(this.readGameMode(yaml));
-            player.setFlying(false);
-            boolean allowFlight = yaml.getBoolean("allow-flight", false);
-            player.setAllowFlight(allowFlight);
-            if (allowFlight && yaml.getBoolean("flying", false))
-                player.setFlying(true);
+                player.getInventory().clear();
+                player.getInventory().setArmorContents(new ItemStack[4]);
+                player.getInventory().setItemInOffHand(null);
 
-            player.setLevel(Math.max(0, yaml.getInt("level", 0)));
-            player.setExp((float) clamp(yaml.getDouble("exp", 0.0), 0.0, 1.0));
-            player.setTotalExperience(Math.max(0, yaml.getInt("total-experience", 0)));
-            player.setHealth(Math.max(
-                    0.01,
-                    Math.min(yaml.getDouble("health", player.getHealth()), player.getMaxHealth())
-            ));
-            player.setFoodLevel(clamp(yaml.getInt("food", 20), 0, 20));
-            player.setSaturation((float) Math.max(0.0, yaml.getDouble("saturation", 5.0)));
-            player.setExhaustion((float) Math.max(0.0, yaml.getDouble("exhaustion", 0.0)));
-            player.setFireTicks(yaml.getInt("fire-ticks", 0));
-            player.setFallDistance((float) Math.max(0.0, yaml.getDouble("fall-distance", 0.0)));
-            player.setWalkSpeed((float) clamp(yaml.getDouble("walk-speed", 0.2), -1.0, 1.0));
-            player.setFlySpeed((float) clamp(yaml.getDouble("fly-speed", 0.1), -1.0, 1.0));
+                player.getInventory().setStorageContents(storage);
+                player.getInventory().setArmorContents(armor);
+                player.getInventory().setItemInOffHand(offhand);
+                player.getInventory().setHeldItemSlot(clamp(yaml.getInt("inventory.held-slot", 0), 0, 8));
 
-            for (Object value : yaml.getList("potion-effects", List.of())) {
-                if (value instanceof PotionEffect effect)
-                    player.addPotionEffect(effect, true);
-            }
+                player.setGameMode(savedMode);
+                player.setFlying(false);
+                boolean allowFlight = yaml.getBoolean("allow-flight", false);
+                player.setAllowFlight(allowFlight);
+                if (allowFlight && yaml.getBoolean("flying", false))
+                    player.setFlying(true);
 
-            if (!player.teleport(target))
-                throw new IllegalStateException("teleport to saved location was rejected");
+                player.setLevel(Math.max(0, yaml.getInt("level", 0)));
+                player.setExp((float) clamp(yaml.getDouble("exp", 0.0), 0.0, 1.0));
+                player.setTotalExperience(Math.max(0, yaml.getInt("total-experience", 0)));
+                player.setHealth(Math.max(
+                        0.01,
+                        Math.min(yaml.getDouble("health", player.getHealth()), player.getMaxHealth())
+                ));
+                player.setFoodLevel(clamp(yaml.getInt("food", 20), 0, 20));
+                player.setSaturation((float) Math.max(0.0, yaml.getDouble("saturation", 5.0)));
+                player.setExhaustion((float) Math.max(0.0, yaml.getDouble("exhaustion", 0.0)));
+                player.setFireTicks(yaml.getInt("fire-ticks", 0));
+                player.setFallDistance((float) Math.max(0.0, yaml.getDouble("fall-distance", 0.0)));
+                player.setWalkSpeed((float) clamp(yaml.getDouble("walk-speed", 0.2), -1.0, 1.0));
+                player.setFlySpeed((float) clamp(yaml.getDouble("fly-speed", 0.1), -1.0, 1.0));
 
-            Scoreboard exactLiveScoreboard = this.liveScoreboards.remove(playerId);
-            if (exactLiveScoreboard != null) {
-                player.setScoreboard(exactLiveScoreboard);
-            } else {
-                Scoreboard durableScoreboard = this.readScoreboard(yaml);
-                if (durableScoreboard != null)
-                    player.setScoreboard(durableScoreboard);
-            }
+                for (Object value : yaml.getList("potion-effects", List.of())) {
+                    if (value instanceof PotionEffect effect)
+                        player.addPotionEffect(effect, true);
+                }
 
-            Files.delete(file.toPath());
+                Scoreboard exactLiveScoreboard = this.liveScoreboards.get(playerId);
+                if (exactLiveScoreboard != null) {
+                    player.setScoreboard(exactLiveScoreboard);
+                } else {
+                    Scoreboard durableScoreboard = this.readScoreboard(yaml);
+                    if (durableScoreboard != null)
+                        player.setScoreboard(durableScoreboard);
+                }
+
+                player.saveData();
+            }, () -> this.savePhase(yaml, file, RecoveryTransaction.Phase.APPLIED),
+                    () -> Files.delete(file.toPath()));
+            this.liveScoreboards.remove(playerId);
+            this.failedRecoveries.remove(playerId);
             this.plugin.getLogger().info("[DeathRun] Restored pre-game state for " + player.getName());
             return true;
         } catch (Exception exception) {
@@ -220,6 +249,22 @@ public final class PlayerSnapshotService {
                             + "; recovery file kept: " + exception.getMessage()
             );
             return false;
+        } finally {
+            this.restoring.remove(playerId);
+        }
+    }
+
+    private void savePhase(YamlConfiguration yaml, File target, RecoveryTransaction.Phase phase) throws IOException {
+        yaml.set("recovery-phase", phase.name());
+        File temp = new File(this.recoveryDirectory, target.getName() + ".tmp");
+        yaml.save(temp);
+        try (FileChannel channel = FileChannel.open(temp.toPath(), StandardOpenOption.WRITE)) {
+            channel.force(true);
+        }
+        try {
+            Files.move(temp.toPath(), target.toPath(), StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
+        } catch (AtomicMoveNotSupportedException ignored) {
+            Files.move(temp.toPath(), target.toPath(), StandardCopyOption.REPLACE_EXISTING);
         }
     }
 

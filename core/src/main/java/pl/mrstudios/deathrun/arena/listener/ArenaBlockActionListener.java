@@ -13,7 +13,7 @@ import pl.mrstudios.deathrun.arena.ArenaManager;
 
 import static org.bukkit.GameMode.CREATIVE;
 
-import static org.bukkit.event.EventPriority.MONITOR;
+import static org.bukkit.event.EventPriority.HIGHEST;
 import static org.bukkit.event.block.Action.PHYSICAL;
 import static org.bukkit.event.block.Action.RIGHT_CLICK_BLOCK;
 
@@ -30,7 +30,7 @@ public class ArenaBlockActionListener implements Listener {
         this.arenaManager = arenaManager;
     }
 
-    @EventHandler(priority = MONITOR)
+    @EventHandler(priority = HIGHEST)
     public void onBlockBreak(
             @NotNull BlockBreakEvent event
     ) {
@@ -38,7 +38,7 @@ public class ArenaBlockActionListener implements Listener {
             event.setCancelled(true);
     }
 
-    @EventHandler(priority = MONITOR)
+    @EventHandler(priority = HIGHEST)
     public void onBlockPlace(
             @NotNull BlockPlaceEvent event
     ) {
@@ -46,7 +46,7 @@ public class ArenaBlockActionListener implements Listener {
             event.setCancelled(true);
     }
 
-    @EventHandler(priority = MONITOR)
+    @EventHandler(priority = HIGHEST)
     public void onPlayerInteract(
             @NotNull PlayerInteractEvent event
     ) {

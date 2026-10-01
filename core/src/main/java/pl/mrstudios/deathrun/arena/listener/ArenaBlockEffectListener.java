@@ -28,7 +28,7 @@ public class ArenaBlockEffectListener implements Listener {
         this.configuration = configuration;
     }
 
-    @EventHandler(priority = MONITOR)
+    @EventHandler(priority = MONITOR, ignoreCancelled = true)
     public void onStepOnBlockEffect(@NotNull PlayerMoveEvent event) {
         if (event.getTo() == null)
             return;

@@ -27,6 +27,7 @@ import static java.nio.file.StandardOpenOption.TRUNCATE_EXISTING;
 
 public final class PlaytestTraceService {
 
+    private final BatchedTraceWriter writer = new BatchedTraceWriter();
     private final Plugin plugin;
     private final ArenaManager arenaManager;
     private final Path researchDirectory;
@@ -45,6 +46,7 @@ public final class PlaytestTraceService {
 
     public synchronized @NotNull Path start(@NotNull String mapId) throws IOException {
         String normalized = this.normalize(mapId);
+        this.writer.flush();
         createDirectories(this.researchDirectory);
         Path path = this.reportPath(normalized);
 
@@ -65,6 +67,7 @@ public final class PlaytestTraceService {
         if (this.enabledMaps.contains(normalized))
             this.record(normalized, "TRACE_STOP", "enabled=false");
         this.enabledMaps.remove(normalized);
+        this.flushSafely();
         return this.status(normalized);
     }
 
@@ -73,6 +76,7 @@ public final class PlaytestTraceService {
         this.enabledMaps.remove(normalized);
         this.lineCounts.remove(normalized);
         this.disconnectedMaps.entrySet().removeIf(entry -> entry.getValue().equals(normalized));
+        this.writer.flush();
         deleteIfExists(this.reportPath(normalized));
         return this.status(normalized);
     }
@@ -96,20 +100,14 @@ public final class PlaytestTraceService {
             return;
 
         try {
-            createDirectories(this.researchDirectory);
             String line = Instant.now()
                     + " | " + this.singleLine(event)
                     + " | " + this.singleLine(details == null ? "" : details)
                     + System.lineSeparator();
-            writeString(
-                    this.reportPath(normalized),
-                    line,
-                    StandardCharsets.UTF_8,
-                    CREATE,
-                    APPEND
-            );
+            this.writer.append(this.reportPath(normalized), line);
             this.lineCounts.merge(normalized, 1, Integer::sum);
         } catch (IOException exception) {
+            this.enabledMaps.remove(normalized);
             this.plugin.getLogger().warning(
                     "[DeathRun] Unable to write playtest trace for "
                             + normalized + ": " + exception.getMessage()
@@ -137,6 +135,7 @@ public final class PlaytestTraceService {
             @NotNull List<Integer> expectedCheckpointIds,
             int expectedTrapCount
     ) throws IOException {
+        this.writer.flush();
         Path path = this.reportPath(mapId);
         List<String> lines = java.nio.file.Files.exists(path)
                 ? java.nio.file.Files.readAllLines(path, StandardCharsets.UTF_8)
@@ -150,6 +149,7 @@ public final class PlaytestTraceService {
             @NotNull List<Integer> checkpointPoints,
             @Nullable Integer finishId
     ) throws IOException {
+        this.writer.flush();
         Path path = this.reportPath(mapId);
         List<String> lines = java.nio.file.Files.exists(path)
                 ? java.nio.file.Files.readAllLines(path, StandardCharsets.UTF_8)
@@ -209,6 +209,13 @@ public final class PlaytestTraceService {
             this.record(mapId, "SERVER_DISABLE", "trace closed by plugin shutdown");
             this.enabledMaps.remove(mapId);
         }
+        try { this.writer.close(); }
+        catch (IOException exception) { this.plugin.getLogger().warning("[DeathRun] Trace shutdown flush failed: " + exception.getMessage()); }
+    }
+
+    private void flushSafely() {
+        try { this.writer.flush(); }
+        catch (IOException exception) { this.plugin.getLogger().warning("[DeathRun] Trace flush failed: " + exception.getMessage()); }
     }
 
     private @NotNull String normalize(@NotNull String mapId) {

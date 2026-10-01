@@ -13,7 +13,7 @@ import pl.mrstudios.deathrun.classic.trap.TrapActivationService;
 import pl.mrstudios.deathrun.classic.playtest.PlaytestTraceService;
 import pl.mrstudios.deathrun.config.Configuration;
 
-import static org.bukkit.event.EventPriority.MONITOR;
+import static org.bukkit.event.EventPriority.HIGHEST;
 import static org.bukkit.event.block.Action.RIGHT_CLICK_BLOCK;
 import static pl.mrstudios.deathrun.api.arena.user.enums.Role.DEATH;
 
@@ -38,7 +38,7 @@ public class ArenaButtonClickListener implements Listener {
         this.trace = trace;
     }
 
-    @EventHandler(priority = MONITOR)
+    @EventHandler(priority = HIGHEST)
     public void onArenaButtonClick(@NotNull PlayerInteractEvent event) {
         if (event.isCancelled())
             return;

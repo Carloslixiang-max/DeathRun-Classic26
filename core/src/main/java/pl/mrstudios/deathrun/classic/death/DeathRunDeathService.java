@@ -83,6 +83,17 @@ public final class DeathRunDeathService {
             return null;
         LAST_DEATH_AT.put(player.getUniqueId(), now);
 
+        org.bukkit.Location respawn = this.respawnLocation(user);
+        if (respawn == null || respawn.getWorld() == null || !player.teleport(respawn)) {
+            LAST_DEATH_AT.remove(player.getUniqueId());
+            this.plugin.getLogger().warning("[DeathRun] Respawn teleport rejected for " + player.getName());
+            this.arenaManager.leaveCurrentMap(player, true);
+            player.sendMessage(miniMessage().deserialize(this.configuration.language().commandMessageRespawnFailed));
+            return null;
+        }
+        if (this.arenaManager.runtimeForPlayer(player) != runtime || runtime.arena().getUser(player) != user)
+            return null;
+
         TrapActivationContext attribution = this.trapActivationService.recentAttribution(player.getUniqueId());
         int livesBefore = user.getLives();
         user.setDeaths(user.getDeaths() + 1);
@@ -90,6 +101,7 @@ public final class DeathRunDeathService {
         if (user.getLives() <= 0) {
             user.setLives(0);
             user.setEliminated(true);
+            pl.mrstudios.deathrun.classic.strafe.ClassicStrafeService.clearCooldowns(player.getUniqueId());
             if (this.configuration.plugin().classicZeroLivesSpectator) {
                 user.setRole(pl.mrstudios.deathrun.api.arena.user.enums.Role.SPECTATOR);
                 player.setAllowFlight(true);
@@ -114,7 +126,6 @@ public final class DeathRunDeathService {
             }
         }
 
-        player.teleport(this.respawnLocation(user));
         player.setVelocity(new org.bukkit.util.Vector(0.0, 0.0, 0.0));
         player.setFallDistance(0.0f);
         player.playSound(player.getLocation(), this.configuration.plugin().arenaSoundPlayerDeath, 1.0f, 1.0f);

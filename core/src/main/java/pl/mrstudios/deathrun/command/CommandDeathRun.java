@@ -540,7 +540,7 @@ public class CommandDeathRun {
         if (!leftMap) {
             if (this.arenaManager.hasPendingSnapshot(player)) {
                 if (!this.arenaManager.restorePendingSnapshot(player)) {
-                    this.message(player, "<red>DeathRun could not restore your saved state yet; recovery data was kept.");
+                    this.message(player, this.configuration.language().commandMessageRecoverFailed);
                     return;
                 }
             } else {
@@ -548,13 +548,13 @@ public class CommandDeathRun {
             }
         }
         if (leftMap && this.arenaManager.hasPendingSnapshot(player)) {
-            this.message(player, "<red>You left DeathRun, but recovery is still pending. Use <white>/dr recover</white> after the saved world is available.");
+            this.message(player, this.configuration.language().chatMessageLeavePending);
             return;
         }
 
         this.message(player, leftMap
-                ? "<yellow>You have left DeathRun and your previous state was restored."
-                : "<yellow>You have left the DeathRun queue.");
+                ? this.configuration.language().chatMessageLeaveRestored
+                : this.configuration.language().chatMessageLeaveQueue);
     }
 
     /* Setup Command */
@@ -879,6 +879,10 @@ public class CommandDeathRun {
             return;
         }
 
+        pl.mrstudios.deathrun.util.WorldRestoreTransaction restore = null;
+        boolean unloaded = false;
+        boolean lockedBefore = this.arenaManager.isMapLockedForEditing(id);
+        boolean rollbackFailed = false;
         try {
             World loadedWorld = this.plugin.getServer().getWorld(worldName);
             if (loadedWorld == null) {
@@ -890,46 +894,70 @@ public class CommandDeathRun {
                 return;
             }
 
+            var runtime = this.arenaManager.runtimeByMapId(id);
+            if (!loadedWorld.getPlayers().isEmpty() || runtime == null
+                    || runtime.arena().getGameState() != pl.mrstudios.deathrun.api.arena.enums.GameState.WAITING)
+                throw new IllegalStateException("地图必须处于等待状态，且世界内没有玩家。");
+
             // Backups are created from World#getWorldFolder(). On Paper 26.2
             // this can be <level>/dimensions/<namespace>/<key>, not the old
             // server-root/<worldName> layout. Restore next to the exact folder
             // returned by the loaded world so legacy and 26.2 layouts both work.
             Path worldFolder = loadedWorld.getWorldFolder().toPath().toAbsolutePath().normalize();
-            Path extractionParent = worldFolder.getParent();
-            if (extractionParent == null)
-                throw new IllegalStateException("World folder has no parent: " + worldFolder);
+            restore = pl.mrstudios.deathrun.util.WorldRestoreTransaction.prepare(backupZip, worldFolder);
+            this.arenaManager.setMapEditLocked(id, true);
+            loadedWorld.save();
 
             if (!this.plugin.getServer().unloadWorld(loadedWorld, false)) {
                 this.message(sender, this.configuration.language().commandMessageSetupMapRestoreUnloadFailed.replace("<world>", worldName));
                 return;
             }
+            unloaded = true;
 
-            if (exists(worldFolder))
-                deleteDirectory(worldFolder.toFile());
-
-            try (ZipFile zipFile = new ZipFile(backupZip.toFile())) {
-                zipFile.extractAll(extractionParent.toString());
-            }
-
-            if (!exists(worldFolder))
-                throw new IllegalStateException("Backup did not restore expected world folder: " + worldFolder);
+            restore.install();
 
             World restoredWorld = this.plugin.getServer().createWorld(new WorldCreator(worldName));
             if (restoredWorld == null) {
-                this.message(sender, this.configuration.language().commandMessageSetupMapRestoreLoadFailed.replace("<world>", worldName));
-                return;
+                throw new IllegalStateException("恢复后的世界无法加载：" + worldName);
             }
 
             this.rebindMapWorldReferences(map, restoredWorld);
             this.configuration.map().save();
             this.arenaManager.reloadRuntime(map.id);
+            restore.commit();
+            this.plugin.getLogger().info("[DeathRun] Previous world retained at " + restore.previousWorld());
 
             this.message(sender, this.configuration.language().commandMessageSetupMapRestoreSuccess
                     .replace("<map>", map.id)
                     .replace("<world>", worldName));
         } catch (Exception exception) {
+            if (unloaded && restore != null) {
+                try {
+                    World replacement = this.plugin.getServer().getWorld(worldName);
+                    if (replacement != null && !this.plugin.getServer().unloadWorld(replacement, false))
+                        throw new IllegalStateException("无法卸载失败的替换世界，旧世界副本保留在 " + restore.previousWorld());
+                    restore.rollback();
+                    World original = this.plugin.getServer().createWorld(new WorldCreator(worldName));
+                    if (original == null) throw new IllegalStateException("旧世界已恢复到磁盘，但重新加载失败。");
+                    this.rebindMapWorldReferences(map, original);
+                    this.configuration.map().save();
+                    this.arenaManager.reloadRuntime(map.id);
+                } catch (Exception rollbackFailure) {
+                    exception.addSuppressed(rollbackFailure);
+                    this.plugin.getLogger().log(java.util.logging.Level.SEVERE, "[DeathRun] World restore rollback failed", rollbackFailure);
+                    // Do not move directories while a replacement is still loaded.
+                    restore = null;
+                    rollbackFailed = true;
+                }
+            }
             this.message(sender, this.configuration.language().commandMessageSetupMapRestoreFailed
                     .replace("<reason>", requireNonNull(exception.getMessage(), "unknown")));
+        } finally {
+            if (restore != null) {
+                try { restore.close(); }
+                catch (Exception cleanupFailure) { this.plugin.getLogger().log(java.util.logging.Level.WARNING, "[DeathRun] Restore staging cleanup failed", cleanupFailure); }
+            }
+            this.arenaManager.setMapEditLocked(id, lockedBefore || rollbackFailed);
         }
     }
 
@@ -3489,8 +3517,8 @@ public class CommandDeathRun {
             if (!leftMap)
                 this.arenaManager.returnPlayerToHub(target);
             this.message(target, leftMap
-                    ? "<yellow>You have left DeathRun and your previous state was restored."
-                    : "<yellow>You have left the DeathRun queue.");
+                    ? this.configuration.language().chatMessageLeaveRestored
+                    : this.configuration.language().chatMessageLeaveQueue);
 
             if (actor != null && actor != target)
                 this.message(actor, this.configuration.language().commandMessageJoinForcedLobbyActor
@@ -3502,7 +3530,8 @@ public class CommandDeathRun {
         String content = switch (result) {
             case JOINED -> this.configuration.language().mapSelectorMapSelected.replace("<map>", mapId);
             case ALREADY_IN_MAP -> this.configuration.language().mapSelectorAlreadyJoined;
-            case PLAYER_STATE_SAVE_FAILED -> "<red>DeathRun could not safely save your current player state; join cancelled.";
+            case PLAYER_STATE_SAVE_FAILED -> this.configuration.language().commandMessageJoinStateSaveFailed;
+            case PLAYER_TELEPORT_FAILED -> this.configuration.language().commandMessageJoinTeleportFailed;
             case MAP_NOT_READY -> this.configuration.language().mapSelectorMapNotReady;
             case MAP_FULL -> this.configuration.language().mapSelectorMapFull;
             case MATCH_IN_PROGRESS -> this.configuration.language().mapSelectorMapInProgress;

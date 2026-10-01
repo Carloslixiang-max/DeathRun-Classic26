@@ -28,6 +28,7 @@ public final class ClassicStrafeService {
     private final NamespacedKey strafeKey;
     private static final Map<UUID, EnumMap<Direction, Long>> cooldownUntil = new ConcurrentHashMap<>();
     private static final Map<UUID, BukkitTask> displayTasks = new ConcurrentHashMap<>();
+    private static final Map<UUID, EnumMap<Direction, Long>> displayedSeconds = new ConcurrentHashMap<>();
 
     public ClassicStrafeService(@NotNull Plugin plugin) {
         this.plugin = plugin;
@@ -41,6 +42,9 @@ public final class ClassicStrafeService {
         player.getInventory().setItem(3, item(Direction.LEFT, 0L));
         player.getInventory().setItem(4, item(Direction.BACK, 0L));
         player.getInventory().setItem(5, item(Direction.RIGHT, 0L));
+        EnumMap<Direction, Long> displayed = new EnumMap<>(Direction.class);
+        for (Direction direction : Direction.values()) displayed.put(direction, 0L);
+        displayedSeconds.put(playerId, displayed);
 
         BukkitTask displayTask = this.plugin.getServer().getScheduler().runTaskTimer(
                 this.plugin,
@@ -59,6 +63,7 @@ public final class ClassicStrafeService {
 
     public static void clearCooldowns(@NotNull UUID playerId) {
         cooldownUntil.remove(playerId);
+        displayedSeconds.remove(playerId);
         BukkitTask task = displayTasks.remove(playerId);
         if (task != null)
             task.cancel();
@@ -88,9 +93,8 @@ public final class ClassicStrafeService {
 
     public long remainingMillis(@NotNull Player player, @NotNull Direction direction) {
         long now = System.currentTimeMillis();
-        long until = this.cooldownUntil
-                .getOrDefault(player.getUniqueId(), new EnumMap<>(Direction.class))
-                .getOrDefault(direction, 0L);
+        var cooldowns = cooldownUntil.get(player.getUniqueId());
+        long until = cooldowns == null ? 0L : cooldowns.getOrDefault(direction, 0L);
         return Math.max(0L, until - now);
     }
 
@@ -116,15 +120,20 @@ public final class ClassicStrafeService {
 
     private void refreshDisplay(@NotNull Player player) {
         Direction[] directions = { Direction.LEFT, Direction.BACK, Direction.RIGHT };
+        var displayed = displayedSeconds.computeIfAbsent(player.getUniqueId(), ignored -> new EnumMap<>(Direction.class));
         for (int i = 0; i < directions.length; i++) {
             Direction direction = directions[i];
             long remaining = this.remainingMillis(player, direction);
+            long seconds = (remaining + 999L) / 1000L;
+            if (displayed.getOrDefault(direction, -1L) == seconds) continue;
             ItemStack current = player.getInventory().getItem(3 + i);
 
             // Only rewrite the slot while it is still one of our own Strafe
             // items; this avoids fighting an administrator/debug edit.
-            if (current != null && this.directionOf(current) == direction)
+            if (current != null && this.directionOf(current) == direction) {
                 player.getInventory().setItem(3 + i, item(direction, remaining));
+                displayed.put(direction, seconds);
+            }
         }
     }
 

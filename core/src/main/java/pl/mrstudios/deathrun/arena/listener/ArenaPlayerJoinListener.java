@@ -13,15 +13,18 @@ import static org.bukkit.event.EventPriority.MONITOR;
 /** Main-server-safe join listener: it never clears or rewrites unrelated player state. */
 public class ArenaPlayerJoinListener implements Listener {
 
+    private final pl.mrstudios.deathrun.config.Configuration configuration;
     private final ArenaManager arenaManager;
     private final PlaytestTraceService trace;
 
     @Inject
     public ArenaPlayerJoinListener(
             @NotNull ArenaManager arenaManager,
-            @NotNull PlaytestTraceService trace
+            @NotNull PlaytestTraceService trace,
+            @NotNull pl.mrstudios.deathrun.config.Configuration configuration
     ) {
         this.arenaManager = arenaManager;
+        this.configuration = configuration;
         this.trace = trace;
     }
 
@@ -33,9 +36,9 @@ public class ArenaPlayerJoinListener implements Listener {
         if (pendingBefore) {
             boolean recovered = this.arenaManager.restorePendingSnapshot(event.getPlayer());
             if (recovered)
-                event.getPlayer().sendMessage(org.bukkit.ChatColor.GREEN + "[DeathRun] Your saved pre-game state was recovered.");
+                event.getPlayer().sendMessage(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize(this.configuration.language().commandMessageRecoverSuccess));
             else
-                event.getPlayer().sendMessage(org.bukkit.ChatColor.RED + "[DeathRun] Recovery is still pending. Use /dr recover after the saved world is available.");
+                event.getPlayer().sendMessage(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize(this.configuration.language().chatMessageLeavePending));
 
             if (traceMap != null)
                 this.trace.record(traceMap, "RECONNECT_RECOVERY",

@@ -3,7 +3,7 @@ plugins {
     id("com.gradleup.shadow") version "9.6.1"
 }
 
-val manualVersion = "1.4.1-classic26.3"
+val manualVersion = "1.4.1-classic26.4"
 
 project.group = project.parent?.group!!
 project.version = project.parent?.version!!
@@ -39,6 +39,7 @@ dependencies {
     compileOnly("org.jetbrains:annotations:${project.parent?.property("jetbrains.annotations.version")}")
     annotationProcessor("org.jetbrains:annotations:${project.parent?.property("jetbrains.annotations.version")}")
     testImplementation("org.junit.jupiter:junit-jupiter:5.12.2")
+    testImplementation("io.papermc.paper:paper-api:${project.parent?.property("minecraft.version")}")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher:1.12.2")
 }
 
@@ -58,7 +59,7 @@ tasks {
     }
 
     shadowJar {
-        archiveFileName.set("DeathRun-Classic26-1.4.1-classic26.3.jar")
+        archiveFileName.set("DeathRun-Classic26-1.4.1-classic26.4.jar")
         archiveClassifier.set("")
         exclude("META-INF/*.SF", "META-INF/*.DSA", "META-INF/*.RSA")
     }

@@ -19,7 +19,7 @@ public final class ClassicVoteListener implements Listener {
         this.voteService = voteService;
     }
 
-    @EventHandler(priority = EventPriority.MONITOR)
+    @EventHandler(priority = EventPriority.HIGHEST)
     public void onClick(@NotNull InventoryClickEvent event) {
         if (!this.voteService.isVoteInventory(event.getView().getTopInventory()))
             return;
@@ -32,7 +32,7 @@ public final class ClassicVoteListener implements Listener {
             this.voteService.handleClick(player, event.getCurrentItem());
     }
 
-    @EventHandler(priority = EventPriority.MONITOR)
+    @EventHandler(priority = EventPriority.HIGHEST)
     public void onDrag(@NotNull InventoryDragEvent event) {
         if (this.voteService.isVoteInventory(event.getView().getTopInventory()))
             event.setCancelled(true);

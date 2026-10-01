@@ -1197,6 +1197,25 @@ public final class ToBeeCandidateProfileService {
         if (runtime.arena().getGameState() != pl.mrstudios.deathrun.api.arena.enums.GameState.WAITING
                 || !runtime.arena().getUsers().isEmpty() || !world.getPlayers().isEmpty())
             return new Result(false, "map-must-be-idle-and-empty", List.of());
+        if (!ToBeeCheckpointRepairPlan.valid(map.arenaCheckpoints.stream()
+                .map(cp -> cp == null ? null : cp.id()).toList(), map.arenaFinishCheckpointId))
+            return new Result(false, "checkpoint-layout-not-reviewed", List.of("expected-ids-1-through-6-and-finish-6"));
+        for (Checkpoint cp : map.arenaCheckpoints) {
+            int gateId = ToBeeCheckpointRepairPlan.gateForCheckpoint(cp.id());
+            GateEvidence gate = GATES.get(gateId);
+            if (cp.locations().size() != 2 || !cp.locations().stream().allMatch(loc -> spawnWorldMatches(world, loc))
+                    || !sameBlock(cp.locations().get(0), gate.min()) || !sameBlock(cp.locations().get(1), gate.max())
+                    || !safeStandingColumn(world, SAFE_ROUTE_SIDE_CANDIDATES.get(gateId)))
+                return new Result(false, "checkpoint-geometry-not-reviewed", List.of("checkpoint:" + cp.id()));
+        }
+        java.nio.file.Path configPath = this.configuration.map().getBindFile();
+        byte[] previousConfig;
+        try {
+            if (configPath == null) throw new java.io.IOException("Map configuration has no file");
+            previousConfig = java.nio.file.Files.readAllBytes(configPath);
+        } catch (Exception failure) {
+            return new Result(false, "map-backup-read-failed", List.of(String.valueOf(failure.getMessage())));
+        }
         var runners = runnerStartCandidates(world, 20);
         var deaths = deathStartCandidates(world, 2);
         if (runners.size() != 20 || deaths.size() != 2)
@@ -1216,16 +1235,43 @@ public final class ToBeeCandidateProfileService {
             map.arenaWaitingLobbyLocation = oldLobby;
             return new Result(false, "spawn-check-failed", issues);
         }
-        map.name = MAP_NAME;
-        for (int i = 0; i < map.arenaCheckpoints.size(); i++) {
-            var cp = map.arenaCheckpoints.get(i);
-            map.arenaCheckpoints.set(i, new Checkpoint(cp.id(), feetLocation(world, SAFE_ROUTE_SIDE_CANDIDATES.get(CHECKPOINT_GATE_IDS.get(i))), cp.locations(),
-                    i == map.arenaCheckpoints.size() - 1 ? "终点" : "检查点 " + (i + 1)));
+        String oldName = map.name;
+        var oldCheckpoints = map.arenaCheckpoints;
+        var signBackup = ToBeeSignTranslations.ENTRIES.stream()
+                .map(entry -> world.getBlockAt(entry.x(), entry.y(), entry.z()).getState())
+                .filter(state -> state instanceof org.bukkit.block.Sign).toList();
+        boolean saved = false;
+        try {
+            map.name = MAP_NAME;
+            map.arenaCheckpoints = new ArrayList<>(oldCheckpoints.stream().map(cp -> {
+                int gate = ToBeeCheckpointRepairPlan.gateForCheckpoint(cp.id());
+                return new Checkpoint(cp.id(), feetLocation(world, SAFE_ROUTE_SIDE_CANDIDATES.get(gate)), cp.locations(),
+                        cp.id().equals(map.arenaFinishCheckpointId) ? "终点" : "检查点 " + cp.id());
+            }).toList());
+            pl.mrstudios.deathrun.config.AtomicConfigurationSave.save(this.configuration.map());
+            saved = true;
+            ToBeeSignTranslations.apply(world);
+            this.arenaManager.reloadRuntime(MAP_ID);
+            return new Result(true, "spawn-repair-complete", List.of("20-runner", "2-death", "23-controls"));
+        } catch (Exception failure) {
+            map.name = oldName;
+            map.arenaCheckpoints = oldCheckpoints;
+            map.arenaRunnerSpawnLocations = oldRunners;
+            map.arenaDeathSpawnLocations = oldDeaths;
+            map.arenaWaitingLobbyLocation = oldLobby;
+            List<String> failures = new ArrayList<>();
+            failures.add(String.valueOf(failure.getMessage()));
+            try {
+                if (saved) pl.mrstudios.deathrun.config.AtomicConfigurationSave.restore(configPath, previousConfig);
+                for (var sign : signBackup) if (!sign.update(true, false)) failures.add("sign-rollback-failed:" + sign.getLocation());
+                this.arenaManager.reloadRuntime(MAP_ID);
+            } catch (Exception rollbackFailure) { failures.add("rollback-failed:" + rollbackFailure.getMessage()); }
+            return new Result(false, "spawn-repair-rolled-back", failures);
         }
-        this.configuration.map().save();
-        ToBeeSignTranslations.apply(world);
-        this.arenaManager.reloadRuntime(MAP_ID);
-        return new Result(true, "spawn-repair-complete", List.of("20-runner", "2-death", "23-controls"));
+    }
+
+    private static boolean sameBlock(Location location, BlockPos position) {
+        return location.getBlockX() == position.x() && location.getBlockY() == position.y() && location.getBlockZ() == position.z();
     }
 
     private static int countPortalBlocks(@NotNull World world, @NotNull GateEvidence gate) {
