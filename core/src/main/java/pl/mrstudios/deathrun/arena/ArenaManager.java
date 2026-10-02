@@ -168,7 +168,8 @@ public class ArenaManager {
         // from another map whose secondary world has not yet loaded.
         var maps = this.configuration.map().resolvedMaps();
         maps.forEach(this::ensureMapWorldBindings);
-        if (maps.stream().allMatch(map -> map.world != null && this.server.getWorld(map.world) != null)) {
+        if (maps.stream().allMatch(map -> map.world == null || map.world.isBlank()
+                || this.server.getWorld(map.world) != null)) {
             var bee = this.configuration.map().getMapById(pl.mrstudios.deathrun.classic.tobee.ToBeeCandidateProfileService.MAP_ID);
             if (bee != null) {
                 try {
