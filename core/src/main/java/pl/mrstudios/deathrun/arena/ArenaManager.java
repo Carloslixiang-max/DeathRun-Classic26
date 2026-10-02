@@ -164,8 +164,23 @@ public class ArenaManager {
         });
         this.runtimesByMapId.clear();
 
-        for (MapConfiguration.MapDefinition map : this.configuration.map().resolvedMaps()) {
-            this.ensureMapWorldBindings(map);
+        // Bind every map first: saving one migration must not erase world metadata
+        // from another map whose secondary world has not yet loaded.
+        var maps = this.configuration.map().resolvedMaps();
+        maps.forEach(this::ensureMapWorldBindings);
+        if (maps.stream().allMatch(map -> map.world != null && this.server.getWorld(map.world) != null)) {
+            var bee = this.configuration.map().getMapById(pl.mrstudios.deathrun.classic.tobee.ToBeeCandidateProfileService.MAP_ID);
+            if (bee != null) {
+                try {
+                    if (pl.mrstudios.deathrun.classic.tobee.ToBeeWaitingLobby.migrate(
+                            this.configuration.map(), this.server.getWorld(bee.world)))
+                        this.plugin.getLogger().info("[DeathRun] To Bee waiting courtyard migration saved; English map name applied.");
+                } catch (Exception failure) {
+                    this.plugin.getLogger().warning("[DeathRun] To Bee waiting courtyard migration failed: " + failure.getMessage());
+                }
+            }
+        }
+        for (MapConfiguration.MapDefinition map : maps) {
             String mapId = this.mapId(map);
             Arena arena = new Arena(this.mapName(map));
             ArenaServiceRunnable service = new ArenaServiceRunnable(arena, map, this, this.winMapManager, this.rewardService, this.plugin, this.server, this.configuration);

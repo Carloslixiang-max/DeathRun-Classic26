@@ -305,7 +305,6 @@ class ToBeeCandidateProfileServiceTest {
     @Test
     void candidateProfileRetainsExplicitUnknownsInsteadOfInventingThem() {
         assertEquals(List.of(
-                "original-waiting-lobby-not-recovered",
                 "runner-start-layout-generated-from-safe-archive-geometry-not-original",
                 "death-spawns-generated-from-first-stage-control-geometry-not-original",
                 "death-button-to-trap-bindings-partially-reconstructed-runtime-set",

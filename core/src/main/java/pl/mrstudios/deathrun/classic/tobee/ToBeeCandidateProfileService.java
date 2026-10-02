@@ -37,7 +37,7 @@ import java.util.Map;
 public final class ToBeeCandidateProfileService {
 
     public static final String MAP_ID = "to-bee-or-not-to-bee";
-    public static final String MAP_NAME = "蜂与不蜂";
+    public static final String MAP_NAME = "To Bee Or Not To Bee";
 
     private static final List<Integer> ROUTE_GATE_IDS = List.of(6, 7, 2, 1, 4, 5, 3);
     private static final List<Integer> CHECKPOINT_GATE_IDS = List.of(7, 2, 1, 4, 5, 3);
@@ -338,11 +338,12 @@ public final class ToBeeCandidateProfileService {
             return new Result(false, "insufficient-safe-runner-starts",
                     List.of(runnerStarts.size() + "/20"));
 
-        // Rebuilding a candidate profile must preserve an administrator's separate waiting room.
-        map.arenaWaitingLobbyLocation = existing != null
-                && spawnWorldMatches(world, existing.arenaWaitingLobbyLocation)
-                ? existing.arenaWaitingLobbyLocation.clone()
-                : feetLocation(world, runnerStarts.get(0), ToBeeSpawnGeometry.RUNNER_YAW);
+        try {
+            map.arenaWaitingLobbyLocation = ToBeeWaitingLobby.choose(world,
+                    existing == null ? null : existing.arenaWaitingLobbyLocation);
+        } catch (IllegalStateException failure) {
+            return new Result(false, "waiting-courtyard-unavailable", List.of(failure.getMessage()));
+        }
         runnerStarts.stream()
                 .map(pos -> feetLocation(world, pos, ToBeeSpawnGeometry.RUNNER_YAW))
                 .forEach(map.arenaRunnerSpawnLocations::add);
@@ -713,7 +714,6 @@ public final class ToBeeCandidateProfileService {
 
     public static @NotNull List<String> knownRemainingBlockers() {
         return List.of(
-                "original-waiting-lobby-not-recovered",
                 "runner-start-layout-generated-from-safe-archive-geometry-not-original",
                 "death-spawns-generated-from-first-stage-control-geometry-not-original",
                 "death-button-to-trap-bindings-partially-reconstructed-runtime-set",

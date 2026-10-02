@@ -63,7 +63,7 @@ def prepare(map_path, snapshot_path):
     text = map_path.read_text()
     lines, start, end = location_block(text)
     block = ''.join(lines[start:end])
-    block, x_count = re.subn(r"(?m)^(\s*x:)\s*.*$", r"\g<1> 90.5", block)
+    block, x_count = re.subn(r"(?m)^(\s*x:)\s*.*$", r"\g<1> 35.5", block)
     block, yaw_count = re.subn(r"(?m)^(\s*yaw:)\s*.*$", r"\g<1> 33.0", block)
     if x_count != 1 or yaw_count != 1:
         raise ValueError("Location fields were not unique")
@@ -80,10 +80,34 @@ def check(map_path, snapshot_path):
     print("Waiting lobby preservation PASS")
 
 
+
+def legacy(map_path):
+    text = map_path.read_text()
+    lines, start, end = location_block(text)
+    block = ''.join(lines[start:end])
+    for key, value in {'x': 85.5, 'y': 25.0, 'z': 79.5, 'yaw': 90.0, 'pitch': 0.0}.items():
+        block, count = re.subn(r'(?m)^(\s*' + key + r':)\s*.*$', r'\g<1> ' + str(value), block)
+        if count != 1:
+            raise ValueError('Location fields were not unique')
+    map_path.write_text(''.join(lines[:start]) + block + ''.join(lines[end:]))
+
+
+def courtyard(map_path):
+    actual = values(map_path.read_text())
+    expected = {'x': 34.5, 'y': 35.0, 'z': 59.5, 'yaw': 180.0, 'pitch': 0.0}
+    if any(actual[key] != value for key, value in expected.items()):
+        raise ValueError(f'Wrong courtyard landing: {actual}')
+    if 'name: To Bee Or Not To Bee' not in map_path.read_text():
+        raise ValueError('English map name was not applied')
+    print('Waiting courtyard migration PASS')
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('action', choices=['prepare', 'check'])
+    parser.add_argument('action', choices=['prepare', 'check', 'legacy', 'courtyard'])
     parser.add_argument('map', type=Path)
-    parser.add_argument('snapshot', type=Path)
+    parser.add_argument('snapshot', type=Path, nargs='?')
     args = parser.parse_args()
-    (prepare if args.action == 'prepare' else check)(args.map, args.snapshot)
+    if args.action in ('legacy', 'courtyard'):
+        (legacy if args.action == 'legacy' else courtyard)(args.map)
+    else:
+        (prepare if args.action == 'prepare' else check)(args.map, args.snapshot)

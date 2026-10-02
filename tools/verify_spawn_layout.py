@@ -17,3 +17,9 @@ for pos in ((75,25,56),(76,25,57)): assert valid(*pos),pos
 runner=[(x,25,z) for x in range(85,93) for z in range(79,86) if valid(x,25,z) and blocks.get((x,24,z))=='minecraft:grass_block']
 assert len(runner)>=20,len(runner)
 print(f'SPAWN_LAYOUT PASS runner_capacity={len(runner)} death=2 control_landings=23')
+
+# Screenshot 3 courtyard: matching ring, clear full-block landing outside the central pit.
+assert valid(34,35,59), "waiting-courtyard-landing"
+for x,z in ((34,45),(34,57),(28,51),(40,51)):
+    assert blocks.get((x,35,z)) == 'minecraft:light_weighted_pressure_plate', (x,z)
+print('WAITING_COURTYARD PASS location=34.5,35.0,59.5 yaw=180 gold_plate_ring=matched')

@@ -37,7 +37,7 @@ public final class ToBeeSignTranslations {
             new Entry(22, 25, -33, List.of("当心！", "前方可能出现墙壁", "", "")),
             new Entry(23, 29, -19, List.of("召唤随机墙壁", "前方可能出现墙壁", "<<<", "")),
             new Entry(24, 35, 79, List.of("注意！", "深色木块不稳定", "可能突然消失", "")),
-            new Entry(26, 35, 51, List.of("蜂与不蜂", "", "作者：", "Timmetatsch")),
+            new Entry(26, 35, 51, List.of("To Bee Or Not", "To Bee", "作者：", "Timmetatsch")),
             new Entry(27, 44, 21, List.of("淹没地板", "地板可能被淹没", "<<<", "")),
             new Entry(28, 29, -17, List.of("移除地板", "地板可能突然消失", "<<<", "")),
             new Entry(29, 44, 9, List.of("落下炸药", "<<<", "", "")),

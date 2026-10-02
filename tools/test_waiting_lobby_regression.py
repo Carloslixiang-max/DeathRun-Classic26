@@ -52,7 +52,7 @@ maps:
             map_path.write_text(text)
             prepare(map_path, snapshot)
             check(map_path, snapshot)
-            map_path.write_text(map_path.read_text().replace('x: 90.5', 'x: 85.5'))
+            map_path.write_text(map_path.read_text().replace('x: 35.5', 'x: 85.5'))
             with self.assertRaisesRegex(ValueError, 'Waiting lobby was changed'):
                 check(map_path, snapshot)
 
