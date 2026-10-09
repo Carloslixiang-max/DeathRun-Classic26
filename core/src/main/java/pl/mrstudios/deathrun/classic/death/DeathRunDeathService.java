@@ -36,7 +36,10 @@ import static pl.mrstudios.deathrun.api.arena.user.enums.Role.RUNNER;
 
 public final class DeathRunDeathService {
 
-    private static final PotionEffect FIRE_RESISTANCE_EFFECT = new PotionEffect(FIRE_RESISTANCE, 20, 1, false, false, false);
+    // Resolve gameplay effects only when needed, independently of player cleanup.
+    private static final class FireResistanceEffect {
+        private static final PotionEffect INSTANCE = new PotionEffect(FIRE_RESISTANCE, 20, 1, false, false, false);
+    }
     private static final long DEATH_DEBOUNCE_MILLIS = 750L;
     private static final Map<UUID, Long> LAST_DEATH_AT = new ConcurrentHashMap<>();
 
@@ -129,7 +132,7 @@ public final class DeathRunDeathService {
         player.setVelocity(new org.bukkit.util.Vector(0.0, 0.0, 0.0));
         player.setFallDistance(0.0f);
         player.playSound(player.getLocation(), this.configuration.plugin().arenaSoundPlayerDeath, 1.0f, 1.0f);
-        player.addPotionEffect(FIRE_RESISTANCE_EFFECT);
+        player.addPotionEffect(FireResistanceEffect.INSTANCE);
         player.setFireTicks(0);
 
         if (user.isEliminated()) {
