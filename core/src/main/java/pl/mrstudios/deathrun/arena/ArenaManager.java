@@ -761,8 +761,10 @@ public class ArenaManager {
             return;
 
         World world = this.server.getWorld(map.world);
-        if (world != null)
+        if (world != null) {
             world.setAutoSave(false);
+            pl.mrstudios.deathrun.arena.world.ArenaMobProtection.protect(world);
+        }
     }
 
         public void returnPlayerToHub(

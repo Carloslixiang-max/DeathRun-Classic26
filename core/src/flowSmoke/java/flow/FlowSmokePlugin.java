@@ -45,9 +45,12 @@ public final class FlowSmokePlugin extends JavaPlugin {
             var deathrun = (Entrypoint) Bukkit.getPluginManager().getPlugin("DeathRun");
             var runtime = deathrun.getArenaManager().runtimeByMapId(args[0]);
             if (runtime == null || !runtime.arena().getUsers().isEmpty()) throw new AssertionError("map not idle");
-            new Simulation(this, runtime.map()).run();
+            if (command.getName().equals("mob-smoke"))
+                new MobSmoke().run(this, deathrun.getArenaManager(), runtime);
+            else
+                new Simulation(this, runtime.map()).run();
         } catch (Throwable failure) {
-            getLogger().log(java.util.logging.Level.SEVERE, "[DR-FLOW] FAIL", failure);
+            getLogger().log(java.util.logging.Level.SEVERE, (command.getName().equals("mob-smoke") ? "[DR-MOB] FAIL" : "[DR-FLOW] FAIL"), failure);
         }
         return true;
     }

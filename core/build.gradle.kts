@@ -3,7 +3,7 @@ plugins {
     id("com.gradleup.shadow") version "9.6.1"
 }
 
-val manualVersion = "1.4.1-classic26.9"
+val manualVersion = "1.4.1-classic26.10"
 
 project.group = project.parent?.group!!
 project.version = project.parent?.version!!
@@ -60,7 +60,7 @@ tasks {
     }
 
     shadowJar {
-        archiveFileName.set("DeathRun-Classic26-1.4.1-classic26.9.jar")
+        archiveFileName.set("DeathRun-Classic26-1.4.1-classic26.10.jar")
         archiveClassifier.set("")
         exclude("META-INF/*.SF", "META-INF/*.DSA", "META-INF/*.RSA")
     }

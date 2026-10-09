@@ -6,6 +6,8 @@ depend: [DeathRun]
 commands:
   flow-smoke:
     permission: deathrun.flowsmoke
+  mob-smoke:
+    permission: deathrun.flowsmoke
 permissions:
   deathrun.flowsmoke:
     default: op
