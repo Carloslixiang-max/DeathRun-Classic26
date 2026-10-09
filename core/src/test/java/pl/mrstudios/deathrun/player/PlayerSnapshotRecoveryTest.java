@@ -128,10 +128,12 @@ class PlayerSnapshotRecoveryTest {
         assertTrue(service.isCurrentSessionSnapshot(playerId));
     }
     @Test void leavingEventCannotReenterOrRecoverUntilOuterRestoreCompletes() throws Exception {
-        journal("PENDING");
         var config=new Configuration(new PluginConfiguration(),new LanguageConfiguration(),new MapConfiguration());
         var wins=new pl.mrstudios.deathrun.arena.win.WinMapManager();
-        var manager=new ArenaManager(plugin,server,config,wins,null);
+        var manager=new ArenaManager(plugin,server,config,wins,null) {
+            @Override public boolean isMapConfigured(MapConfiguration.MapDefinition map) { return true; }
+        };
+        assertTrue(manager.ensureSnapshot(player));
         var map=new MapConfiguration.MapDefinition(); map.id="bee"; map.world="saved";
         var arena=new pl.mrstudios.deathrun.arena.Arena("bee");
         arena.getUsers().add(new pl.mrstudios.deathrun.arena.user.User(player));
@@ -141,6 +143,10 @@ class PlayerSnapshotRecoveryTest {
         Field field=ArenaManager.class.getDeclaredField("runtimesByMapId"); field.setAccessible(true);
         @SuppressWarnings("unchecked") Map<String,ArenaManager.ArenaRuntime> runtimes=(Map<String,ArenaManager.ArenaRuntime>)field.get(manager);
         runtimes.put("bee",new ArenaManager.ArenaRuntime("bee",map,arena,service));
+        var otherMap=new MapConfiguration.MapDefinition(); otherMap.id="other"; otherMap.world="saved";
+        otherMap.arenaWaitingLobbyLocation=new Location(world,34.5,35,59.5);
+        var otherArena=new pl.mrstudios.deathrun.arena.Arena("other");
+        runtimes.put("other",new ArenaManager.ArenaRuntime("other",otherMap,otherArena,service));
         field=ArenaManager.class.getDeclaredField("playerMapIndex"); field.setAccessible(true);
         @SuppressWarnings("unchecked") Map<UUID,String> index=(Map<UUID,String>)field.get(manager);
         index.put(playerId,"bee");
@@ -151,10 +157,11 @@ class PlayerSnapshotRecoveryTest {
             assertFalse(manager.ensureSnapshot(player));
             assertFalse(manager.restorePendingSnapshot(player));
             assertFalse(manager.leaveCurrentMap(player,false));
-            assertEquals(ArenaManager.JoinResult.PLAYER_STATE_SAVE_FAILED,manager.joinMap(player,"bee"));
+            assertEquals(ArenaManager.JoinResult.PLAYER_STATE_SAVE_FAILED,manager.joinMap(player,"other"));
         };
         assertTrue(manager.leaveCurrentMap(player,false));
         assertTrue(arena.getUsers().isEmpty());
+        assertTrue(otherArena.getUsers().isEmpty());
         assertFalse(manager.hasPendingSnapshot(player));
         assertFalse(manager.isRecoveryBlocked(player));
         assertEquals(List.of("teleport","inventory","save-player"),calls);
