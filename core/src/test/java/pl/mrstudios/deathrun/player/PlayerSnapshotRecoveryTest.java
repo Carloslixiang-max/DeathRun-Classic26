@@ -26,7 +26,8 @@ class PlayerSnapshotRecoveryTest {
     @TempDir Path root;
     final UUID playerId=UUID.randomUUID(), worldId=UUID.randomUUID();
     final List<String> calls=new ArrayList<>();
-    boolean teleportAllowed=true, rejectStorage=false, worldsAvailable=true;
+    boolean teleportAllowed=true, rejectStorage=false, worldsAvailable=true, rejectCapture=false;
+    java.util.function.Consumer<org.bukkit.event.Event> eventHook = ignored -> {};
     Plugin plugin; Player player; World world; Server server;
 
     @BeforeEach void setup() throws Exception {
@@ -40,6 +41,10 @@ class PlayerSnapshotRecoveryTest {
             case "getName", "getVersion", "getBukkitVersion" -> "recovery-test";
             case "getScheduler" -> proxy(org.bukkit.scheduler.BukkitScheduler.class,(name,arguments) ->
                     name.equals("runTaskTimer") ? proxy(org.bukkit.scheduler.BukkitTask.class,(n,a)->null) : null);
+            case "getPluginManager" -> proxy(org.bukkit.plugin.PluginManager.class,(name,arguments) -> {
+                if (name.equals("callEvent")) eventHook.accept((org.bukkit.event.Event) arguments[0]);
+                return null;
+            });
             default -> null;
         });
         // Paper's public setter logs ServerBuildInfo through a server-only service provider.
@@ -51,7 +56,10 @@ class PlayerSnapshotRecoveryTest {
             case "getLogger" -> Logger.getLogger("recovery-test"); default -> null;
         });
         PlayerInventory inventory=proxy(PlayerInventory.class, (method,args) -> {
-            if(method.equals("getStorageContents")) return new ItemStack[36];
+            if(method.equals("getStorageContents")) {
+                if (rejectCapture) throw new IllegalStateException("injected capture failure");
+                return new ItemStack[36];
+            }
             if(method.equals("getArmorContents")) return new ItemStack[4];
             if(method.equals("setStorageContents")) {
                 calls.add("inventory");
@@ -82,7 +90,74 @@ class PlayerSnapshotRecoveryTest {
     void journal(String phase) throws Exception {
         Files.createDirectories(journal().getParent());
         Files.writeString(journal(), "format-version: 2\nuuid: '"+playerId+"'\nrecovery-phase: "+phase
-                +"\nlocation:\n  world-uuid: '"+worldId+"'\n  world-name: saved\n  x: 85.5\n  y: 25\n  z: 82.5\n");
+                +"\nlocation:\n  world-uuid: '"+worldId+"'\n  world-name: saved\n  x: 85.5\n  y: 25\n  z: 82.5\n  yaw: 0\n  pitch: 0\n"
+                +"inventory:\n  storage: ["+String.join(", ",Collections.nCopies(36,"null"))+"]\n"
+                +"  armor: [null, null, null, null]\n");
+    }
+    @Test void incompleteJournalNeverTeleportsOrClearsInventory() throws Exception {
+        journal("PENDING");
+        var yaml=org.bukkit.configuration.file.YamlConfiguration.loadConfiguration(journal().toFile());
+        yaml.set("inventory.storage",null); yaml.save(journal().toFile());
+        String original=Files.readString(journal());
+        var service=new PlayerSnapshotService(plugin);
+        assertFalse(service.restore(player));
+        assertTrue(calls.isEmpty());
+        assertEquals(original,Files.readString(journal()));
+    }
+    @Test void invalidSlotAndNonFiniteLocationAreRejectedBeforeTeleport() throws Exception {
+        journal("PENDING");
+        var yaml=org.bukkit.configuration.file.YamlConfiguration.loadConfiguration(journal().toFile());
+        var slots=new ArrayList<Object>(Collections.nCopies(36,null)); slots.set(0,"not-an-item");
+        yaml.set("inventory.storage",slots); yaml.save(journal().toFile());
+        var service=new PlayerSnapshotService(plugin);
+        assertFalse(service.restore(player)); assertTrue(calls.isEmpty());
+        journal("PENDING");
+        yaml=org.bukkit.configuration.file.YamlConfiguration.loadConfiguration(journal().toFile());
+        yaml.set("location.x",Double.NaN); yaml.save(journal().toFile());
+        assertFalse(service.restore(player)); assertTrue(calls.isEmpty());
+    }
+    @Test void captureGetterFailureReturnsFailureWithoutLeavingSessionOwnership() throws Exception {
+        rejectCapture=true;
+        var service=new PlayerSnapshotService(plugin);
+        assertFalse(service.capture(player));
+        assertFalse(service.hasPending(playerId));
+        assertFalse(service.isCurrentSessionSnapshot(playerId));
+        assertFalse(Files.exists(root.resolve("recovery/"+playerId+".yml.tmp")));
+        rejectCapture=false;
+        assertTrue(service.capture(player));
+        assertTrue(service.isCurrentSessionSnapshot(playerId));
+    }
+    @Test void leavingEventCannotReenterOrRecoverUntilOuterRestoreCompletes() throws Exception {
+        journal("PENDING");
+        var config=new Configuration(new PluginConfiguration(),new LanguageConfiguration(),new MapConfiguration());
+        var wins=new pl.mrstudios.deathrun.arena.win.WinMapManager();
+        var manager=new ArenaManager(plugin,server,config,wins,null);
+        var map=new MapConfiguration.MapDefinition(); map.id="bee"; map.world="saved";
+        var arena=new pl.mrstudios.deathrun.arena.Arena("bee");
+        arena.getUsers().add(new pl.mrstudios.deathrun.arena.user.User(player));
+        var service=new pl.mrstudios.deathrun.arena.ArenaServiceRunnable(arena,map,manager,wins,null,plugin,server,config) {
+            @Override protected void setState(pl.mrstudios.deathrun.api.arena.enums.GameState state) {}
+        };
+        Field field=ArenaManager.class.getDeclaredField("runtimesByMapId"); field.setAccessible(true);
+        @SuppressWarnings("unchecked") Map<String,ArenaManager.ArenaRuntime> runtimes=(Map<String,ArenaManager.ArenaRuntime>)field.get(manager);
+        runtimes.put("bee",new ArenaManager.ArenaRuntime("bee",map,arena,service));
+        field=ArenaManager.class.getDeclaredField("playerMapIndex"); field.setAccessible(true);
+        @SuppressWarnings("unchecked") Map<UUID,String> index=(Map<UUID,String>)field.get(manager);
+        index.put(playerId,"bee");
+        eventHook=event -> {
+            if (!(event instanceof pl.mrstudios.deathrun.api.arena.event.arena.ArenaUserLeftEvent)) return;
+            assertNull(manager.runtimeForPlayer(player));
+            assertTrue(manager.isRecoveryBlocked(player));
+            assertFalse(manager.ensureSnapshot(player));
+            assertFalse(manager.restorePendingSnapshot(player));
+            assertFalse(manager.leaveCurrentMap(player,false));
+            assertEquals(ArenaManager.JoinResult.PLAYER_STATE_SAVE_FAILED,manager.joinMap(player,"bee"));
+        };
+        assertTrue(manager.leaveCurrentMap(player,false));
+        assertTrue(arena.getUsers().isEmpty());
+        assertFalse(manager.hasPendingSnapshot(player));
+        assertFalse(manager.isRecoveryBlocked(player));
+        assertEquals(List.of("teleport","inventory","save-player"),calls);
     }
     @Test void actualRejectedTeleportNeverAppliesInventory() throws Exception {
         journal("PENDING"); teleportAllowed=false;

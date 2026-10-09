@@ -76,48 +76,50 @@ public final class PlayerSnapshotService {
             return false;
         }
 
-        this.liveScoreboards.put(playerId, player.getScoreboard());
-
-        YamlConfiguration yaml = new YamlConfiguration();
-        yaml.set("format-version", FORMAT_VERSION);
-        yaml.set("uuid", playerId.toString());
-        yaml.set("name", player.getName());
-
-        yaml.set("inventory.storage", Arrays.asList(player.getInventory().getStorageContents()));
-        yaml.set("inventory.armor", Arrays.asList(player.getInventory().getArmorContents()));
-        yaml.set("inventory.offhand", player.getInventory().getItemInOffHand());
-        yaml.set("inventory.held-slot", player.getInventory().getHeldItemSlot());
-
-        Location location = player.getLocation();
-        World world = location.getWorld();
-        yaml.set("location.world-name", world == null ? null : world.getName());
-        yaml.set("location.world-uuid", world == null ? null : world.getUID().toString());
-        yaml.set("location.x", location.getX());
-        yaml.set("location.y", location.getY());
-        yaml.set("location.z", location.getZ());
-        yaml.set("location.yaw", location.getYaw());
-        yaml.set("location.pitch", location.getPitch());
-
-        yaml.set("gamemode", player.getGameMode().name());
-        yaml.set("allow-flight", player.getAllowFlight());
-        yaml.set("flying", player.isFlying());
-        yaml.set("level", player.getLevel());
-        yaml.set("exp", player.getExp());
-        yaml.set("total-experience", player.getTotalExperience());
-        yaml.set("health", player.getHealth());
-        yaml.set("food", player.getFoodLevel());
-        yaml.set("saturation", player.getSaturation());
-        yaml.set("exhaustion", player.getExhaustion());
-        yaml.set("potion-effects", new ArrayList<>(player.getActivePotionEffects()));
-        yaml.set("fire-ticks", player.getFireTicks());
-        yaml.set("fall-distance", player.getFallDistance());
-        yaml.set("walk-speed", player.getWalkSpeed());
-        yaml.set("fly-speed", player.getFlySpeed());
-
-        this.writeScoreboard(yaml, player.getScoreboard());
-
         File temp = new File(this.recoveryDirectory, playerId + ".yml.tmp");
         try {
+            this.liveScoreboards.put(playerId, player.getScoreboard());
+
+            YamlConfiguration yaml = new YamlConfiguration();
+            yaml.set("format-version", FORMAT_VERSION);
+            yaml.set("uuid", playerId.toString());
+            yaml.set("name", player.getName());
+
+            yaml.set("inventory.storage", Arrays.asList(player.getInventory().getStorageContents()));
+            yaml.set("inventory.armor", Arrays.asList(player.getInventory().getArmorContents()));
+            yaml.set("inventory.offhand", player.getInventory().getItemInOffHand());
+            yaml.set("inventory.held-slot", player.getInventory().getHeldItemSlot());
+
+            Location location = player.getLocation();
+            World world = location.getWorld();
+            if (world == null) throw new IllegalStateException("player world is unavailable");
+            yaml.set("location.world-name", world == null ? null : world.getName());
+            yaml.set("location.world-uuid", world == null ? null : world.getUID().toString());
+            yaml.set("location.x", location.getX());
+            yaml.set("location.y", location.getY());
+            yaml.set("location.z", location.getZ());
+            yaml.set("location.yaw", location.getYaw());
+            yaml.set("location.pitch", location.getPitch());
+
+            yaml.set("gamemode", player.getGameMode().name());
+            yaml.set("allow-flight", player.getAllowFlight());
+            yaml.set("flying", player.isFlying());
+            yaml.set("level", player.getLevel());
+            yaml.set("exp", player.getExp());
+            yaml.set("total-experience", player.getTotalExperience());
+            yaml.set("health", player.getHealth());
+            yaml.set("food", player.getFoodLevel());
+            yaml.set("saturation", player.getSaturation());
+            yaml.set("exhaustion", player.getExhaustion());
+            yaml.set("potion-effects", new ArrayList<>(player.getActivePotionEffects()));
+            yaml.set("fire-ticks", player.getFireTicks());
+            yaml.set("fall-distance", player.getFallDistance());
+            yaml.set("walk-speed", player.getWalkSpeed());
+            yaml.set("fly-speed", player.getFlySpeed());
+
+            this.writeScoreboard(yaml, player.getScoreboard());
+            this.validatePayload(yaml);
+
             yaml.save(temp);
             try (FileChannel channel = FileChannel.open(temp.toPath(), StandardOpenOption.WRITE)) {
                 channel.force(true);
@@ -171,6 +173,7 @@ public final class PlayerSnapshotService {
                 return true;
             }
 
+            this.validatePayload(yaml);
             Location target = this.readLocation(yaml);
             if (target == null || target.getWorld() == null)
                 throw new IllegalStateException("snapshot world is unavailable");
@@ -429,8 +432,8 @@ public final class PlayerSnapshotService {
     private @NotNull GameMode readGameMode(@NotNull YamlConfiguration yaml) {
         try {
             return GameMode.valueOf(yaml.getString("gamemode", GameMode.SURVIVAL.name()));
-        } catch (IllegalArgumentException ignored) {
-            return GameMode.SURVIVAL;
+        } catch (IllegalArgumentException invalidMode) {
+            throw new IllegalStateException("invalid saved game mode", invalidMode);
         }
     }
 
@@ -473,6 +476,9 @@ public final class PlayerSnapshotService {
                 if (formatVersion < 1 || formatVersion > FORMAT_VERSION)
                     throw new IllegalStateException("unsupported recovery format " + formatVersion);
 
+                RecoveryTransaction.Phase phase = RecoveryTransaction.Phase.valueOf(yaml.getString("recovery-phase", "PENDING"));
+                if (phase != RecoveryTransaction.Phase.APPLIED) this.validatePayload(yaml);
+
                 try {
                     Files.move(
                             temp.toPath(),
@@ -498,6 +504,25 @@ public final class PlayerSnapshotService {
 
     private @NotNull File fileFor(@NotNull UUID playerId) {
         return new File(this.recoveryDirectory, playerId + ".yml");
+    }
+
+    private void validatePayload(YamlConfiguration yaml) {
+        this.readItemArray(yaml, "inventory.storage", 36);
+        this.readItemArray(yaml, "inventory.armor", 4);
+        Object offhand = yaml.get("inventory.offhand");
+        if (offhand != null && !(offhand instanceof ItemStack))
+            throw new IllegalStateException("invalid recovery offhand item");
+        for (String field : List.of("x", "y", "z", "yaw", "pitch")) {
+            Object value = yaml.get("location." + field);
+            if (!(value instanceof Number number) || !Double.isFinite(number.doubleValue()))
+                throw new IllegalStateException("missing or invalid recovery location." + field);
+        }
+        for (String field : List.of("health", "exp", "saturation", "exhaustion", "fall-distance", "walk-speed", "fly-speed")) {
+            Object value = yaml.get(field);
+            if (value != null && (!(value instanceof Number number) || !Double.isFinite(number.doubleValue())))
+                throw new IllegalStateException("invalid recovery " + field);
+        }
+        this.readGameMode(yaml);
     }
 
     private @Nullable Location readLocation(@NotNull YamlConfiguration yaml) {
@@ -531,12 +556,15 @@ public final class PlayerSnapshotService {
 
     private ItemStack[] readItemArray(@NotNull YamlConfiguration yaml, @NotNull String path, int size) {
         ItemStack[] output = new ItemStack[size];
-        List<?> values = yaml.getList(path, List.of());
-        int limit = Math.min(size, values.size());
-        for (int i = 0; i < limit; i++) {
+        List<?> values = yaml.getList(path);
+        if (values == null || values.size() != size)
+            throw new IllegalStateException("incomplete recovery " + path + ": expected " + size + " slots");
+        for (int i = 0; i < size; i++) {
             Object value = values.get(i);
             if (value instanceof ItemStack item)
                 output[i] = item;
+            else if (value != null)
+                throw new IllegalStateException("invalid recovery item at " + path + "[" + i + "]");
         }
         return output;
     }

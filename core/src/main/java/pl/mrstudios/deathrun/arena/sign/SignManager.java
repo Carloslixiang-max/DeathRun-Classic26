@@ -138,8 +138,7 @@ public class SignManager {
         if (runtime == null)
             return false;
 
-        this.arenaManager.ensureMapWorldBindings(runtime.map());
-
+        // Runtime construction/reload binds map locations once; joining only validates them.
         if (!this.arenaManager.isMapConfigured(runtime.map()))
             return false;
 

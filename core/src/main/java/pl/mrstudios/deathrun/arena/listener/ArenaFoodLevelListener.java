@@ -20,7 +20,7 @@ public class ArenaFoodLevelListener implements Listener {
         this.arenaManager = arenaManager;
     }
 
-    @EventHandler(priority = EventPriority.MONITOR)
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onFoodLevelChange(
             @NotNull FoodLevelChangeEvent event
     ) {

@@ -59,6 +59,7 @@ public class ArenaManager {
     private final Map<String, ArenaRuntime> runtimesByMapId = new LinkedHashMap<>();
     private final Map<UUID, String> playerMapIndex = new HashMap<>();
     private final Set<String> editLockedMaps = new HashSet<>();
+    private final Set<UUID> leavingPlayers = new HashSet<>();
 
     public ArenaManager(
             @NotNull Plugin plugin,
@@ -106,7 +107,7 @@ public class ArenaManager {
     }
 
     public boolean isRecoveryBlocked(Player player) {
-        return this.isSnapshotRestoring(player) || (this.hasPendingSnapshot(player)
+        return this.leavingPlayers.contains(player.getUniqueId()) || this.isSnapshotRestoring(player) || (this.hasPendingSnapshot(player)
                 && this.runtimeForPlayer(player) == null
                 && (this.signManager == null || !this.signManager.isQueued(player)));
     }
@@ -121,6 +122,7 @@ public class ArenaManager {
 
     public boolean ensureSnapshot(@NotNull Player player) {
         UUID playerId = player.getUniqueId();
+        if (this.leavingPlayers.contains(playerId)) return false;
 
         if (!this.playerSnapshotService.hasPending(playerId))
             return this.playerSnapshotService.capture(player);
@@ -139,6 +141,7 @@ public class ArenaManager {
     }
 
     public boolean restorePendingSnapshot(@NotNull Player player) {
+        if (this.leavingPlayers.contains(player.getUniqueId())) return false;
         // A restored lobby player must not remain eligible for automatic arena admission.
         // Clear queue ownership before restoring, so failures remain recovery-protected.
         if (this.runtimeForPlayer(player) == null)
@@ -344,6 +347,9 @@ public class ArenaManager {
             @NotNull Player player,
             @NotNull String mapId
     ) {
+        if (this.leavingPlayers.contains(player.getUniqueId()))
+            return JoinResult.PLAYER_STATE_SAVE_FAILED;
+
         ArenaRuntime runtime = this.runtimeByMapId(mapId);
         if (runtime == null)
             return JoinResult.MAP_UNAVAILABLE;
@@ -511,56 +517,63 @@ public class ArenaManager {
             @NotNull Player player,
             boolean notifyArena
     ) {
-        boolean removed = false;
+        UUID playerId = player.getUniqueId();
+        if (!this.leavingPlayers.add(playerId)) return false;
+        try {
+            // Release ownership before publishing the leave event. Event handlers may
+            // request another join, but the transition lock owns the snapshot until restore finishes.
+            this.playerMapIndex.remove(playerId);
+            boolean removed = false;
 
-        for (ArenaRuntime runtime : this.runtimesByMapId.values()) {
-            IUser user = runtime.arena().getUser(player);
-            if (user == null)
-                continue;
+            for (ArenaRuntime runtime : new ArrayList<>(this.runtimesByMapId.values())) {
+                IUser user = runtime.arena().getUser(player);
+                if (user == null)
+                    continue;
 
-            runtime.arena().getUsers().remove(user);
-            runtime.service().removeBackgroundSongPlayer(player);
-            this.winMapManager.reclaimMap(player);
+                runtime.arena().getUsers().remove(user);
+                runtime.service().removeBackgroundSongPlayer(player);
+                this.winMapManager.reclaimMap(player);
 
-            if (runtime.arena().getSidebar() != null)
-                runtime.arena().getSidebar().removeViewer(player);
+                if (runtime.arena().getSidebar() != null)
+                    runtime.arena().getSidebar().removeViewer(player);
 
-            if (notifyArena && (runtime.arena().getGameState() == WAITING || runtime.arena().getGameState() == STARTING)) {
-                int maxPlayers = this.maxPlayers(runtime.map());
-                runtime.arena().getUsers().stream()
-                        .map(IUser::asBukkit)
-                        .filter(Objects::nonNull)
-                        .forEach((target) -> target.sendMessage(miniMessage().deserialize(
-                                this.configuration.language().chatMessageArenaPlayerLeft
-                                        .replace("<player>", this.safePlayerName(player))
-                                        .replace("<currentPlayers>", valueOf(runtime.arena().getUsers().size()))
-                                        .replace("<maxPlayers>", valueOf(maxPlayers))
-                        )));
+                if (notifyArena && (runtime.arena().getGameState() == WAITING || runtime.arena().getGameState() == STARTING)) {
+                    int maxPlayers = this.maxPlayers(runtime.map());
+                    runtime.arena().getUsers().stream()
+                            .map(IUser::asBukkit)
+                            .filter(Objects::nonNull)
+                            .forEach((target) -> target.sendMessage(miniMessage().deserialize(
+                                    this.configuration.language().chatMessageArenaPlayerLeft
+                                            .replace("<player>", this.safePlayerName(player))
+                                            .replace("<currentPlayers>", valueOf(runtime.arena().getUsers().size()))
+                                            .replace("<maxPlayers>", valueOf(maxPlayers))
+                            )));
+                }
+
+                this.server.getPluginManager().callEvent(new ArenaUserLeftEvent(user, runtime.arena()));
+                removed = true;
             }
 
-            this.server.getPluginManager().callEvent(new ArenaUserLeftEvent(user, runtime.arena()));
-            removed = true;
-        }
+            if (removed) {
+                ClassicStrafeService.clearCooldowns(playerId);
+                DeathNavigatorService.clearPlayer(playerId);
+                DeathRunDeathService.clearPlayer(playerId);
+                TrapActivationService.clearPlayer(playerId);
 
-        this.playerMapIndex.remove(player.getUniqueId());
-        if (removed) {
-            UUID playerId = player.getUniqueId();
-            ClassicStrafeService.clearCooldowns(playerId);
-            DeathNavigatorService.clearPlayer(playerId);
-            DeathRunDeathService.clearPlayer(playerId);
-            TrapActivationService.clearPlayer(playerId);
-
-            this.server.getOnlinePlayers().forEach((onlinePlayer) -> {
-                onlinePlayer.showPlayer(this.plugin, player);
-                player.showPlayer(this.plugin, onlinePlayer);
-            });
-            if (!this.playerSnapshotService.restore(player))
-                this.plugin.getLogger().warning(
-                        "[DeathRun] Player " + player.getName()
-                                + " left the runtime but recovery is still pending."
-                );
+                this.server.getOnlinePlayers().forEach((onlinePlayer) -> {
+                    onlinePlayer.showPlayer(this.plugin, player);
+                    player.showPlayer(this.plugin, onlinePlayer);
+                });
+                if (!this.playerSnapshotService.restore(player))
+                    this.plugin.getLogger().warning(
+                            "[DeathRun] Player " + player.getName()
+                                    + " left the runtime but recovery is still pending."
+                    );
+            }
+            return removed;
+        } finally {
+            this.leavingPlayers.remove(playerId);
         }
-        return removed;
     }
 
     public boolean leaveQueue(
