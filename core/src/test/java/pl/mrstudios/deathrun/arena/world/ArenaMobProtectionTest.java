@@ -48,6 +48,10 @@ class ArenaMobProtectionTest {
             listener.onCreatureSpawn(outside); assertFalse(outside.isCancelled(),reason.name());
         }
     }
+    @Test void spawnGuardDoesNotBlockArmorStandDecorationsEvenWithDefaultReason() {
+        var stand=new CreatureSpawnEvent(entity(ArmorStand.class,arenaWorld,SpawnReason.DEFAULT,false,Set.of()),SpawnReason.DEFAULT);
+        listener().onCreatureSpawn(stand); assertFalse(stand.isCancelled());
+    }
     @Test void cleanupRemovesAmbientMobsButPreservesIntentionalAndDecorativeEntities() {
         assertTrue(ArenaMobProtection.removeAmbient(entity(Zombie.class,arenaWorld,SpawnReason.NATURAL,false,Set.of())));
         assertTrue(ArenaMobProtection.removeAmbient(entity(Cow.class,arenaWorld,SpawnReason.DEFAULT,false,Set.of())));

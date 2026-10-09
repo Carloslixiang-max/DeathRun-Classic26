@@ -33,7 +33,9 @@ final class MobSmoke {
             Villager npc=world.spawn(point,Villager.class,SpawnReason.CUSTOM,false,mob->mob.setAI(false)); created.add(npc);
             Villager summoned=world.spawn(point,Villager.class,SpawnReason.COMMAND,false,mob->mob.setAI(false)); created.add(summoned);
             ArmorStand decoration=world.spawn(point,ArmorStand.class); created.add(decoration);
-            check(npc.isValid() && summoned.isValid() && decoration.isValid(),"NPC, command and decoration preserved");
+            check(npc.isValid() && summoned.isValid() && decoration.isValid(),"NPC, command and decoration preserved: npc="+npc.isValid()+"/"+npc.getEntitySpawnReason()
+                    +" command="+summoned.isValid()+"/"+summoned.getEntitySpawnReason()
+                    +" decoration="+decoration.isValid()+"/"+decoration.getEntitySpawnReason());
             Set<UUID> before=new HashSet<>(); world.getEntities().forEach(e->before.add(e.getUniqueId()));
             giantTrap.start();
             Giant giant=world.getEntitiesByClass(Giant.class).stream().filter(e->!before.contains(e.getUniqueId())).findFirst().orElseThrow();

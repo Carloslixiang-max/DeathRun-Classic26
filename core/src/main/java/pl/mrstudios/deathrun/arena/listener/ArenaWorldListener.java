@@ -32,7 +32,8 @@ public class ArenaWorldListener implements Listener {
 
     @EventHandler(priority = org.bukkit.event.EventPriority.HIGHEST, ignoreCancelled = true)
     public void onCreatureSpawn(@NotNull CreatureSpawnEvent event) {
-        if (this.arenaManager.isDeathRunWorld(event.getLocation().getWorld())
+        if (event.getEntity() instanceof org.bukkit.entity.Mob
+                && this.arenaManager.isDeathRunWorld(event.getLocation().getWorld())
                 && ArenaMobProtection.blocks(event.getSpawnReason()))
             event.setCancelled(true);
     }
