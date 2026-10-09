@@ -363,13 +363,13 @@ public class ArenaManager {
         if (runtime.arena().getGameState() != WAITING && runtime.arena().getGameState() != STARTING)
             return JoinResult.MATCH_IN_PROGRESS;
 
-        int maxPlayers = this.maxPlayers(runtime.map());
-        if (runtime.arena().getUsers().size() >= maxPlayers)
-            return JoinResult.MAP_FULL;
-
         ArenaRuntime previousRuntime = this.runtimeForPlayer(player);
         if (previousRuntime != null && previousRuntime.mapId().equalsIgnoreCase(runtime.mapId()))
             return JoinResult.ALREADY_IN_MAP;
+
+        int maxPlayers = this.maxPlayers(runtime.map());
+        if (runtime.arena().getUsers().size() >= maxPlayers)
+            return JoinResult.MAP_FULL;
 
         if (this.signManager != null)
             this.signManager.leaveQueue(player);
@@ -987,7 +987,7 @@ public class ArenaManager {
                 && location.getWorld().getUID().equals(world.getUID());
     }
 
-    private boolean preparePlayerForWaiting(
+    public boolean preparePlayerForWaiting(
             @NotNull Player player,
             @NotNull MapConfiguration.MapDefinition map
     ) {

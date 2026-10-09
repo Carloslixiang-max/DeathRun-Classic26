@@ -1,0 +1,11 @@
+name: DeathRunFlowSmoke
+version: 1.0
+main: flow.FlowSmokePlugin
+api-version: "26.2"
+depend: [DeathRun]
+commands:
+  flow-smoke:
+    permission: deathrun.flowsmoke
+permissions:
+  deathrun.flowsmoke:
+    default: op

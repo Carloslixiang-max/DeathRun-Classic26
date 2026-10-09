@@ -3,7 +3,7 @@ plugins {
     id("com.gradleup.shadow") version "9.6.1"
 }
 
-val manualVersion = "1.4.1-classic26.8"
+val manualVersion = "1.4.1-classic26.9"
 
 project.group = project.parent?.group!!
 project.version = project.parent?.version!!
@@ -60,7 +60,7 @@ tasks {
     }
 
     shadowJar {
-        archiveFileName.set("DeathRun-Classic26-1.4.1-classic26.8.jar")
+        archiveFileName.set("DeathRun-Classic26-1.4.1-classic26.9.jar")
         archiveClassifier.set("")
         exclude("META-INF/*.SF", "META-INF/*.DSA", "META-INF/*.RSA")
     }
@@ -68,4 +68,14 @@ tasks {
     build {
         dependsOn(shadowJar)
     }
+}
+
+// CI-only player-flow simulator; never packaged in the production plugin.
+val flowSmoke by sourceSets.creating {
+    compileClasspath += sourceSets.main.get().output + sourceSets.main.get().compileClasspath
+}
+tasks.register<Jar>("flowSmokeJar") {
+    dependsOn(tasks.named(flowSmoke.classesTaskName))
+    archiveFileName.set("DeathRun-FlowSmoke.jar")
+    from(flowSmoke.output)
 }

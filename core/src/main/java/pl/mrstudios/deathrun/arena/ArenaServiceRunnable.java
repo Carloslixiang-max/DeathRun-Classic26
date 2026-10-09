@@ -157,16 +157,16 @@ public class ArenaServiceRunnable extends BukkitRunnable {
             location.getBlock().setType(restoreMaterial);
         }
 
-        this.arena.getUsers().stream()
+        // Countdown cancellation must use the same checked preparation as a new join.
+        // In particular, preserve the exit bed and never leave a rejected teleport
+        // attached to a WAITING match. Leaving can mutate users, so iterate a copy.
+        new ArrayList<>(this.arena.getUsers()).stream()
                 .map(IUser::asBukkit)
                 .filter(Objects::nonNull)
-                .forEach((player) -> {
-                                        this.winMapManager.reclaimMap(player);
-                    player.getInventory().clear();
-                    player.getInventory().setArmorContents(new ItemStack[4]);
-                    player.getInventory().setItemInOffHand(null);
-                    player.setAllowFlight(false);
-                    player.teleport(this.map.arenaWaitingLobbyLocation);
+                .forEach(player -> {
+                    this.winMapManager.reclaimMap(player);
+                    if (!this.arenaManager.preparePlayerForWaiting(player, this.map))
+                        this.arenaManager.leaveCurrentMap(player, false);
                 });
 
         this.arena.getUsers().forEach((user) -> {
