@@ -128,7 +128,7 @@ class PlayerSnapshotRecoveryTest {
         assertTrue(service.isCurrentSessionSnapshot(playerId));
     }
     @Test void leavingEventCannotReenterOrRecoverUntilOuterRestoreCompletes() throws Exception {
-        var config=new Configuration(new PluginConfiguration(),new LanguageConfiguration(),new MapConfiguration());
+        var config=new Configuration(null,new LanguageConfiguration(),new MapConfiguration());
         var wins=new pl.mrstudios.deathrun.arena.win.WinMapManager();
         var manager=new ArenaManager(plugin,server,config,wins,null) {
             @Override public boolean isMapConfigured(MapConfiguration.MapDefinition map) { return true; }
@@ -139,6 +139,7 @@ class PlayerSnapshotRecoveryTest {
         arena.getUsers().add(new pl.mrstudios.deathrun.arena.user.User(player));
         var service=new pl.mrstudios.deathrun.arena.ArenaServiceRunnable(arena,map,manager,wins,null,plugin,server,config) {
             @Override protected void setState(pl.mrstudios.deathrun.api.arena.enums.GameState state) {}
+            @Override protected void resetRoundState() {}
         };
         Field field=ArenaManager.class.getDeclaredField("runtimesByMapId"); field.setAccessible(true);
         @SuppressWarnings("unchecked") Map<String,ArenaManager.ArenaRuntime> runtimes=(Map<String,ArenaManager.ArenaRuntime>)field.get(manager);

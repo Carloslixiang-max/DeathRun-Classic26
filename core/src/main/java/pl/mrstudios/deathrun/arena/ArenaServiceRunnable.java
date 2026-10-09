@@ -830,7 +830,7 @@ public class ArenaServiceRunnable extends BukkitRunnable {
                 return true;
         }
 
-        private void resetRoundState() {
+        protected void resetRoundState() {
                                 this.forceStartRequested = false;
                 this.deathVictory = false;
                 this.barrierTimer = this.configuration.plugin().arenaStartingTime;
