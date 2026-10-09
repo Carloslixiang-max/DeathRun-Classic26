@@ -210,6 +210,16 @@ Every push to `main` is checked by GitHub Actions using Java 25. CI runs the
 unit tests, builds the shaded plugin, verifies the package, downloads Paper
 26.2 and WorldEdit 7.4.5, and performs a clean Paper smoke boot.
 
+The separate `:core:flowSmokeJar` target builds a **CI-only** plugin that drives
+production vote, queue, countdown, role, Strafe, death, checkpoint, settlement
+and snapshot recovery services in sequence using simulated `Player` interfaces.
+It uses real Paper item registries and the archived To Bee blocks, checks the
+22-player lifecycle, then tests a new round and rejected waiting teleports.
+Network connections, movement physics, sidebar rendering and result artwork
+are not simulated. This evidence does not mark human playtest acceptance as
+complete. Never install `DeathRun-FlowSmoke.jar` on a production server.
+It is excluded from the production plugin and release artifact.
+
 ## License and upstream
 
 This fork remains under GNU AGPLv3 in accordance with the upstream project.

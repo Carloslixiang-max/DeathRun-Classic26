@@ -159,7 +159,7 @@ public final class ClassicVoteService {
 
     private void startCountdown() {
         this.secondsRemaining = Math.max(5, this.configuration.plugin().classicVoteSeconds);
-        this.countdownTask = Bukkit.getScheduler().runTaskTimer(this.plugin, () -> {
+        this.countdownTask = this.plugin.getServer().getScheduler().runTaskTimer(this.plugin, () -> {
             if (this.participants.isEmpty()) {
                 this.resetSession();
                 return;
@@ -183,7 +183,7 @@ public final class ClassicVoteService {
                         .replace("<seconds>", String.valueOf(this.secondsRemaining))
         );
         for (UUID uuid : this.participants) {
-            Player player = Bukkit.getPlayer(uuid);
+            Player player = this.plugin.getServer().getPlayer(uuid);
             if (player != null && player.isOnline())
                 player.sendActionBar(message);
         }
@@ -220,7 +220,7 @@ public final class ClassicVoteService {
         this.resetSession();
 
         for (UUID uuid : voters) {
-            Player player = Bukkit.getPlayer(uuid);
+            Player player = this.plugin.getServer().getPlayer(uuid);
             if (player == null || !player.isOnline() || this.arenaManager.runtimeForPlayer(player) != null)
                 continue;
 
@@ -346,7 +346,7 @@ public final class ClassicVoteService {
 
     private void forEachParticipant(java.util.function.Consumer<Player> action) {
         for (UUID uuid : this.participants) {
-            Player player = Bukkit.getPlayer(uuid);
+            Player player = this.plugin.getServer().getPlayer(uuid);
             if (player != null && player.isOnline())
                 action.accept(player);
         }

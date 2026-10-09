@@ -114,7 +114,14 @@ public final class FlowSmokePlugin extends JavaPlugin {
             }; // result artwork needs actual clients; gameplay, score and exit inventory remain real
             rewards = new RewardService(plugin, configuration);
             arena = new Arena(map.id);
-            manager = new ArenaManager(plugin, server, configuration, wins, rewards);
+            manager = new ArenaManager(plugin, server, configuration, wins, rewards) {
+                @Override public JoinResult joinMap(Player player, String id) {
+                    JoinResult result=super.joinMap(player,id); bindActors(); return result;
+                }
+                @Override public int applyQueuedPlayersForMapStart(String id) {
+                    int count=super.applyQueuedPlayersForMapStart(id); bindActors(); return count;
+                }
+            };
             round = new ArenaServiceRunnable(arena, map, manager, wins, rewards, plugin, server, configuration);
             @SuppressWarnings("unchecked") var runtimes = (Map<String,ArenaManager.ArenaRuntime>) field(manager, "runtimesByMapId");
             runtimes.put(map.id, new ArenaManager.ArenaRuntime(map.id, map, arena, round));
@@ -124,11 +131,10 @@ public final class FlowSmokePlugin extends JavaPlugin {
         }
 
         void run() throws Exception {
-            Field global = Bukkit.class.getDeclaredField("server"); global.setAccessible(true);
-            // Main-thread console command only. Always restore the real singleton before returning.
+            // Keep the real Bukkit server singleton: Paper item APIs require CraftServer.
+            // Only this isolated arena's User handles resolve the simulated Player interfaces.
             Map<Location, org.bukkit.block.data.BlockData> barriers = new LinkedHashMap<>();
             for (Location block : map.arenaStartBarrierBlocks) barriers.put(block, block.getBlock().getBlockData().clone());
-            global.set(null, server);
             try {
                 check(manager.isMapConfigured(map), "real map ready");
                 check(map.name.equals("To Bee Or Not To Bee"), "English map name");
@@ -149,7 +155,23 @@ public final class FlowSmokePlugin extends JavaPlugin {
                 Actor queued=actor();
                 check(signs.queuePlayerToMap(queued.player,map.id), "sign queues player");
                 check(queued.location.equals(map.arenaWaitingLobbyLocation) && manager.runtimeForPlayer(queued.player)==null, "queue waits in lobby before promotion");
+                new pl.mrstudios.deathrun.arena.listener.ArenaPlayerQuitListener(manager, trace)
+                        .onPlayerQuit(new org.bukkit.event.player.PlayerQuitEvent(queued.player, (String)null));
+                queued.online=false;
+                check(signs.queuedPlayersCount(map.id)==0 && manager.hasPendingSnapshot(queued.player), "queued disconnect retains recovery journal");
+                queued.online=true;
+                new pl.mrstudios.deathrun.arena.listener.ArenaPlayerJoinListener(manager, trace, configuration)
+                        .onPlayerJoin(new org.bukkit.event.player.PlayerJoinEvent(queued.player, (String)null));
+                restored(queued);
+                check(signs.queuePlayerToMap(queued.player,map.id), "queue after reconnect");
                 check(manager.applyQueuedPlayersForMapStart(map.id)==1, "queue promotes once"); waiting(queued);
+                var exit=new pl.mrstudios.deathrun.arena.listener.ArenaClickItemListener(manager, signs, configuration);
+                var exitEvent=new org.bukkit.event.player.PlayerInteractEvent(queued.player,
+                        org.bukkit.event.block.Action.RIGHT_CLICK_AIR, queued.items[8], null,
+                        org.bukkit.block.BlockFace.SELF, EquipmentSlot.HAND);
+                exit.onStepOnBlockEffect(exitEvent);
+                check(exitEvent.isCancelled() && manager.runtimeForPlayer(queued.player)==null, "right-click exit bed leaves room");
+                restored(queued); join(queued);
                 check(manager.applyQueuedPlayersForMapStart(map.id)==0, "queue promotion idempotent");
                 for (int i=2; i<10; i++) join(actor());
                 round.run(); check(arena.getGameState()==WAITING, "10 players do not auto-start");
@@ -184,6 +206,14 @@ public final class FlowSmokePlugin extends JavaPlugin {
                 var handle=manager.runtimeForPlayer(death.player);
                 check(nav.previous(death.player,handle)==22 && nav.next(death.player,handle)==0,"Death navigation wraps 23 traps");
                 check(nav.jump(death.player,handle),"Death Jumper reaches safe control landing");
+                var strafeListener=new pl.mrstudios.deathrun.arena.listener.ClassicStrafeListener(manager,plugin,trace);
+                strafeListener.onInteract(new org.bukkit.event.player.PlayerInteractEvent(runner.player,
+                        org.bukkit.event.block.Action.RIGHT_CLICK_AIR, runner.items[3], null,
+                        org.bukkit.block.BlockFace.SELF, EquipmentSlot.HAND));
+                check(strafe.remainingMillis(runner.player,ClassicStrafeService.Direction.LEFT)==0,"Strafe input blocked before barrier release");
+                var swap=new org.bukkit.event.player.PlayerSwapHandItemsEvent(runner.player,runner.items[3],runner.items[4]);
+                new pl.mrstudios.deathrun.arena.listener.ArenaInventoryActionListener(manager,plugin).onPlayerItemSwap(swap);
+                check(swap.isCancelled(), "arena tool swap blocked");
                 check(deaths.killRunner(runner.player,DeathRunDeathCause.values()[0])==null,"no death before barrier release");
                 for(int i=0;i<9;i++) round.run(); check(arena.getRemainingTime()==300,"barrier countdown preserves game time");
                 round.run(); check(round.barrierTimerForDisplay()==0 && arena.getRemainingTime()==299,"barrier releases and timer starts");
@@ -230,10 +260,14 @@ public final class FlowSmokePlugin extends JavaPlugin {
                 for(int i=0;i<4;i++) round.run();
                 check(arena.getGameState()==PLAYING && arena.getRunners().size()==1 && arena.getDeaths().isEmpty(),"single-player debug start");
                 check(arena.getRemainingTime()==300 && arena.getUser(first.player).getLives()==2 && arena.getUser(first.player).getRoundPoints()==0,"next round has clean counters");
-                first.online=false; // quit handler performs the same leave operation while Player is still available
-                first.online=true; manager.leaveCurrentMap(first.player,false); first.online=false;
+                new pl.mrstudios.deathrun.arena.listener.ArenaPlayerQuitListener(manager,trace)
+                        .onPlayerQuit(new org.bukkit.event.player.PlayerQuitEvent(first.player,(String)null));
+                first.online=false;
                 check(!manager.hasPendingSnapshot(first.player),"disconnect restores and retires snapshot");
-                first.online=true; restored(first); round.run(); for(int i=0;i<15;i++) round.run();
+                first.online=true;
+                new pl.mrstudios.deathrun.arena.listener.ArenaPlayerJoinListener(manager,trace,configuration)
+                        .onPlayerJoin(new org.bukkit.event.player.PlayerJoinEvent(first.player,(String)null));
+                restored(first); round.run(); for(int i=0;i<15;i++) round.run();
                 check(arena.getGameState()==WAITING,"last Runner quitting ends round");
                 // Rejected cancellation teleport affects only that player, and restores the original snapshot.
                 for(int i=0;i<11;i++) join(new ArrayList<>(actors.values()).get(i)); round.run();
@@ -246,7 +280,7 @@ public final class FlowSmokePlugin extends JavaPlugin {
                 Actor rejectedJoin=actor(); rejectedJoin.rejectTarget=map.arenaWaitingLobbyLocation.clone();
                 check(manager.joinMap(rejectedJoin.player,map.id)==ArenaManager.JoinResult.PLAYER_TELEPORT_FAILED,"rejected initial waiting teleport reported");
                 restored(rejectedJoin);
-                owner.getLogger().info("[DR-FLOW] PASS assertions="+checks+" scenarios=vote,waiting,countdown-cancel,22-player-start,strafe,death,checkpoints,finish,timeout,settlement,next-round,disconnect,teleport-rejection");
+                owner.getLogger().info("[DR-FLOW] PASS assertions="+checks+" scenarios=vote,queue,reconnect,exit-bed,waiting,countdown-cancel,22-player-start,strafe,death,checkpoints,finish,timeout,settlement,next-round,disconnect,teleport-rejection");
             } finally {
                 for(Actor actor:actors.values()) {
                     actor.online=true; actor.rejectTarget=null;
@@ -254,8 +288,20 @@ public final class FlowSmokePlugin extends JavaPlugin {
                     ClassicStrafeService.clearCooldowns(actor.id); DeathRunDeathService.clearPlayer(actor.id); DeathNavigatorService.clearPlayer(actor.id);
                 }
                 barriers.forEach((location,state)->location.getBlock().setBlockData(state));
-                global.set(null,real);
                 try(var paths=Files.walk(data)) { for(Path path:paths.sorted(Comparator.reverseOrder()).toList()) Files.deleteIfExists(path); }
+            }
+        }
+        void bindActors() {
+            for(int i=0;i<arena.getUsers().size();i++) {
+                var old=arena.getUsers().get(i);
+                if(old instanceof ActorUser) continue;
+                Actor actor=actors.get(old.getUniqueId());
+                if(actor==null) throw new AssertionError("unknown actor");
+                ActorUser bound=new ActorUser(actor);
+                bound.setRole(old.getRole()); bound.setLives(old.getLives()); bound.setDeaths(old.getDeaths());
+                bound.setRoundPoints(old.getRoundPoints()); bound.setEliminated(old.isEliminated());
+                if(old.getCheckpoint()!=null) bound.setCheckpoint(old.getCheckpoint());
+                arena.getUsers().set(i,bound);
             }
         }
         Actor actor() { Actor actor=new Actor("Flow"+actors.size(),real.getWorlds().getFirst().getSpawnLocation()); actors.put(actor.id,actor); return actor; }
@@ -276,6 +322,12 @@ public final class FlowSmokePlugin extends JavaPlugin {
             checkpoints.onPlayerTeleport(new PlayerTeleportEvent(actor.player, location, location));
         }
         void check(boolean value,String label) { if(!value) throw new AssertionError("step "+checks+": "+label); checks++; }
+    }
+
+    static final class ActorUser extends pl.mrstudios.deathrun.arena.user.User {
+        final Actor actor;
+        ActorUser(Actor actor) { super(actor.player); this.actor=actor; }
+        @Override public Player asBukkit() { return actor.online ? actor.player : null; }
     }
 
     static final class Actor {
@@ -328,7 +380,13 @@ public final class FlowSmokePlugin extends JavaPlugin {
             });
         }
     }
-    static Object field(Object target,String name) throws Exception { Field field=target.getClass().getDeclaredField(name); field.setAccessible(true); return field.get(target); }
+    static Object field(Object target,String name) throws Exception {
+        for(Class<?> type=target.getClass();type!=null;type=type.getSuperclass()) {
+            try { Field field=type.getDeclaredField(name); field.setAccessible(true); return field.get(target); }
+            catch(NoSuchFieldException ignored) {}
+        }
+        throw new NoSuchFieldException(name);
+    }
     static Object invoke(Object target,Method method,Object[] args) {
         try { return method.invoke(target,args); } catch(ReflectiveOperationException failure) { throw new RuntimeException(failure); }
     }
