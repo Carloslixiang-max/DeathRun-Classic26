@@ -31,6 +31,26 @@ final class MobSmoke {
             }
         },20L);
     }
+    Zombie ambientBeforeProtection(ArenaManager manager,ArenaManager.ArenaRuntime runtime,Location point) {
+        // CI fixture only: simulate a mob that existed before this map was registered.
+        // No yield or server tick occurs with ownership/rules temporarily released.
+        // A cross-world teleport is unsuitable: Paper can recreate the entity with
+        // a different spawn reason / tracking state during dimension transfer.
+        try {
+            var field=ArenaManager.class.getDeclaredField("runtimesByMapId"); field.setAccessible(true);
+            @SuppressWarnings("unchecked") var runtimes=(Map<String,ArenaManager.ArenaRuntime>)field.get(manager);
+            World world=point.getWorld(); Boolean originalRule=world.getGameRuleValue(GameRules.SPAWN_MOBS);
+            var previous=runtimes.remove(runtime.mapId());
+            try {
+                if(manager.isDeathRunWorld(world)) throw new AssertionError("fixture world has another runtime");
+                world.setGameRule(GameRules.SPAWN_MOBS,true);
+                return world.spawn(point,Zombie.class,SpawnReason.NATURAL,false,mob->mob.setAI(false));
+            } finally {
+                world.setGameRule(GameRules.SPAWN_MOBS,originalRule);
+                if(previous!=null) runtimes.put(runtime.mapId(),previous);
+            }
+        } catch(ReflectiveOperationException failure) { throw new IllegalStateException(failure); }
+    }
     void run(FlowSmokePlugin owner,ArenaManager manager,ArenaManager.ArenaRuntime runtime) {
         World world=runtime.map().arenaWaitingLobbyLocation.getWorld();
         World survival=Bukkit.getWorlds().stream().filter(w->!manager.isDeathRunWorld(w)).findFirst().orElseThrow();
@@ -59,17 +79,18 @@ final class MobSmoke {
             giantTrap.start();
             Giant giant=world.getEntitiesByClass(Giant.class).stream().filter(e->!before.contains(e.getUniqueId())).findFirst().orElseThrow();
             check(giant.isInWorld(),"real Giant trap starts with spawn guard active");
-            Zombie old=survival.spawn(survival.getSpawnLocation(),Zombie.class,SpawnReason.NATURAL,false,mob->mob.setAI(false)); created.add(old);
-            check(old.isInWorld(),"unrelated world still permits NATURAL spawn");
-            check(old.teleport(point),"ambient mob fixture moves to map");
+            Zombie control=survival.spawn(survival.getSpawnLocation(),Zombie.class,SpawnReason.NATURAL,false,mob->mob.setAI(false)); created.add(control);
+            check(control.isInWorld() && survival.getEntity(control.getUniqueId())!=null,"unrelated world still permits NATURAL spawn");
+            Zombie old=ambientBeforeProtection(manager,runtime,point); created.add(old);
+            check(old.getEntitySpawnReason()==SpawnReason.NATURAL && world.getEntities().contains(old),"pre-existing natural mob is loaded in map");
             ArenaMobProtection.protect(world);
-            check(!old.isInWorld(),"reapplying map protection removes existing ambient mob");
+            check(old.isDead(),"reapplying map protection removes existing ambient mob: reason="+old.getEntitySpawnReason());
             check(giant.isInWorld() && npc.isInWorld() && summoned.isInWorld() && decoration.isInWorld(),"cleanup preserves Giant and NPCs");
-            Zombie late=survival.spawn(survival.getSpawnLocation(),Zombie.class,SpawnReason.NATURAL,false,mob->mob.setAI(false)); created.add(late);
-            check(late.teleport(point),"late-loaded mob fixture arrives");
+            Zombie late=ambientBeforeProtection(manager,runtime,point); created.add(late);
+            check(late.getEntitySpawnReason()==SpawnReason.NATURAL && world.getEntities().contains(late),"late-loaded natural mob fixture exists");
             new ArenaWorldListener(manager).onEntitiesLoad(new EntitiesLoadEvent(point.getChunk(),List.of(late,npc,giant)));
-            check(!late.isInWorld() && npc.isInWorld() && giant.isInWorld(),"later entity chunk load removes ambient mob only");
-            giantTrap.end(); check(!giant.isInWorld(),"Giant trap ends normally");
+            check(late.isDead() && npc.isInWorld() && giant.isInWorld(),"later entity chunk load removes ambient mob only");
+            giantTrap.end(); check(giant.isDead(),"Giant trap ends normally");
             check(Objects.equals(survivalRule,survival.getGameRuleValue(GameRules.SPAWN_MOBS)),"unrelated-world gamerule unchanged");
             owner.getLogger().info("[DR-MOB] PASS assertions="+checks+" map="+runtime.mapId());
         } finally {
