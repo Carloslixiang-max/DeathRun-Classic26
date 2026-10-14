@@ -46,7 +46,7 @@ public final class FlowSmokePlugin extends JavaPlugin {
             var runtime = deathrun.getArenaManager().runtimeByMapId(args[0]);
             if (runtime == null || !runtime.arena().getUsers().isEmpty()) throw new AssertionError("map not idle");
             if (command.getName().equals("mob-smoke"))
-                new MobSmoke().run(this, deathrun.getArenaManager(), runtime);
+                new MobSmoke().start(this, deathrun.getArenaManager(), runtime);
             else
                 new Simulation(this, runtime.map()).run();
         } catch (Throwable failure) {

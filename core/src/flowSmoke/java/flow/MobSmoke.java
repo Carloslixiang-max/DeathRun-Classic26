@@ -14,6 +14,23 @@ import java.util.*;
 final class MobSmoke {
     int checks;
     void check(boolean success,String label) { if(!success) throw new AssertionError(label); checks++; }
+    void start(FlowSmokePlugin owner,ArenaManager manager,ArenaManager.ArenaRuntime runtime) {
+        Chunk mapChunk=runtime.map().arenaWaitingLobbyLocation.getChunk();
+        World survival=Bukkit.getWorlds().stream().filter(w->!manager.isDeathRunWorld(w)).findFirst().orElseThrow();
+        Chunk controlChunk=survival.getSpawnLocation().getChunk();
+        boolean mapWasForced=mapChunk.isForceLoaded(), controlWasForced=controlChunk.isForceLoaded();
+        mapChunk.setForceLoaded(true); controlChunk.setForceLoaded(true);
+        // With no real clients, entity chunk activation may lag the initial block load.
+        // Let tickets settle, then test actual world membership, not the tick-valid flag.
+        owner.getServer().getScheduler().runTaskLater(owner, () -> {
+            try { run(owner,manager,runtime); }
+            catch(Throwable failure) {
+                owner.getLogger().log(java.util.logging.Level.SEVERE,"[DR-MOB] FAIL",failure);
+            } finally {
+                mapChunk.setForceLoaded(mapWasForced); controlChunk.setForceLoaded(controlWasForced);
+            }
+        },20L);
+    }
     void run(FlowSmokePlugin owner,ArenaManager manager,ArenaManager.ArenaRuntime runtime) {
         World world=runtime.map().arenaWaitingLobbyLocation.getWorld();
         World survival=Bukkit.getWorlds().stream().filter(w->!manager.isDeathRunWorld(w)).findFirst().orElseThrow();
@@ -28,29 +45,31 @@ final class MobSmoke {
                     SpawnReason.SPAWNER_EGG,SpawnReason.DISPENSE_EGG,SpawnReason.SLIME_SPLIT)) {
                 Zombie zombie=world.spawn(point,Zombie.class,reason,false,mob->mob.setAI(false));
                 if(zombie!=null) created.add(zombie);
-                check(zombie==null || !zombie.isValid(),"map spawn cancelled: "+reason);
+                check(zombie==null || (!zombie.isInWorld() && world.getEntity(zombie.getUniqueId())==null),"map spawn cancelled: "+reason);
             }
             Villager npc=world.spawn(point,Villager.class,SpawnReason.CUSTOM,false,mob->mob.setAI(false)); created.add(npc);
             Villager summoned=world.spawn(point,Villager.class,SpawnReason.COMMAND,false,mob->mob.setAI(false)); created.add(summoned);
             ArmorStand decoration=world.spawn(point,ArmorStand.class); created.add(decoration);
-            check(npc.isValid() && summoned.isValid() && decoration.isValid(),"NPC, command and decoration preserved: npc="+npc.isValid()+"/"+npc.getEntitySpawnReason()
-                    +" command="+summoned.isValid()+"/"+summoned.getEntitySpawnReason()
-                    +" decoration="+decoration.isValid()+"/"+decoration.getEntitySpawnReason());
+            check(npc.isInWorld() && summoned.isInWorld() && decoration.isInWorld()
+                    && world.getEntity(npc.getUniqueId())!=null && world.getEntity(summoned.getUniqueId())!=null
+                    && world.getEntity(decoration.getUniqueId())!=null,"NPC, command and decoration preserved: npc="+npc.isInWorld()+"/"+npc.getEntitySpawnReason()
+                    +" command="+summoned.isInWorld()+"/"+summoned.getEntitySpawnReason()
+                    +" decoration="+decoration.isInWorld()+"/"+decoration.getEntitySpawnReason());
             Set<UUID> before=new HashSet<>(); world.getEntities().forEach(e->before.add(e.getUniqueId()));
             giantTrap.start();
             Giant giant=world.getEntitiesByClass(Giant.class).stream().filter(e->!before.contains(e.getUniqueId())).findFirst().orElseThrow();
-            check(giant.isValid(),"real Giant trap starts with spawn guard active");
+            check(giant.isInWorld(),"real Giant trap starts with spawn guard active");
             Zombie old=survival.spawn(survival.getSpawnLocation(),Zombie.class,SpawnReason.NATURAL,false,mob->mob.setAI(false)); created.add(old);
-            check(old.isValid(),"unrelated world still permits NATURAL spawn");
+            check(old.isInWorld(),"unrelated world still permits NATURAL spawn");
             check(old.teleport(point),"ambient mob fixture moves to map");
             ArenaMobProtection.protect(world);
-            check(!old.isValid(),"reapplying map protection removes existing ambient mob");
-            check(giant.isValid() && npc.isValid() && summoned.isValid() && decoration.isValid(),"cleanup preserves Giant and NPCs");
+            check(!old.isInWorld(),"reapplying map protection removes existing ambient mob");
+            check(giant.isInWorld() && npc.isInWorld() && summoned.isInWorld() && decoration.isInWorld(),"cleanup preserves Giant and NPCs");
             Zombie late=survival.spawn(survival.getSpawnLocation(),Zombie.class,SpawnReason.NATURAL,false,mob->mob.setAI(false)); created.add(late);
             check(late.teleport(point),"late-loaded mob fixture arrives");
             new ArenaWorldListener(manager).onEntitiesLoad(new EntitiesLoadEvent(point.getChunk(),List.of(late,npc,giant)));
-            check(!late.isValid() && npc.isValid() && giant.isValid(),"later entity chunk load removes ambient mob only");
-            giantTrap.end(); check(!giant.isValid(),"Giant trap ends normally");
+            check(!late.isInWorld() && npc.isInWorld() && giant.isInWorld(),"later entity chunk load removes ambient mob only");
+            giantTrap.end(); check(!giant.isInWorld(),"Giant trap ends normally");
             check(Objects.equals(survivalRule,survival.getGameRuleValue(GameRules.SPAWN_MOBS)),"unrelated-world gamerule unchanged");
             owner.getLogger().info("[DR-MOB] PASS assertions="+checks+" map="+runtime.mapId());
         } finally {
