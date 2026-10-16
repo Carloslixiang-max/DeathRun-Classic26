@@ -494,7 +494,7 @@ public class CommandDeathRun {
         try {
             this.configuration.plugin().load();
             this.configuration.language().load();
-            this.configuration.map().load();
+            this.configuration.map().load(false);
             this.configuration.map().ensureMapsMutable();
 
             this.arenaManager.initialize();
@@ -1813,7 +1813,7 @@ public class CommandDeathRun {
         int checkpointId = map.arenaCheckpoints.size();
         checkpointId = checkpointId + 1;
         map.arenaCheckpoints.add(
-            new Checkpoint(checkpointId, player.getLocation().toCenterLocation(), selectedLocations, "")
+            new Checkpoint(checkpointId, player.getLocation().clone(), selectedLocations, "")
         );
         if (!map.arenaCheckpointPoints.isEmpty())
             map.arenaCheckpointPoints.add(0);
@@ -2424,7 +2424,8 @@ public class CommandDeathRun {
         if (this.spawnAt(player, role, spawns, index) == null)
             return;
 
-        spawns.set(index - 1, player.getLocation().toCenterLocation());
+        spawns.set(index - 1, player.getLocation().clone());
+        this.markCustomRoleSpawns(map, role);
         this.configuration.map().save();
         this.message(player, this.configuration.language().commandMessageRoleSpawnMoved
                 .replace("<role>", role.name())
@@ -2482,9 +2483,59 @@ public class CommandDeathRun {
         if (!this.playerInConfiguredMapWorld(player, map))
             return;
 
-        this.spawnLocations(map, role).add(player.getLocation().toCenterLocation());
+        this.spawnLocations(map, role).add(player.getLocation().clone());
+        this.markCustomRoleSpawns(map, role);
         this.configuration.map().save();
         this.message(player, this.configuration.language().commandMessageRoleSpawnAdded.replace("<role>", role.name()));
+    }
+
+    private void markCustomRoleSpawns(MapConfiguration.MapDefinition map, Role role) {
+        if (role == RUNNER) map.arenaCustomRunnerSpawns = true;
+        else if (role == DEATH) map.arenaCustomDeathSpawns = true;
+    }
+
+    @Execute(name = "runnerstart")
+    @Permission("mrstudios.command.deathrun.setup")
+    public void setRunnerMainStart(@Context Player player,@Arg("map") String mapId) {
+        var map=this.configuration.map().getMapById(mapId);
+        if(map==null || !this.playerInConfiguredMapWorld(player,map)) return;
+        var runtime=this.arenaManager.runtimeByMapId(map.id);
+        if(runtime!=null && runtime.arena().getGameState()!=pl.mrstudios.deathrun.api.arena.enums.GameState.WAITING) {
+            this.message(player,PREFIX+"<red>请先停止比赛，再设置赛道起点。"); return;
+        }
+        Location target=player.getLocation().clone();
+        if(!target.getBlock().isPassable() || !target.clone().add(0,1,0).getBlock().isPassable()
+                || !target.clone().subtract(0,1,0).getBlock().getType().isSolid()) {
+            this.message(player,PREFIX+"<red>请站在安全实心地面上设置起点。"); return;
+        }
+        Location previous=map.arenaRunnerStartLocation;
+        map.arenaRunnerStartLocation=target;
+        try {
+            pl.mrstudios.deathrun.config.AtomicConfigurationSave.save(this.configuration.map());
+            this.message(player,PREFIX+"<green>已保存 Runner 赛道起点和朝向；下一局从这里开始。");
+        } catch(Exception failure) {
+            map.arenaRunnerStartLocation=previous;
+            this.message(player,PREFIX+"<red>起点保存失败："+this.safe(String.valueOf(failure.getMessage())));
+        }
+    }
+
+    @Execute(name = "cp setspawn")
+    @Permission("mrstudios.command.deathrun.setup")
+    public void setCheckpointSpawn(@Context Player player, @Arg("id") int checkpointId) {
+        MapConfiguration.MapDefinition map = this.selectedMapForSetup(player, true);
+        if (map == null || !this.playerInConfiguredMapWorld(player, map)) return;
+        this.ensureMutableSetupCollections(map);
+        for (int i=0; i<map.arenaCheckpoints.size(); i++) {
+            Checkpoint cp=map.arenaCheckpoints.get(i);
+            if (cp.id() != checkpointId) continue;
+            map.arenaCheckpoints.set(i,new Checkpoint(cp.id(),player.getLocation().clone(),cp.locations(),cp.name()));
+            map.arenaCustomCheckpointSpawns = new ArrayList<>(map.arenaCustomCheckpointSpawns);
+            if (!map.arenaCustomCheckpointSpawns.contains(checkpointId)) map.arenaCustomCheckpointSpawns.add(checkpointId);
+            this.configuration.map().save();
+            this.message(player, PREFIX + "<green>已保存检查点 #" + checkpointId + " 的复活位置和朝向。");
+            return;
+        }
+        this.message(player, PREFIX + "<red>找不到检查点 #" + checkpointId);
     }
 
     private boolean validSpawnRole(

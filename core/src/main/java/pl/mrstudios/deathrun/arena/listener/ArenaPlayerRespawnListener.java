@@ -44,14 +44,19 @@ public class ArenaPlayerRespawnListener implements Listener {
             @NotNull PlayerRespawnEvent event
     ) {
         if (this.arenaManager.runtimeForPlayer(event.getPlayer()) != null) {
-            Location hub = this.arenaManager.resolveHubLocation();
-            if (hub != null && hub.getWorld() != null)
-                event.setRespawnLocation(hub);
+            var runtime=this.arenaManager.runtimeForPlayer(event.getPlayer());
+            var user=runtime.arena().getUser(event.getPlayer());
+            Location target=user!=null && user.getRole()==pl.mrstudios.deathrun.api.arena.user.enums.Role.RUNNER
+                    && !user.isEliminated() && user.getCheckpoint()!=null
+                    && runtime.arena().getGameState()==pl.mrstudios.deathrun.api.arena.enums.GameState.PLAYING
+                    ? user.getCheckpoint().spawn() : this.arenaManager.resolveHubLocation();
+            if (target != null && target.getWorld() != null) event.setRespawnLocation(target.clone());
 
-            // Restore the durable pre-DeathRun snapshot after Bukkit has fully
-            // completed respawn. This is a safety fallback, not normal life loss.
+            // Wait until Bukkit completes respawn, then spend one life and resume
+            // from the saved checkpoint. Non-runner / ended sessions retain recovery fallback.
             this.plugin.getServer().getScheduler().runTask(this.plugin, () -> {
                 if (this.arenaManager.runtimeForPlayer(event.getPlayer()) != null) {
+                    if (this.arenaManager.resumeRunnerAfterVanillaRespawn(event.getPlayer())) return;
                     this.arenaManager.leaveCurrentMap(event.getPlayer(), true);
                     if (this.arenaManager.hasPendingSnapshot(event.getPlayer()))
                         event.getPlayer().sendMessage(org.bukkit.ChatColor.RED

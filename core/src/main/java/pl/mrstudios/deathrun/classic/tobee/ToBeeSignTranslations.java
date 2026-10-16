@@ -56,18 +56,69 @@ public final class ToBeeSignTranslations {
             new Entry(89, 25, 65, List.of("移除红色方块", "红色方块可能消失", ">>>", "")),
             new Entry(93, 25, 56, List.of("警告！", "红色方块可能消失", "", ""))
     );
-    public static int apply(World world) {
+    public static java.util.Map<ToBeeCandidateProfileService.BlockPos,ToBeeCandidateProfileService.BlockPos> actionSignsByButton() {
+        var result=new java.util.LinkedHashMap<ToBeeCandidateProfileService.BlockPos,ToBeeCandidateProfileService.BlockPos>();
+        var materials=new java.util.ArrayList<ToBeeCandidateProfileService.MaterialTrapEvidence>();
+        materials.add(ToBeeCandidateProfileService.iceMeltEvidence());
+        materials.add(ToBeeCandidateProfileService.coalFireEvidence());
+        materials.add(ToBeeCandidateProfileService.seaLanternEvidence());
+        materials.addAll(ToBeeCandidateProfileService.redBlockEvidence());
+        materials.addAll(ToBeeCandidateProfileService.darkWoodEvidence());
+        materials.add(ToBeeCandidateProfileService.dropTntEvidence());
+        materials.add(ToBeeCandidateProfileService.floorFallEvidence());
+        materials.add(ToBeeCandidateProfileService.floorFallBEvidence());
+        materials.add(ToBeeCandidateProfileService.minefieldEvidence());
+        materials.addAll(ToBeeCandidateProfileService.floodEvidenceAll());
+        materials.addAll(ToBeeCandidateProfileService.randomWallEvidence());
+        materials.forEach(e -> result.put(e.button(),e.actionSign()));
+        ToBeeCandidateProfileService.fireArrowEvidence().forEach(e -> result.put(e.button(),e.actionSign()));
+        ToBeeCandidateProfileService.fireSnakeEvidenceAll().forEach(e -> result.put(e.button(),e.actionSign()));
+        return java.util.Map.copyOf(result);
+    }
+
+    public static int apply(World world) { return apply(world,null); }
+
+    public static int apply(World world,pl.mrstudios.deathrun.config.impl.MapConfiguration.MapDefinition map) {
+        var numbers=new java.util.HashMap<ToBeeCandidateProfileService.BlockPos,Integer>();
+        if (map!=null) {
+            var signs=actionSignsByButton();
+            for(int i=0;i<map.arenaTraps.size();i++) {
+                var button=map.arenaTraps.get(i).getButton();
+                if(button==null) continue;
+                var sign=signs.get(new ToBeeCandidateProfileService.BlockPos(button.getBlockX(),button.getBlockY(),button.getBlockZ()));
+                if(sign!=null) numbers.put(sign,i+1);
+            }
+        }
         int changed = 0;
         for (var entry : ENTRIES) {
-            if (!(world.getBlockAt(entry.x(), entry.y(), entry.z()).getState() instanceof Sign sign))
-                continue;
-            for (int line = 0; line < 4; line++)
-                sign.getSide(Side.FRONT).line(line, Component.text(entry.lines().get(line)));
-            if (!sign.update(true, false))
-                throw new IllegalStateException("Sign update failed: " + sign.getLocation());
+            if (!(world.getBlockAt(entry.x(), entry.y(), entry.z()).getState() instanceof Sign sign)) continue;
+            var number=numbers.get(new ToBeeCandidateProfileService.BlockPos(entry.x(),entry.y(),entry.z()));
+            List<String> lines=entry.lines();
+            if(number!=null) {
+                String direction=lines.stream().filter(line -> line.contains("<<<") || line.contains(">>>")).findFirst().orElse("");
+                String detail=lines.stream().skip(1).filter(line -> !line.isBlank() && !line.contains("<<<") && !line.contains(">>>"))
+                        .reduce((first,last)->last).orElse("死神机关");
+                lines=List.of("机关 #"+number,lines.getFirst(),detail,direction);
+            }
+            for (Side side : number==null ? List.of(Side.FRONT) : List.of(Side.FRONT,Side.BACK))
+                for (int line = 0; line < 4; line++) sign.getSide(side).line(line,Component.text(lines.get(line)));
+            if (!sign.update(true, false)) throw new IllegalStateException("Sign update failed: " + sign.getLocation());
             changed++;
         }
         return changed;
+    }
+
+    @SuppressWarnings("deprecation")
+    public static int numberedCount(World world,pl.mrstudios.deathrun.config.impl.MapConfiguration.MapDefinition map) {
+        var signs=actionSignsByButton(); int count=0;
+        for(int i=0;i<map.arenaTraps.size();i++) {
+            var button=map.arenaTraps.get(i).getButton();
+            var pos=signs.get(new ToBeeCandidateProfileService.BlockPos(button.getBlockX(),button.getBlockY(),button.getBlockZ()));
+            if(pos==null || !(world.getBlockAt(pos.x(),pos.y(),pos.z()).getState() instanceof Sign sign)) continue;
+            String expected="机关 #"+(i+1);
+            if(expected.equals(sign.getSide(Side.FRONT).getLine(0)) && expected.equals(sign.getSide(Side.BACK).getLine(0))) count++;
+        }
+        return count;
     }
     public record Entry(int x, int y, int z, List<String> lines) {}
 }

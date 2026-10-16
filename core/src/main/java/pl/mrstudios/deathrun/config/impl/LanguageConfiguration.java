@@ -303,7 +303,7 @@ public class LanguageConfiguration extends OkaeriConfig {
     public List<String> chatMessageArenaGameStartRunner = asList(
             "<gold><b>你是跑酷者！",
             "<gray>沿赛道依次通过检查点，到达终点；避开死神机关。",
-            "<gray>初始 <green>2 条生命</green>，普通检查点 <green>+2</green>，死亡 <red>−1</red>；耗尽后淘汰。",
+            "<gray>初始 <green><startLives> 条生命</green>，普通检查点 <green>+2</green>，死亡 <red>−1</red>；耗尽后淘汰。",
             "<gray>快捷栏 <aqua>4 / 5 / 6</aqua> 格羽毛右键：左 / 后 / 右冲刺，每个方向独立冷却 <white>60 秒</white>。",
             "<gray>起跑屏障打开后才能冲刺；退出使用 <white>/dr leave</white>。"
     );

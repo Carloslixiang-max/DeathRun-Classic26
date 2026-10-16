@@ -423,7 +423,7 @@ public final class ToBeeCandidateProfileService {
         );
         this.configuration.map().maps.add(map);
         this.configuration.map().save();
-        ToBeeSignTranslations.apply(world);
+        ToBeeSignTranslations.apply(world, map);
         this.arenaManager.reloadRuntime(MAP_ID);
 
         return new Result(true, "candidate-profile-created", knownRemainingBlockers());
@@ -1162,19 +1162,25 @@ public final class ToBeeCandidateProfileService {
 
     public static List<String> spawnIssues(@NotNull World world, @NotNull MapConfiguration.MapDefinition map) {
         List<String> issues = new ArrayList<>();
+        if(map.arenaRunnerStartLocation!=null) {
+            var location=map.arenaRunnerStartLocation;
+            if(!spawnWorldMatches(world,location) || !safeStandingColumn(world,new BlockPos(location.getBlockX(),location.getBlockY(),location.getBlockZ())))
+                issues.add("custom-runner-start-unsafe:"+location);
+        }
         for (Location location : map.arenaRunnerSpawnLocations) {
-            if (!spawnWorldMatches(world, location) || !ToBeeSpawnGeometry.runnerRegion(location.getBlockX(), location.getBlockY(), location.getBlockZ())
+            if (!spawnWorldMatches(world, location)
                     || !safeStandingColumn(world, new BlockPos(location.getBlockX(), location.getBlockY(), location.getBlockZ()))
-                    || world.getBlockAt(location.getBlockX(), 24, location.getBlockZ()).getType() != Material.GRASS_BLOCK
-                    || Math.abs(location.getYaw() - ToBeeSpawnGeometry.RUNNER_YAW) > 0.01f)
+                    || (!map.arenaCustomRunnerSpawns && (!ToBeeSpawnGeometry.runnerRegion(location.getBlockX(), location.getBlockY(), location.getBlockZ())
+                        || world.getBlockAt(location.getBlockX(), 24, location.getBlockZ()).getType() != Material.GRASS_BLOCK
+                        || Math.abs(location.getYaw() - ToBeeSpawnGeometry.RUNNER_YAW) > 0.01f)))
                 issues.add("runner-spawn-outside-reviewed-start-or-unsafe:" + location);
         }
         for (Location location : map.arenaDeathSpawnLocations) {
             boolean reviewed = location != null && ToBeeSpawnGeometry.DEATH_STARTS.stream().anyMatch(pos ->
                     pos.x() == location.getBlockX() && pos.y() == location.getBlockY() && pos.z() == location.getBlockZ());
-            if (!spawnWorldMatches(world, location) || !reviewed
+            if (!spawnWorldMatches(world, location)
                     || !safeStandingColumn(world, new BlockPos(location.getBlockX(), location.getBlockY(), location.getBlockZ()))
-                    || Math.abs(location.getYaw() - ToBeeSpawnGeometry.DEATH_YAW) > 0.01f)
+                    || (!map.arenaCustomDeathSpawns && (!reviewed || Math.abs(location.getYaw() - ToBeeSpawnGeometry.DEATH_YAW) > 0.01f)))
                 issues.add("death-spawn-outside-reviewed-controls-or-unsafe:" + location);
         }
         if (map.arenaRunnerSpawnLocations.stream().distinct().count() != 20)
@@ -1226,10 +1232,12 @@ public final class ToBeeCandidateProfileService {
             return new Result(false, "reviewed-platforms-obstructed", List.of());
         var oldRunners = map.arenaRunnerSpawnLocations;
         var oldDeaths = map.arenaDeathSpawnLocations;
-        map.arenaRunnerSpawnLocations = new ArrayList<>(runners.stream()
-                .map(pos -> feetLocation(world, pos, ToBeeSpawnGeometry.RUNNER_YAW)).toList());
-        map.arenaDeathSpawnLocations = new ArrayList<>(deaths.stream()
-                .map(pos -> feetLocation(world, pos, ToBeeSpawnGeometry.DEATH_YAW)).toList());
+        if (!map.arenaCustomRunnerSpawns)
+            map.arenaRunnerSpawnLocations = new ArrayList<>(runners.stream()
+                    .map(pos -> feetLocation(world, pos, ToBeeSpawnGeometry.RUNNER_YAW)).toList());
+        if (!map.arenaCustomDeathSpawns)
+            map.arenaDeathSpawnLocations = new ArrayList<>(deaths.stream()
+                    .map(pos -> feetLocation(world, pos, ToBeeSpawnGeometry.DEATH_YAW)).toList());
         // Waiting-room configuration is independent of Runner/Death race spawns.
         var issues = spawnIssues(world, map);
         if (!issues.isEmpty()) {
@@ -1247,12 +1255,13 @@ public final class ToBeeCandidateProfileService {
             map.name = MAP_NAME;
             map.arenaCheckpoints = new ArrayList<>(oldCheckpoints.stream().map(cp -> {
                 int gate = ToBeeCheckpointRepairPlan.gateForCheckpoint(cp.id());
-                return new Checkpoint(cp.id(), feetLocation(world, SAFE_ROUTE_SIDE_CANDIDATES.get(gate)), cp.locations(),
+                return new Checkpoint(cp.id(), map.arenaCustomCheckpointSpawns.contains(cp.id()) ? cp.spawn().clone()
+                                : feetLocation(world, SAFE_ROUTE_SIDE_CANDIDATES.get(gate)), cp.locations(),
                         cp.id().equals(map.arenaFinishCheckpointId) ? "终点" : "检查点 " + cp.id());
             }).toList());
             pl.mrstudios.deathrun.config.AtomicConfigurationSave.save(this.configuration.map());
             saved = true;
-            ToBeeSignTranslations.apply(world);
+            ToBeeSignTranslations.apply(world, map);
             this.arenaManager.reloadRuntime(MAP_ID);
             return new Result(true, "spawn-repair-complete", List.of("20-runner", "2-death", "23-controls"));
         } catch (Exception failure) {

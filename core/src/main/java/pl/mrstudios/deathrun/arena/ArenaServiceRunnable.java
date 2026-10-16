@@ -351,7 +351,7 @@ public class ArenaServiceRunnable extends BukkitRunnable {
                 .forEach((user) -> user.setRole(RUNNER));
 
         this.arena.getRunners().forEach(user -> {
-            user.setLives(ClassicScoring.RUNNER_START_LIVES);
+            user.setLives(pl.mrstudios.deathrun.classic.runner.RunnerRules.startLives(this.configuration.plugin().arenaRunnerStartLives));
             user.setRoundPoints(0);
             user.setEliminated(false);
         });
@@ -369,12 +369,24 @@ public class ArenaServiceRunnable extends BukkitRunnable {
                 .forEach((i) -> {
                     IUser runner = this.arena.getRunners().get(i);
                     Player runnerPlayer = requireNonNull(runner.asBukkit());
-                    Location spawn = this.map.arenaRunnerSpawnLocations.get(i % this.map.arenaRunnerSpawnLocations.size());
-                    if (!runnerPlayer.teleport(spawn))
-                        throw new IllegalStateException("Runner start teleport rejected: " + runnerPlayer.getName());
+                    Location spawn = (this.map.arenaRunnerStartLocation!=null ? this.map.arenaRunnerStartLocation
+                            : this.map.arenaRunnerSpawnLocations.get(i % this.map.arenaRunnerSpawnLocations.size())).clone();
+                    // Establish the initial respawn before any teleport event can run.
                     runner.setCheckpoint(new pl.mrstudios.deathrun.arena.checkpoint.Checkpoint(
-                            0, spawn.clone(), java.util.List.of(), "Start"
-                    ));
+                            0, spawn.clone(), java.util.List.of(), "Start"));
+                    runnerPlayer.setVelocity(new org.bukkit.util.Vector());
+                    runnerPlayer.setFallDistance(0);
+                    if (!runnerPlayer.teleport(spawn.clone()))
+                        throw new IllegalStateException("Runner start teleport rejected: " + runnerPlayer.getName());
+                    Location actual = runnerPlayer.getLocation();
+                    if (actual.getWorld() == null || !actual.getWorld().equals(spawn.getWorld())
+                            || actual.distanceSquared(spawn) > 1.0)
+                        throw new IllegalStateException("Runner start redirected: " + runnerPlayer.getName()
+                                + " expected=" + spawn + " actual=" + actual);
+                    runnerPlayer.setVelocity(new org.bukkit.util.Vector());
+                    runnerPlayer.setFallDistance(0);
+                    this.plugin.getLogger().info("[DR-SPAWN] Runner " + runnerPlayer.getName()
+                            + " map=" + this.resolvedMapId() + " start=" + spawn);
                 });
 
         range(0, this.arena.getDeaths().size())
@@ -393,7 +405,8 @@ public class ArenaServiceRunnable extends BukkitRunnable {
                         return;
 
                     this.configuration.language().chatMessageArenaRules.stream()
-                            .map(line -> line.replace("<gameSeconds>", valueOf(this.configuration.plugin().arenaGameTime)))
+                            .map(line -> line.replace("<gameSeconds>", valueOf(this.configuration.plugin().arenaGameTime))
+                                    .replace("<startLives>", valueOf(pl.mrstudios.deathrun.classic.runner.RunnerRules.startLives(this.configuration.plugin().arenaRunnerStartLives))))
                             .map(miniMessage()::deserialize).forEach(player::sendMessage);
 
                     if (user.getRole() == RUNNER)
@@ -745,6 +758,10 @@ public class ArenaServiceRunnable extends BukkitRunnable {
 
         public int requiredPlayersToStartForDisplay() {
                 return this.requiredPlayersToStart();
+        }
+
+        public int runnerStartLivesForDisplay() {
+                return pl.mrstudios.deathrun.classic.runner.RunnerRules.startLives(this.configuration.plugin().arenaRunnerStartLives);
         }
 
         public int startingTimerForDisplay() {

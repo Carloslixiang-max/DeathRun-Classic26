@@ -51,6 +51,10 @@ public final class ToBeeFingerprintService {
         field(out, "creator", map.creator);
         field(out, "world", map.world);
         field(out, "setup", map.arenaSetupEnabled);
+        field(out,"runnerStart",map.arenaRunnerStartLocation==null ? "default-grid" : location(map.arenaRunnerStartLocation));
+        field(out,"customRunnerSpawns",map.arenaCustomRunnerSpawns);
+        field(out,"customDeathSpawns",map.arenaCustomDeathSpawns);
+        field(out,"customCheckpointSpawns",map.arenaCustomCheckpointSpawns);
         field(out, "maxPlayers", map.arenaMaxPlayers);
         field(out, "requiredPlayers", map.arenaRequiredPlayersToStart);
         field(out, "finishCheckpoint", map.arenaFinishCheckpointId);

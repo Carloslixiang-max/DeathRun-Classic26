@@ -154,7 +154,9 @@ public final class PlaytestTraceService {
         List<String> lines = java.nio.file.Files.exists(path)
                 ? java.nio.file.Files.readAllLines(path, StandardCharsets.UTF_8)
                 : List.of();
-        return PlaytestRulesAnalyzer.analyze(lines, checkpointIds, checkpointPoints, finishId);
+        var runtime=this.arenaManager.runtimeByMapId(mapId);
+        int lives=runtime==null ? 10 : runtime.service().runnerStartLivesForDisplay();
+        return PlaytestRulesAnalyzer.analyze(lines, checkpointIds, checkpointPoints, finishId, lives);
     }
 
     public void recordArena(

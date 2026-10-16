@@ -99,7 +99,7 @@ public class ArenaCheckpointReachedListener implements Listener {
 
     }
 
-    @EventHandler(priority = MONITOR, ignoreCancelled = true)
+    @EventHandler(priority = MONITOR)
     public void onPlayerPortal(
             @NotNull PlayerPortalEvent event
     ) {
@@ -151,18 +151,6 @@ public class ArenaCheckpointReachedListener implements Listener {
                                 if (user.getRole() != RUNNER || user.isEliminated())
             return;
 
-                int touchedIndex = -1;
-                for (int i = 0; i < map.arenaCheckpoints.size(); i++) {
-                        if (!this.sweptTouchesCheckpoint(map.arenaCheckpoints.get(i), from, to))
-                                continue;
-
-                        touchedIndex = i;
-                        break;
-                }
-
-                                if (touchedIndex < 0)
-                        return;
-
                 int lastCompletedIndex = -1;
                 if (user.getCheckpoint() != null) {
                         for (int i = 0; i < map.arenaCheckpoints.size(); i++) {
@@ -174,14 +162,19 @@ public class ArenaCheckpointReachedListener implements Listener {
                 }
 
                 int expectedIndex = lastCompletedIndex + 1;
-                if (touchedIndex != expectedIndex)
-                        return;
-
-                Checkpoint checkpoint = map.arenaCheckpoints.get(touchedIndex);
+                if (expectedIndex >= map.arenaCheckpoints.size()) return;
+                int touchedIndex = expectedIndex;
+                Checkpoint checkpoint = map.arenaCheckpoints.get(expectedIndex);
+                // An already completed gate must not mask the expected gate in a swept move.
+                if (!this.sweptTouchesCheckpoint(checkpoint, from, to)) return;
+                var previousCheckpoint = user.getCheckpoint();
 
         UserArenaCheckpointEvent userArenaCheckpointEvent = new UserArenaCheckpointEvent(user, checkpoint);
         this.server.getPluginManager().callEvent(userArenaCheckpointEvent);
 
+        if (this.arenaManager.runtimeForPlayer(player) != runtime || arena.getUser(player) != user
+                || arena.getGameState() != PLAYING || user.getRole() != RUNNER || user.isEliminated()
+                || user.getCheckpoint() != previousCheckpoint) return;
         user.setCheckpoint(checkpoint);
 
         Checkpoint finishCheckpoint = this.finishCheckpoint(map);

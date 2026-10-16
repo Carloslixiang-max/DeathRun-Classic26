@@ -153,6 +153,7 @@ public class MapConfiguration extends OkaeriConfig {
         map.teleportPads = new ArrayList<>(map.teleportPads == null ? List.of() : map.teleportPads);
         map.arenaStartBarrierBlocks = new ArrayList<>(map.arenaStartBarrierBlocks == null ? List.of() : map.arenaStartBarrierBlocks);
         map.arenaStartBarrierRestoreMaterials = new ArrayList<>(map.arenaStartBarrierRestoreMaterials == null ? List.of() : map.arenaStartBarrierRestoreMaterials);
+        map.arenaCustomCheckpointSpawns = new ArrayList<>(map.arenaCustomCheckpointSpawns==null ? List.of() : map.arenaCustomCheckpointSpawns);
     }
 
     public String normalizedMapId(String source) {
@@ -189,6 +190,12 @@ public class MapConfiguration extends OkaeriConfig {
         public Boolean arenaBackgroundSongLoop;
         public Integer arenaMaxPlayers;
         public Integer arenaRequiredPlayersToStart;
+
+        // Optional exact main race start; never the waiting-lobby location.
+        public Location arenaRunnerStartLocation;
+        public boolean arenaCustomRunnerSpawns = false;
+        public boolean arenaCustomDeathSpawns = false;
+        public List<Integer> arenaCustomCheckpointSpawns = new ArrayList<>();
 
         public boolean arenaSetupEnabled = false;
 

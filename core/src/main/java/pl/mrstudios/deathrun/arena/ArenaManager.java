@@ -470,7 +470,12 @@ public class ArenaManager {
             }
         }
 
-        runtime.arena().setGameState(WAITING);
+        try {
+            runtime.service().requestStop();
+        } catch (Throwable resetFailure) {
+            runtime.arena().setGameState(WAITING);
+            this.plugin.getLogger().warning("[DR-START] Abort reset failed: "+resetFailure.getMessage());
+        }
     }
 
     public @NotNull ForceStopResult forceStopMap(
@@ -640,6 +645,23 @@ public class ArenaManager {
         return this.signManager.queuedPlayersCount(mapId);
     }
 
+    public boolean resumeRunnerAfterVanillaRespawn(@NotNull Player player) {
+        ArenaRuntime runtime=this.runtimeForPlayer(player);
+        if (runtime==null || runtime.arena().getGameState()!=PLAYING || runtime.service().barrierTimerForDisplay()>0) return false;
+        IUser user=runtime.arena().getUser(player);
+        if (user==null || user.getRole()!=pl.mrstudios.deathrun.api.arena.user.enums.Role.RUNNER
+                || user.isEliminated() || user.getCheckpoint()==null) return false;
+        var result=new DeathRunDeathService(this,plugin,server,configuration,winMapManager)
+                .killRunner(player,pl.mrstudios.deathrun.classic.death.DeathRunDeathCause.DIRECT_DAMAGE);
+        if (result!=null) return true;
+        // An intercepted death in the same debounce window already spent its life.
+        if (this.runtimeForPlayer(player)!=runtime) return false;
+        Location spawn=user.getCheckpoint().spawn();
+        if (spawn==null || spawn.getWorld()==null || !player.teleport(spawn.clone())) return false;
+        player.setVelocity(new org.bukkit.util.Vector()); player.setFallDistance(0);
+        return true;
+    }
+
     public void preparePlayerForLobbyTools(
             @NotNull Player player
     ) {
@@ -764,6 +786,8 @@ public class ArenaManager {
         if (world != null) {
             world.setAutoSave(false);
             pl.mrstudios.deathrun.arena.world.ArenaMobProtection.protect(world);
+            if (pl.mrstudios.deathrun.classic.tobee.ToBeeCandidateProfileService.MAP_ID.equalsIgnoreCase(map.id))
+                pl.mrstudios.deathrun.classic.tobee.ToBeeSignTranslations.apply(world, map);
         }
     }
 
@@ -863,6 +887,7 @@ public class ArenaManager {
         if (mapWorld == null)
             return false;
 
+        if (map.arenaRunnerStartLocation!=null && !this.locationBelongsToWorld(map.arenaRunnerStartLocation,mapWorld)) return false;
         if (!this.locationBelongsToWorld(map.arenaWaitingLobbyLocation, mapWorld))
             return false;
 
@@ -1066,6 +1091,7 @@ public class ArenaManager {
         this.ensureConfiguredMapWorldLoaded(map);
 
         map.arenaWaitingLobbyLocation = this.resolveMapLocation(map.arenaWaitingLobbyLocation, map);
+        map.arenaRunnerStartLocation = this.resolveMapLocation(map.arenaRunnerStartLocation, map);
 
         map.arenaRunnerSpawnLocations = map.arenaRunnerSpawnLocations.stream()
             .map((location) -> this.resolveMapLocation(location, map))

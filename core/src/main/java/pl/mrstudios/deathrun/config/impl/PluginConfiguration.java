@@ -57,6 +57,12 @@ public class PluginConfiguration extends OkaeriConfig {
     @Comment({ "", "Amount of time that runners have to complete run. (in seconds)" })
     public int arenaGameTime = 300;
 
+    @Comment({ "", "Initial Runner lives. Ordinary checkpoints still grant +2." })
+    public int arenaRunnerStartLives = 10;
+
+    @Comment({ "", "Minimum duration in seconds of jump effects from map blocks." })
+    public float arenaJumpEffectSeconds = 10.0f;
+
     @Comment({ "", "Amount of time that is needed to game start." })
     public int arenaPreStartingTime = 30;
 

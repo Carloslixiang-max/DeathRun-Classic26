@@ -36,8 +36,14 @@ public record ConfigurationFactory(
                         // serialize unresolved Locations without their world references.
                         .load(!pl.mrstudios.deathrun.config.impl.MapConfiguration.class.isAssignableFrom(clazz))
         );
-        if (config instanceof LanguageConfiguration language && upgradeChineseText(language, file.toPath()))
-            config.save();
+        if (config instanceof LanguageConfiguration language) {
+            boolean changed=upgradeChineseText(language,file.toPath());
+            var rules=language.chatMessageArenaRules.stream()
+                    .map(line -> line.replace("初始 <green>2 条生命</green>","初始 <green><startLives> 条生命</green>"))
+                    .toList();
+            if (!rules.equals(language.chatMessageArenaRules)) { language.chatMessageArenaRules=rules; changed=true; }
+            if(changed) config.save();
+        }
         return config;
     }
 

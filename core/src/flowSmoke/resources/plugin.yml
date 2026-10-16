@@ -8,6 +8,8 @@ commands:
     permission: deathrun.flowsmoke
   mob-smoke:
     permission: deathrun.flowsmoke
+  round-smoke:
+    permission: deathrun.flowsmoke
 permissions:
   deathrun.flowsmoke:
     default: op

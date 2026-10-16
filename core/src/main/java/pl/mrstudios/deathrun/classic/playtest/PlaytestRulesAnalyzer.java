@@ -15,6 +15,11 @@ public final class PlaytestRulesAnalyzer {
 
     public static Result analyze(List<String> lines, List<Integer> checkpointIds,
                                  List<Integer> checkpointPoints, Integer finishId) {
+        return analyze(lines,checkpointIds,checkpointPoints,finishId,2);
+    }
+
+    public static Result analyze(List<String> lines,List<Integer> checkpointIds,
+                                 List<Integer> checkpointPoints,Integer finishId,int startLives) {
         Map<Integer, Integer> awards = new HashMap<>();
         for (int i = 0; i < checkpointIds.size(); i++) {
             Integer configured = i < checkpointPoints.size() ? checkpointPoints.get(i) : null;
@@ -64,7 +69,7 @@ public final class PlaytestRulesAnalyzer {
             switch (event) {
                 case "ROLE" -> {
                     if ("RUNNER".equals(fields.get("role")))
-                        starts.observe(identified && eq(lives, 2) && eq(points, 0));
+                        starts.observe(identified && eq(lives, startLives) && eq(points, 0));
                 }
                 case "CHECKPOINT" -> {
                     Long rawId = number(fields, "cp");
@@ -170,7 +175,7 @@ public final class PlaytestRulesAnalyzer {
             }
         }
 
-        add(checks, "runner-start-lives", starts, true, "2 Lives / 0 points");
+        add(checks, "runner-start-lives", starts, true, startLives + " Lives / 0 points");
         add(checks, "checkpoint-lives", cpLives, normalSeen.containsAll(normalIds), "+2 Lives at " + normalSeen + " expected=" + normalIds);
         add(checks, "checkpoint-points", cpPoints, pointsSeen.containsAll(awards.keySet()), "configured awards; seen=" + pointsSeen);
         add(checks, "finish-gate-lives", finishLives, finishId != null, "finish gate grants no extra Lives");

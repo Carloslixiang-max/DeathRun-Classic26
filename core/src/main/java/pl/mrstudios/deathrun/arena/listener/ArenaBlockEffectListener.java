@@ -34,7 +34,8 @@ public class ArenaBlockEffectListener implements Listener {
             return;
 
         var runtime = this.arenaManager.runtimeForPlayer(event.getPlayer());
-        if (runtime == null || runtime.arena().getGameState() != PLAYING)
+        if (runtime == null || runtime.arena().getGameState() != PLAYING
+                || runtime.service().barrierTimerForDisplay() > 0)
             return;
 
         IUser user = runtime.arena().getUser(event.getPlayer());
@@ -52,7 +53,9 @@ public class ArenaBlockEffectListener implements Listener {
                 .ifPresent(effect -> event.getPlayer().addPotionEffect(
                         new PotionEffect(
                                 effect.effectType(),
-                                (int) (20 * effect.duration()),
+                                pl.mrstudios.deathrun.classic.runner.RunnerRules.effectTicks(effect.duration(),
+                                        effect.effectType().equals(org.bukkit.potion.PotionEffectType.JUMP_BOOST)
+                                                ? this.configuration.plugin().arenaJumpEffectSeconds : 0f),
                                 effect.amplifier(),
                                 false,
                                 false,
