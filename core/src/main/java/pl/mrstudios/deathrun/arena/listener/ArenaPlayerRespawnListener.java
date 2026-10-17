@@ -43,8 +43,8 @@ public class ArenaPlayerRespawnListener implements Listener {
     public void onRespawn(
             @NotNull PlayerRespawnEvent event
     ) {
-        if (this.arenaManager.runtimeForPlayer(event.getPlayer()) != null) {
-            var runtime=this.arenaManager.runtimeForPlayer(event.getPlayer());
+        var runtime=this.arenaManager.runtimeForPlayer(event.getPlayer());
+        if (runtime != null) {
             var user=runtime.arena().getUser(event.getPlayer());
             Location target=user!=null && user.getRole()==pl.mrstudios.deathrun.api.arena.user.enums.Role.RUNNER
                     && !user.isEliminated() && user.getCheckpoint()!=null
@@ -55,8 +55,12 @@ public class ArenaPlayerRespawnListener implements Listener {
             // Wait until Bukkit completes respawn, then spend one life and resume
             // from the saved checkpoint. Non-runner / ended sessions retain recovery fallback.
             this.plugin.getServer().getScheduler().runTask(this.plugin, () -> {
-                if (this.arenaManager.runtimeForPlayer(event.getPlayer()) != null) {
+                if (event.getPlayer().isOnline() && this.arenaManager.runtimeForPlayer(event.getPlayer()) == runtime
+                        && runtime.arena().getUser(event.getPlayer()) == user) {
                     if (this.arenaManager.resumeRunnerAfterVanillaRespawn(event.getPlayer())) return;
+                    // A teleport callback can end the old session or join a new one.
+                    if (this.arenaManager.runtimeForPlayer(event.getPlayer()) != runtime
+                            || runtime.arena().getUser(event.getPlayer()) != user) return;
                     this.arenaManager.leaveCurrentMap(event.getPlayer(), true);
                     if (this.arenaManager.hasPendingSnapshot(event.getPlayer()))
                         event.getPlayer().sendMessage(org.bukkit.ChatColor.RED

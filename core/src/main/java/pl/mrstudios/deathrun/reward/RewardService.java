@@ -20,6 +20,7 @@ public class RewardService {
 
     private final Map<String, List<UUID>> finishingOrderByMapId = new ConcurrentHashMap<>();
     private final Map<String, Integer> startingRunnerCountByMapId = new ConcurrentHashMap<>();
+    private final Map<String, java.util.Set<UUID>> rewardedRunnersByMapId = new ConcurrentHashMap<>();
 
     public RewardService(
             @NotNull Plugin plugin,
@@ -35,6 +36,12 @@ public class RewardService {
     ) {
         this.finishingOrderByMapId.put(mapId, new ArrayList<>());
         this.startingRunnerCountByMapId.put(mapId, Math.max(0, runnerCount));
+        this.rewardedRunnersByMapId.put(mapId, ConcurrentHashMap.newKeySet());
+    }
+
+    public void recordRunnerFinish(@NotNull UUID playerId, @NotNull String mapId) {
+        List<UUID> finished = this.finishingOrderByMapId.computeIfAbsent(mapId, ignored -> new ArrayList<>());
+        if (!finished.contains(playerId)) finished.add(playerId);
     }
 
     public void rewardRunnerFinish(
@@ -42,12 +49,10 @@ public class RewardService {
             @NotNull String mapId,
             int position
     ) {
-        List<UUID> finished = this.finishingOrderByMapId.computeIfAbsent(mapId, (ignored) -> new ArrayList<>());
         UUID uniqueId = player.getUniqueId();
-        if (finished.contains(uniqueId))
+        this.recordRunnerFinish(uniqueId, mapId);
+        if (!this.rewardedRunnersByMapId.computeIfAbsent(mapId, ignored -> ConcurrentHashMap.newKeySet()).add(uniqueId))
             return;
-
-        finished.add(uniqueId);
 
         List<String> commands = this.commandsForPlacement(position);
         if (commands.isEmpty())

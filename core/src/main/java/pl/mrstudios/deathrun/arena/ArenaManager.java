@@ -60,6 +60,7 @@ public class ArenaManager {
     private final Map<UUID, String> playerMapIndex = new HashMap<>();
     private final Set<String> editLockedMaps = new HashSet<>();
     private final Set<UUID> leavingPlayers = new HashSet<>();
+    private final Set<UUID> runnerRespawnTeleports = new HashSet<>();
 
     public ArenaManager(
             @NotNull Plugin plugin,
@@ -645,6 +646,24 @@ public class ArenaManager {
         return this.signManager.queuedPlayersCount(mapId);
     }
 
+    public boolean isRunnerRespawning(@NotNull Player player) {
+        return this.runnerRespawnTeleports.contains(player.getUniqueId());
+    }
+
+    /** Respawn teleports cannot award gates, including when a custom spawn overlaps a gate. */
+    public boolean teleportRunnerToCheckpoint(@NotNull Player player, @Nullable Location destination) {
+        if (destination == null || destination.getWorld() == null
+                || !this.runnerRespawnTeleports.add(player.getUniqueId())) return false;
+        Location expected = destination.clone();
+        try {
+            if (!player.teleport(expected.clone())) return false;
+            Location actual = player.getLocation();
+            return expected.getWorld().equals(actual.getWorld()) && actual.distanceSquared(expected) <= 1.0;
+        } finally {
+            this.runnerRespawnTeleports.remove(player.getUniqueId());
+        }
+    }
+
     public boolean resumeRunnerAfterVanillaRespawn(@NotNull Player player) {
         ArenaRuntime runtime=this.runtimeForPlayer(player);
         if (runtime==null || runtime.arena().getGameState()!=PLAYING || runtime.service().barrierTimerForDisplay()>0) return false;
@@ -655,9 +674,12 @@ public class ArenaManager {
                 .killRunner(player,pl.mrstudios.deathrun.classic.death.DeathRunDeathCause.DIRECT_DAMAGE);
         if (result!=null) return true;
         // An intercepted death in the same debounce window already spent its life.
-        if (this.runtimeForPlayer(player)!=runtime) return false;
+        if (this.runtimeForPlayer(player)!=runtime || runtime.arena().getUser(player)!=user
+                || runtime.arena().getGameState()!=PLAYING || user.isEliminated()
+                || user.getRole()!=pl.mrstudios.deathrun.api.arena.user.enums.Role.RUNNER) return false;
         Location spawn=user.getCheckpoint().spawn();
-        if (spawn==null || spawn.getWorld()==null || !player.teleport(spawn.clone())) return false;
+        if (!this.teleportRunnerToCheckpoint(player,spawn)
+                || this.runtimeForPlayer(player)!=runtime || runtime.arena().getUser(player)!=user) return false;
         player.setVelocity(new org.bukkit.util.Vector()); player.setFallDistance(0);
         return true;
     }

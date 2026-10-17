@@ -125,6 +125,7 @@ public class ArenaCheckpointReachedListener implements Listener {
             @NotNull Location to,
             @NotNull String source
     ) {
+        if (this.arenaManager.isRunnerRespawning(player)) return;
         Arena arena = this.arenaManager.arenaForPlayer(player);
         if (source.equals("move") && player.getWorld().equals(from.getWorld())
                 && player.getLocation().distanceSquared(from) > 0.0001
@@ -236,14 +237,21 @@ public class ArenaCheckpointReachedListener implements Listener {
         arena.setFinishedRuns(arena.getFinishedRuns() + 1);
 
         int position = arena.getFinishedRuns(), time = arena.getElapsedTime();
+        int remainingBefore = arena.getRemainingTime();
+        arena.setRemainingTime(ClassicScoring.remainingAfterFinish(remainingBefore, position));
+        // Commit the result before external callbacks. A finish handler or reward
+        // command may leave/stop/rejoin; old work must never clear a restored inventory.
+        user.setRole(SPECTATOR);
+        pl.mrstudios.deathrun.classic.strafe.ClassicStrafeService.clearCooldowns(player.getUniqueId());
+        this.rewardService.recordRunnerFinish(player.getUniqueId(), runtime.mapId());
         this.server.getPluginManager().callEvent(
                 new UserArenaFinishedEvent(user, time, position)
         );
+        if (!this.ownsFinishedSession(player, runtime, user)) return;
 
         this.rewardService.rewardRunnerFinish(player, runtime.mapId(), position);
+        if (!this.ownsFinishedSession(player, runtime, user)) return;
 
-        int remainingBefore = arena.getRemainingTime();
-        arena.setRemainingTime(ClassicScoring.remainingAfterFinish(remainingBefore, position));
         this.trace.record(runtime.mapId(), "FINISH", "player=" + user.getName()
                 + " position=" + position + " time=" + time
                 + " lives=" + user.getLives() + " pointsBefore=" + finishPointsBefore
@@ -273,12 +281,11 @@ public class ArenaCheckpointReachedListener implements Listener {
                 this.configuration.plugin().arenaSoundPlayerFinishedPitch
         );
 
-        user.setRole(SPECTATOR);
-        pl.mrstudios.deathrun.classic.strafe.ClassicStrafeService.clearCooldowns(player.getUniqueId());
         ofNullable(this.arenaManager.runtimeForPlayer(player))
                 .ifPresent((runtimeHandle) -> runtimeHandle.service().removeBackgroundSongPlayer(player));
 
         player.teleport(map.arenaCheckpoints.get(0).spawn());
+        if (!this.ownsFinishedSession(player, runtime, user)) return;
         arena.getUsers().stream()
                 .map(IUser::asBukkit)
                 .filter(Objects::nonNull)
@@ -319,6 +326,12 @@ public class ArenaCheckpointReachedListener implements Listener {
                 + " parchmentLoaded=" + (parchmentImage != null));
         this.winMapManager.giveWinMap(player, parchmentImage, position, time);
 
+    }
+
+    private boolean ownsFinishedSession(org.bukkit.entity.Player player, ArenaManager.ArenaRuntime runtime, IUser user) {
+        return this.arenaManager.runtimeForPlayer(player) == runtime
+                && runtime.arena().getUser(player) == user
+                && runtime.arena().getGameState() == PLAYING && user.getRole() == SPECTATOR;
     }
 
         private @Nullable Checkpoint finishCheckpoint(

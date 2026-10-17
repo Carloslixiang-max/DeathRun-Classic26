@@ -86,15 +86,20 @@ public final class DeathRunDeathService {
             return null;
         LAST_DEATH_AT.put(player.getUniqueId(), now);
 
+        var checkpoint = user.getCheckpoint();
         org.bukkit.Location respawn = this.respawnLocation(user);
-        if (respawn == null || respawn.getWorld() == null || !player.teleport(respawn)) {
+        if (!this.arenaManager.teleportRunnerToCheckpoint(player, respawn)) {
             LAST_DEATH_AT.remove(player.getUniqueId());
-            this.plugin.getLogger().warning("[DeathRun] Respawn teleport rejected for " + player.getName());
-            this.arenaManager.leaveCurrentMap(player, true);
-            player.sendMessage(miniMessage().deserialize(this.configuration.language().commandMessageRespawnFailed));
+            if (this.arenaManager.runtimeForPlayer(player) == runtime && runtime.arena().getUser(player) == user) {
+                this.plugin.getLogger().warning("[DeathRun] Respawn teleport rejected or redirected for " + player.getName());
+                this.arenaManager.leaveCurrentMap(player, true);
+                player.sendMessage(miniMessage().deserialize(this.configuration.language().commandMessageRespawnFailed));
+            }
             return null;
         }
-        if (this.arenaManager.runtimeForPlayer(player) != runtime || runtime.arena().getUser(player) != user)
+        if (this.arenaManager.runtimeForPlayer(player) != runtime || runtime.arena().getUser(player) != user
+                || runtime.arena().getGameState() != PLAYING || user.getRole() != RUNNER
+                || user.isEliminated() || user.getCheckpoint() != checkpoint)
             return null;
 
         TrapActivationContext attribution = this.trapActivationService.recentAttribution(player.getUniqueId());

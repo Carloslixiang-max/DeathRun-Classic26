@@ -76,6 +76,8 @@ public final class FlowSmokePlugin extends JavaPlugin {
         final DeathRunDeathService deaths;
         final Path data;
         int checks;
+        java.util.function.Consumer<org.bukkit.event.Event> eventHook = event -> {};
+        java.util.function.Consumer<Player> finishRewardHook = player -> {};
         final java.util.List<pl.mrstudios.deathrun.arena.checkpoint.Checkpoint> originalCheckpoints;
 
         Simulation(FlowSmokePlugin owner, MapConfiguration.MapDefinition map) throws Exception {
@@ -83,7 +85,9 @@ public final class FlowSmokePlugin extends JavaPlugin {
             data = Files.createTempDirectory(owner.getDataFolder().toPath().toAbsolutePath().getParent(), "flow-smoke-");
             Logger quiet = Logger.getLogger("flow-smoke-isolated"); quiet.setUseParentHandlers(false);
             var pluginManager = proxy(PluginManager.class, (method, args) -> {
-                if (method.getName().equals("callEvent")) return null; // isolated event bus; no live listeners
+                if (method.getName().equals("callEvent")) {
+                    eventHook.accept((org.bukkit.event.Event) args[0]); return null;
+                } // isolated event bus with explicit fault hooks; no live listeners
                 return invoke(real.getPluginManager(), method, args);
             });
             var scheduler = proxy(BukkitScheduler.class, (method, args) -> {
@@ -118,7 +122,12 @@ public final class FlowSmokePlugin extends JavaPlugin {
                 @Override public void giveWinMap(Player player, java.awt.image.BufferedImage image, int place, int time) {}
                 @Override public void giveLoseMap(Player player, java.awt.image.BufferedImage image, int count) {}
             }; // result artwork needs actual clients; gameplay, score and exit inventory remain real
-            rewards = new RewardService(plugin, configuration);
+            rewards = new RewardService(plugin, configuration) {
+                @Override public void rewardRunnerFinish(Player player, String mapId, int position) {
+                    super.rewardRunnerFinish(player, mapId, position);
+                    finishRewardHook.accept(player);
+                }
+            };
             arena = new Arena(map.id);
             manager = new ArenaManager(plugin, server, configuration, wins, rewards) {
                 @Override public JoinResult joinMap(Player player, String id) {
@@ -281,12 +290,25 @@ public final class FlowSmokePlugin extends JavaPlugin {
                 check(arena.getRemainingTime()==60 && finishing.getRole()==SPECTATOR,"first finish clamps remaining time to 60");
                 waitingBed(finisher); touch(finisher,map.arenaCheckpoints.size()-1);
                 check(arena.getFinishedRuns()==1,"duplicate finish rejected");
+                verifyRespawnAndFinishCallbacks();
                 Actor late=actor(); check(manager.joinMap(late.player,map.id)==ArenaManager.JoinResult.MATCH_IN_PROGRESS,"mid-game join blocked");
                 for(int i=0;i<60;i++) round.run(); check(arena.getGameState()==ENDING,"timer expires into ENDING");
                 for(Actor actor:active()) waitingBed(actor);
                 for(int i=0;i<15;i++) round.run();
                 check(arena.getGameState()==WAITING && arena.getUsers().isEmpty(),"settlement returns empty room to WAITING");
                 for(Actor actor:actors.values()) restored(actor);
+                // A respawn callback from an old waiting session must not eject a rejoined player.
+                join(first);
+                int scheduledBefore=timers.size();
+                new pl.mrstudios.deathrun.arena.listener.ArenaPlayerRespawnListener(manager,plugin)
+                        .onRespawn(new org.bukkit.event.player.PlayerRespawnEvent(first.player,first.location,false));
+                check(timers.size()==scheduledBefore+1,"vanilla respawn schedules one recovery callback");
+                Runnable oldRespawn=timers.removeLast();
+                manager.leaveCurrentMap(first.player,false); restored(first); join(first);
+                var newWaitingUser=arena.getUser(first.player);
+                oldRespawn.run();
+                check(arena.getUser(first.player)==newWaitingUser,"old respawn callback cannot leave a new session");
+                waiting(first); manager.leaveCurrentMap(first.player,false); restored(first);
                 // A fresh session must reset timer, lives, points, inventory and old snapshot ownership.
                 join(first); check(manager.forceStartMap(map.id)==ArenaManager.ForceStartResult.STARTED,"force-start one-player debug session");
                 for(int i=0;i<4;i++) round.run();
@@ -321,17 +343,67 @@ public final class FlowSmokePlugin extends JavaPlugin {
                 Actor rejectedJoin=actor(); rejectedJoin.rejectTarget=map.arenaWaitingLobbyLocation.clone();
                 check(manager.joinMap(rejectedJoin.player,map.id)==ArenaManager.JoinResult.PLAYER_TELEPORT_FAILED,"rejected initial waiting teleport reported");
                 restored(rejectedJoin);
-                owner.getLogger().info("[DR-FLOW] PASS assertions="+checks+" scenarios=vote,queue,reconnect,exit-bed,waiting,countdown-cancel,22-player-start,strafe,death,checkpoints,finish,timeout,settlement,next-round,disconnect,teleport-rejection");
+                owner.getLogger().info("[DR-FLOW] PASS assertions="+checks+" scenarios=vote,queue,reconnect,exit-bed,waiting,countdown-cancel,22-player-start,strafe,death,checkpoints,finish,timeout,settlement,next-round,disconnect,teleport-rejection,respawn-gate-overlap,finish-callback-exit,stale-respawn");
             } finally {
+                eventHook=event -> {}; finishRewardHook=player -> {};
                 map.arenaCheckpoints=originalCheckpoints;
                 for(Actor actor:actors.values()) {
-                    actor.online=true; actor.rejectTarget=null;
+                    actor.online=true; actor.rejectTarget=null; actor.teleportHook=null;
                     manager.leaveCurrentMap(actor.player,false);
                     ClassicStrafeService.clearCooldowns(actor.id); DeathRunDeathService.clearPlayer(actor.id); DeathNavigatorService.clearPlayer(actor.id);
                 }
                 barriers.forEach((location,state)->location.getBlock().setBlockData(state));
                 try(var paths=Files.walk(data)) { for(Path path:paths.sorted(Comparator.reverseOrder()).toList()) Files.deleteIfExists(path); }
             }
+        }
+        void verifyRespawnAndFinishCallbacks() throws Exception {
+            Actor overlap=forPlayer(arena.getRunners().getFirst().asBukkit());
+            var overlapUser=arena.getUser(overlap.player);
+            // Deliberate setup error: CP1 respawns inside CP2's trigger. Recovery cannot award CP2.
+            var cp=map.arenaCheckpoints.getFirst();
+            Location nextGate=map.arenaCheckpoints.get(1).locations().getFirst().clone().add(.5,0,.5);
+            var saved=new pl.mrstudios.deathrun.arena.checkpoint.Checkpoint(cp.id(),nextGate,cp.locations(),cp.name());
+            overlapUser.setCheckpoint(saved);
+            int lives=overlapUser.getLives(), points=overlapUser.getRoundPoints();
+            overlap.teleportHook=checkpoints::onPlayerTeleport;
+            DeathRunDeathService.clearPlayer(overlap.id);
+            var result=deaths.killRunner(overlap.player,DeathRunDeathCause.DIRECT_DAMAGE);
+            check(result!=null && result.remainingLives()==lives-1,"overlapping respawn still charges exactly one life");
+            check(overlapUser.getCheckpoint()==saved && overlapUser.getRoundPoints()==points,"respawn teleport cannot award next gate");
+            check(!manager.isRunnerRespawning(overlap.player),"respawn guard clears after teleport");
+            // Redirect a later death to the wrong location, despite teleport returning true.
+            overlap.redirectSource=nextGate.clone(); overlap.redirectDestination=map.arenaWaitingLobbyLocation.clone();
+            DeathRunDeathService.clearPlayer(overlap.id);
+            check(deaths.killRunner(overlap.player,DeathRunDeathCause.DIRECT_DAMAGE)==null,"redirected death teleport fails recovery");
+            check(manager.runtimeForPlayer(overlap.player)==null && !manager.isRunnerRespawning(overlap.player),"redirected respawn detaches and clears guard");
+            overlap.redirectSource=null; overlap.redirectDestination=null; restored(overlap);
+
+            Actor eventExit=forPlayer(arena.getRunners().getFirst().asBukkit());
+            var eventUser=arena.getUser(eventExit.player);
+            eventUser.setCheckpoint(map.arenaCheckpoints.get(map.arenaCheckpoints.size()-2));
+            eventHook=event -> {
+                if (event instanceof pl.mrstudios.deathrun.api.arena.event.user.UserArenaFinishedEvent finished
+                        && finished.getUser()==eventUser) {
+                    check(eventUser.getRole()==SPECTATOR,"finish is committed before callback");
+                    // Reentrant touch and then leave, as an integration listener might do.
+                    touch(eventExit,map.arenaCheckpoints.size()-1);
+                    manager.leaveCurrentMap(eventExit.player,false);
+                }
+            };
+            int finishedBefore=arena.getFinishedRuns();
+            try { touch(eventExit,map.arenaCheckpoints.size()-1); }
+            finally { eventHook=event -> {}; }
+            check(arena.getFinishedRuns()==finishedBefore+1,"finish callback cannot double-complete");
+            @SuppressWarnings("unchecked") var finishOrder=(Map<String,List<UUID>>)field(rewards,"finishingOrderByMapId");
+            check(finishOrder.get(map.id).contains(eventExit.id),"finish remains recorded when completion handler leaves");
+            restored(eventExit);
+
+            Actor rewardExit=forPlayer(arena.getRunners().getFirst().asBukkit());
+            arena.getUser(rewardExit.player).setCheckpoint(map.arenaCheckpoints.get(map.arenaCheckpoints.size()-2));
+            finishRewardHook=player -> { if(player==rewardExit.player) manager.leaveCurrentMap(player,false); };
+            try { touch(rewardExit,map.arenaCheckpoints.size()-1); }
+            finally { finishRewardHook=player -> {}; }
+            restored(rewardExit);
         }
         void bindActors() {
             for(int i=0;i<arena.getUsers().size();i++) {
@@ -379,6 +451,7 @@ public final class FlowSmokePlugin extends JavaPlugin {
         final Player player; boolean online=true, allowFlight, flying;
         GameMode mode=GameMode.SURVIVAL; int food=13, held; float saturation=3;
         Vector velocity=new Vector(); Inventory opened;
+        java.util.function.Consumer<PlayerTeleportEvent> teleportHook;
         final Map<org.bukkit.potion.PotionEffectType,PotionEffect> effects=new HashMap<>();
         Actor(String name,Location original) {
             this.name=name; this.original=original.clone(); this.location=original.clone(); items[0]=new ItemStack(Material.DIAMOND,3);
@@ -413,6 +486,8 @@ public final class FlowSmokePlugin extends JavaPlugin {
                 case "removePotionEffect" -> { effects.remove(args[0]); yield null; }
                 case "teleport" -> {
                     Location target=(Location)args[0]; if(target.equals(rejectTarget)) yield false;
+                    var hook=teleportHook; teleportHook=null;
+                    if(hook!=null) hook.accept(new PlayerTeleportEvent(this.player,location.clone(),target.clone()));
                     location=(target.equals(redirectSource) ? redirectDestination : target).clone(); yield true;
                 }
                 case "setVelocity" -> { velocity=((Vector)args[0]).clone(); yield null; }
