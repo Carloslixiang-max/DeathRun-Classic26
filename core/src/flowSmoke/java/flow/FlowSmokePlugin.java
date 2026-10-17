@@ -486,8 +486,7 @@ public final class FlowSmokePlugin extends JavaPlugin {
                 case "removePotionEffect" -> { effects.remove(args[0]); yield null; }
                 case "teleport" -> {
                     Location target=(Location)args[0]; if(target.equals(rejectTarget)) yield false;
-                    var hook=teleportHook; teleportHook=null;
-                    if(hook!=null) hook.accept(new PlayerTeleportEvent(this.player,location.clone(),target.clone()));
+                    fireTeleportHook(target);
                     location=(target.equals(redirectSource) ? redirectDestination : target).clone(); yield true;
                 }
                 case "setVelocity" -> { velocity=((Vector)args[0]).clone(); yield null; }
@@ -495,6 +494,10 @@ public final class FlowSmokePlugin extends JavaPlugin {
                 case "openInventory" -> { opened=(Inventory)args[0]; yield null; }
                 default -> defaultValue(method.getReturnType());
             });
+        }
+        void fireTeleportHook(Location target) {
+            var hook=teleportHook; teleportHook=null;
+            if(hook!=null) hook.accept(new PlayerTeleportEvent(player,location.clone(),target.clone()));
         }
     }
     static Object field(Object target,String name) throws Exception {
